@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from .model import BLACK, WHITE, piece_color
+from .model import BLACK, FILES, UNICODE_PIECES, WHITE, piece_color
 
 STARTING_BACK_RANK = "rnbqkbnr"
 
@@ -68,3 +68,32 @@ class Board:
         for square, piece in enumerate(self.squares):
             if piece is not None and (color is None or piece_color(piece) == color):
                 yield square, piece
+
+    def render(self, perspective: str = WHITE, unicode: bool = True) -> str:
+        """Render the board with coordinates from either perspective."""
+        if perspective not in (WHITE, BLACK):
+            raise ValueError(f"Invalid perspective: {perspective!r}")
+
+        rows = range(8) if perspective == WHITE else range(7, -1, -1)
+        columns = range(8) if perspective == WHITE else range(7, -1, -1)
+        output: list[str] = []
+
+        for row in rows:
+            rank = 8 - row
+            cells: list[str] = []
+            for column in columns:
+                piece = self.squares[row * 8 + column]
+                if piece is None:
+                    cells.append("·")
+                elif unicode:
+                    cells.append(UNICODE_PIECES[piece])
+                else:
+                    cells.append(piece)
+            output.append(f"{rank}  {' '.join(cells)}")
+
+        ordered_files = FILES if perspective == WHITE else FILES[::-1]
+        output.append(f"\n   {' '.join(ordered_files)}")
+        return "\n".join(output)
+
+    def __str__(self) -> str:
+        return self.render()
