@@ -7,12 +7,16 @@ from dataclasses import dataclass, field
 from .model import (
     BLACK,
     FILES,
+    Move,
     PIECE_TYPES,
     UNICODE_PIECES,
     WHITE,
+    make_piece,
     parse_square,
     piece_color,
+    row_col,
     square_name,
+    to_index,
 )
 
 STARTING_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
@@ -144,6 +148,53 @@ class Board:
         for square, piece in enumerate(self.squares):
             if piece is not None and (color is None or piece_color(piece) == color):
                 yield square, piece
+
+    def pseudo_legal_moves(self, color: str | None = None) -> list[Move]:
+        """Generate moves without checking whether the king is exposed."""
+        moving_color = color or self.turn
+        moves: list[Move] = []
+        for square, piece in self.pieces(moving_color):
+            if piece.lower() == "p":
+                moves.extend(self._pawn_moves(square, moving_color))
+        return moves
+
+    def _pawn_moves(self, square: int, color: str) -> list[Move]:
+        row, column = row_col(square)
+        direction = -1 if color == WHITE else 1
+        start_row = 6 if color == WHITE else 1
+        promotion_row = 0 if color == WHITE else 7
+        moves: list[Move] = []
+
+        one_step = to_index(row + direction, column)
+        if one_step is not None and self.squares[one_step] is None:
+            self._add_pawn_move(moves, square, one_step, promotion_row)
+            two_step = to_index(row + 2 * direction, column)
+            if row == start_row and two_step is not None and self.squares[two_step] is None:
+                moves.append(Move(square, two_step))
+
+        for column_delta in (-1, 1):
+            target = to_index(row + direction, column + column_delta)
+            if target is None:
+                continue
+            occupant = self.squares[target]
+            if occupant is not None and piece_color(occupant) != color:
+                self._add_pawn_move(moves, square, target, promotion_row)
+
+        return moves
+
+    def _add_pawn_move(
+        self,
+        moves: list[Move],
+        from_sq: int,
+        to_sq: int,
+        promotion_row: int,
+    ) -> None:
+        target_row, _ = row_col(to_sq)
+        if target_row == promotion_row:
+            for piece_type in "qrbn":
+                moves.append(Move(from_sq, to_sq, promotion=piece_type))
+        else:
+            moves.append(Move(from_sq, to_sq))
 
     def render(self, perspective: str = WHITE, unicode: bool = True) -> str:
         """Render the board with coordinates from either perspective."""
