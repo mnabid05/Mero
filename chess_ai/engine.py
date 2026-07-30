@@ -16,6 +16,7 @@ class ChessAI:
 
     depth: int = 3
     nodes: int = field(default=0, init=False)
+    cutoffs: int = field(default=0, init=False)
 
     def __post_init__(self) -> None:
         if self.depth < 1:
@@ -59,20 +60,33 @@ class ChessAI:
             return None
 
         self.nodes = 0
+        self.cutoffs = 0
         best_score = -MATE_SCORE
         best_move = moves[0]
-        for move in moves:
+        alpha = -MATE_SCORE
+        beta = MATE_SCORE
+        for move in self._ordered_moves(board, moves):
             score = -self._negamax(
                 board.after(move),
                 depth=self.depth - 1,
+                alpha=-beta,
+                beta=-alpha,
                 ply=1,
             )
             if score > best_score:
                 best_score = score
                 best_move = move
+            alpha = max(alpha, score)
         return best_move
 
-    def _negamax(self, board: Board, depth: int, ply: int) -> int:
+    def _negamax(
+        self,
+        board: Board,
+        depth: int,
+        alpha: int,
+        beta: int,
+        ply: int,
+    ) -> int:
         self.nodes += 1
         moves = board.legal_moves()
         if not moves:
@@ -81,11 +95,41 @@ class ChessAI:
             return self.evaluate_for_turn(board)
 
         best_score = -MATE_SCORE
-        for move in moves:
+        for move in self._ordered_moves(board, moves):
             score = -self._negamax(
                 board.after(move),
                 depth=depth - 1,
+                alpha=-beta,
+                beta=-alpha,
                 ply=ply + 1,
             )
             best_score = max(best_score, score)
+            alpha = max(alpha, score)
+            if alpha >= beta:
+                self.cutoffs += 1
+                break
         return best_score
+
+    def _ordered_moves(self, board: Board, moves: list[Move]) -> list[Move]:
+        """Search forcing moves first to improve alpha-beta pruning."""
+        return sorted(
+            moves,
+            key=lambda move: self._move_priority(board, move),
+            reverse=True,
+        )
+
+    def _move_priority(self, board: Board, move: Move) -> int:
+        attacker = board.squares[move.from_sq]
+        victim = board.squares[move.to_sq]
+        if move.is_en_passant:
+            victim = "p"
+
+        priority = 0
+        if victim is not None and attacker is not None:
+            priority += 10 * PIECE_VALUES[victim.lower()]
+            priority -= PIECE_VALUES[attacker.lower()]
+        if move.promotion:
+            priority += PIECE_VALUES[move.promotion] + 800
+        if move.is_castling:
+            priority += 50
+        return priority
