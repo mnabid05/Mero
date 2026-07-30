@@ -1,6 +1,7 @@
 """Shared chess constants and value objects."""
 
 from dataclasses import dataclass
+from enum import Enum
 
 FILES = "abcdefgh"
 RANKS = "87654321"
@@ -33,6 +34,16 @@ UNICODE_PIECES = {
     "n": "♞",
     "p": "♟",
 }
+
+
+class GameStatus(str, Enum):
+    """Terminal and non-terminal states understood by the game."""
+
+    ACTIVE = "active"
+    CHECKMATE = "checkmate"
+    STALEMATE = "stalemate"
+    DRAW_FIFTY_MOVE = "draw by fifty-move rule"
+    DRAW_INSUFFICIENT_MATERIAL = "draw by insufficient material"
 
 
 def opponent(color: str) -> str:

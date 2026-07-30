@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from .model import (
     BLACK,
     FILES,
+    GameStatus,
     Move,
     PIECE_TYPES,
     UNICODE_PIECES,
@@ -351,6 +352,46 @@ class Board:
     def is_legal(self, move: Move) -> bool:
         """Return whether *move* is legal in the current position."""
         return move in self.legal_moves()
+
+    def find_legal_move(self, notation: str) -> Move:
+        """Resolve UCI notation to the fully annotated legal move."""
+        requested = Move.from_uci(notation)
+        for move in self.legal_moves():
+            if move.uci == requested.uci:
+                return move
+        raise ValueError(f"Illegal move: {notation!r}")
+
+    def play_uci(self, notation: str) -> Move:
+        """Validate and play a UCI move, returning the applied move."""
+        move = self.find_legal_move(notation)
+        self.push(move)
+        return move
+
+    def status(self) -> GameStatus:
+        """Return the current game status."""
+        moves = self.legal_moves()
+        if not moves:
+            return GameStatus.CHECKMATE if self.is_in_check() else GameStatus.STALEMATE
+        if self.halfmove_clock >= 100:
+            return GameStatus.DRAW_FIFTY_MOVE
+        if self._has_insufficient_material():
+            return GameStatus.DRAW_INSUFFICIENT_MATERIAL
+        return GameStatus.ACTIVE
+
+    def _has_insufficient_material(self) -> bool:
+        non_kings = [
+            (square, piece)
+            for square, piece in self.pieces()
+            if piece.lower() != "k"
+        ]
+        if not non_kings:
+            return True
+        if len(non_kings) == 1 and non_kings[0][1].lower() in {"b", "n"}:
+            return True
+        if non_kings and all(piece.lower() == "b" for _, piece in non_kings):
+            square_colors = {(sum(row_col(square)) % 2) for square, _ in non_kings}
+            return len(square_colors) == 1
+        return False
 
     def _pawn_moves(self, square: int, color: str) -> list[Move]:
         row, column = row_col(square)
