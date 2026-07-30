@@ -173,10 +173,45 @@ class Board:
             raise ValueError("The selected piece does not belong to the side to move")
 
         captured = self.squares[move.to_sq]
+        captured_square = move.to_sq
+        if move.is_en_passant:
+            captured_square = move.to_sq + (8 if moving_color == WHITE else -8)
+            captured = self.squares[captured_square]
+            self.squares[captured_square] = None
+
         self.squares[move.from_sq] = None
         self.squares[move.to_sq] = (
             make_piece(move.promotion, moving_color) if move.promotion else piece
         )
+
+        if move.is_castling:
+            rook_from, rook_to = {
+                parse_square("g1"): (parse_square("h1"), parse_square("f1")),
+                parse_square("c1"): (parse_square("a1"), parse_square("d1")),
+                parse_square("g8"): (parse_square("h8"), parse_square("f8")),
+                parse_square("c8"): (parse_square("a8"), parse_square("d8")),
+            }[move.to_sq]
+            self.squares[rook_to] = self.squares[rook_from]
+            self.squares[rook_from] = None
+
+        if piece.lower() == "k":
+            if moving_color == WHITE:
+                self.castling_rights.difference_update("KQ")
+            else:
+                self.castling_rights.difference_update("kq")
+
+        rook_rights = {
+            parse_square("h1"): "K",
+            parse_square("a1"): "Q",
+            parse_square("h8"): "k",
+            parse_square("a8"): "q",
+        }
+        moved_rook_right = rook_rights.get(move.from_sq)
+        captured_rook_right = rook_rights.get(captured_square)
+        if piece.lower() == "r" and moved_rook_right:
+            self.castling_rights.discard(moved_rook_right)
+        if captured is not None and captured.lower() == "r" and captured_rook_right:
+            self.castling_rights.discard(captured_rook_right)
 
         if piece.lower() == "p" or captured is not None:
             self.halfmove_clock = 0
@@ -338,6 +373,10 @@ class Board:
             occupant = self.squares[target]
             if occupant is not None and piece_color(occupant) != color:
                 self._add_pawn_move(moves, square, target, promotion_row)
+            elif target == self.en_passant:
+                captured_square = target + (8 if color == WHITE else -8)
+                if self.squares[captured_square] == make_piece("p", opponent(color)):
+                    moves.append(Move(square, target, is_en_passant=True))
 
         return moves
 
@@ -404,6 +443,81 @@ class Board:
             occupant = self.squares[target]
             if occupant is None or piece_color(occupant) != color:
                 moves.append(Move(square, target))
+        moves.extend(self._castling_moves(square, color))
+        return moves
+
+    def _castling_moves(self, square: int, color: str) -> list[Move]:
+        enemy = opponent(color)
+        plans = (
+            (
+                WHITE,
+                "K",
+                "e1",
+                "h1",
+                ("f1", "g1"),
+                ("e1", "f1", "g1"),
+                "g1",
+            ),
+            (
+                WHITE,
+                "Q",
+                "e1",
+                "a1",
+                ("b1", "c1", "d1"),
+                ("e1", "d1", "c1"),
+                "c1",
+            ),
+            (
+                BLACK,
+                "k",
+                "e8",
+                "h8",
+                ("f8", "g8"),
+                ("e8", "f8", "g8"),
+                "g8",
+            ),
+            (
+                BLACK,
+                "q",
+                "e8",
+                "a8",
+                ("b8", "c8", "d8"),
+                ("e8", "d8", "c8"),
+                "c8",
+            ),
+        )
+        moves: list[Move] = []
+        for (
+            plan_color,
+            right,
+            king_name,
+            rook_name,
+            empty_names,
+            safe_names,
+            target_name,
+        ) in plans:
+            if color != plan_color or right not in self.castling_rights:
+                continue
+            king_square = parse_square(king_name)
+            rook_square = parse_square(rook_name)
+            if square != king_square:
+                continue
+            if self.squares[rook_square] != make_piece("r", color):
+                continue
+            if any(self.squares[parse_square(name)] is not None for name in empty_names):
+                continue
+            if any(
+                self.is_square_attacked(parse_square(name), enemy)
+                for name in safe_names
+            ):
+                continue
+            moves.append(
+                Move(
+                    square,
+                    parse_square(target_name),
+                    is_castling=True,
+                )
+            )
         return moves
 
     def render(self, perspective: str = WHITE, unicode: bool = True) -> str:
