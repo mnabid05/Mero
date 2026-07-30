@@ -12,6 +12,7 @@ from .model import (
     UNICODE_PIECES,
     WHITE,
     make_piece,
+    opponent,
     parse_square,
     piece_color,
     row_col,
@@ -161,6 +162,43 @@ class Board:
         for square, piece in enumerate(self.squares):
             if piece is not None and (color is None or piece_color(piece) == color):
                 yield square, piece
+
+    def push(self, move: Move) -> None:
+        """Apply a move in place and advance the game clock."""
+        piece = self.squares[move.from_sq]
+        if piece is None:
+            raise ValueError(f"No piece on {square_name(move.from_sq)}")
+        moving_color = piece_color(piece)
+        if moving_color != self.turn:
+            raise ValueError("The selected piece does not belong to the side to move")
+
+        captured = self.squares[move.to_sq]
+        self.squares[move.from_sq] = None
+        self.squares[move.to_sq] = (
+            make_piece(move.promotion, moving_color) if move.promotion else piece
+        )
+
+        if piece.lower() == "p" or captured is not None:
+            self.halfmove_clock = 0
+        else:
+            self.halfmove_clock += 1
+
+        from_row, _ = row_col(move.from_sq)
+        to_row, _ = row_col(move.to_sq)
+        if piece.lower() == "p" and abs(to_row - from_row) == 2:
+            self.en_passant = (move.from_sq + move.to_sq) // 2
+        else:
+            self.en_passant = None
+
+        if moving_color == BLACK:
+            self.fullmove_number += 1
+        self.turn = opponent(moving_color)
+
+    def after(self, move: Move) -> "Board":
+        """Return a copied position with *move* applied."""
+        position = self.copy()
+        position.push(move)
+        return position
 
     def pseudo_legal_moves(self, color: str | None = None) -> list[Move]:
         """Generate moves without checking whether the king is exposed."""
