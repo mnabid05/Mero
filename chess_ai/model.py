@@ -1,5 +1,7 @@
 """Shared chess constants and value objects."""
 
+from dataclasses import dataclass
+
 FILES = "abcdefgh"
 RANKS = "87654321"
 
@@ -83,3 +85,42 @@ def to_index(row: int, column: int) -> int | None:
     if 0 <= row < 8 and 0 <= column < 8:
         return row * 8 + column
     return None
+
+
+@dataclass(frozen=True, slots=True)
+class Move:
+    """A chess move expressed as source, destination, and optional metadata."""
+
+    from_sq: int
+    to_sq: int
+    promotion: str | None = None
+    is_en_passant: bool = False
+    is_castling: bool = False
+
+    def __post_init__(self) -> None:
+        if not 0 <= self.from_sq < 64 or not 0 <= self.to_sq < 64:
+            raise ValueError("Move squares must be between 0 and 63")
+        if self.promotion is not None and self.promotion.lower() not in "qrbn":
+            raise ValueError(f"Invalid promotion piece: {self.promotion!r}")
+
+    @property
+    def uci(self) -> str:
+        """Return long algebraic notation such as ``e2e4`` or ``a7a8q``."""
+        suffix = self.promotion.lower() if self.promotion else ""
+        return f"{square_name(self.from_sq)}{square_name(self.to_sq)}{suffix}"
+
+    @classmethod
+    def from_uci(cls, notation: str) -> "Move":
+        """Parse coordinate notation without yet checking board legality."""
+        normalized = notation.strip().lower()
+        if len(normalized) not in (4, 5):
+            raise ValueError("Moves use notation like e2e4 or a7a8q")
+        promotion = normalized[4] if len(normalized) == 5 else None
+        return cls(
+            parse_square(normalized[:2]),
+            parse_square(normalized[2:4]),
+            promotion=promotion,
+        )
+
+    def __str__(self) -> str:
+        return self.uci
