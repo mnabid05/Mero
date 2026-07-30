@@ -200,6 +200,78 @@ class Board:
         position.push(move)
         return position
 
+    def is_square_attacked(self, square: int, by_color: str) -> bool:
+        """Return whether *square* is attacked by *by_color*."""
+        row, column = row_col(square)
+
+        pawn_source_row = row + (1 if by_color == WHITE else -1)
+        pawn = make_piece("p", by_color)
+        for column_delta in (-1, 1):
+            source = to_index(pawn_source_row, column + column_delta)
+            if source is not None and self.squares[source] == pawn:
+                return True
+
+        knight = make_piece("n", by_color)
+        for row_delta, column_delta in KNIGHT_OFFSETS:
+            source = to_index(row + row_delta, column + column_delta)
+            if source is not None and self.squares[source] == knight:
+                return True
+
+        king = make_piece("k", by_color)
+        for row_delta, column_delta in KING_DIRECTIONS:
+            source = to_index(row + row_delta, column + column_delta)
+            if source is not None and self.squares[source] == king:
+                return True
+
+        if self._ray_attacked(
+            row,
+            column,
+            by_color,
+            DIAGONAL_DIRECTIONS,
+            attackers={"b", "q"},
+        ):
+            return True
+        return self._ray_attacked(
+            row,
+            column,
+            by_color,
+            ORTHOGONAL_DIRECTIONS,
+            attackers={"r", "q"},
+        )
+
+    def _ray_attacked(
+        self,
+        row: int,
+        column: int,
+        by_color: str,
+        directions: tuple[tuple[int, int], ...],
+        attackers: set[str],
+    ) -> bool:
+        for row_delta, column_delta in directions:
+            distance = 1
+            while True:
+                source = to_index(
+                    row + row_delta * distance,
+                    column + column_delta * distance,
+                )
+                if source is None:
+                    break
+                piece = self.squares[source]
+                if piece is not None:
+                    if piece_color(piece) == by_color and piece.lower() in attackers:
+                        return True
+                    break
+                distance += 1
+        return False
+
+    def is_in_check(self, color: str | None = None) -> bool:
+        """Return whether a color's king is currently attacked."""
+        checked_color = color or self.turn
+        return self.is_square_attacked(
+            self.king_square(checked_color),
+            opponent(checked_color),
+        )
+
     def pseudo_legal_moves(self, color: str | None = None) -> list[Move]:
         """Generate moves without checking whether the king is exposed."""
         moving_color = color or self.turn
