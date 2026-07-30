@@ -4,9 +4,18 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from .model import BLACK, FILES, UNICODE_PIECES, WHITE, piece_color
+from .model import (
+    BLACK,
+    FILES,
+    PIECE_TYPES,
+    UNICODE_PIECES,
+    WHITE,
+    parse_square,
+    piece_color,
+)
 
 STARTING_BACK_RANK = "rnbqkbnr"
+STARTING_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
 
 @dataclass(slots=True)
@@ -31,12 +40,47 @@ class Board:
     @classmethod
     def starting(cls) -> "Board":
         """Create the standard initial chess position."""
-        squares: list[str | None] = [None] * 64
-        squares[0:8] = list(STARTING_BACK_RANK)
-        squares[8:16] = ["p"] * 8
-        squares[48:56] = ["P"] * 8
-        squares[56:64] = list(STARTING_BACK_RANK.upper())
-        return cls(squares=squares)
+        return cls.from_fen(STARTING_FEN)
+
+    @classmethod
+    def from_fen(cls, fen: str) -> "Board":
+        """Create a board from Forsyth-Edwards Notation."""
+        fields = fen.strip().split()
+        if len(fields) != 6:
+            raise ValueError("FEN must contain six space-separated fields")
+
+        placement, turn, castling, en_passant, halfmove, fullmove = fields
+        rows = placement.split("/")
+        if len(rows) != 8:
+            raise ValueError("FEN placement must contain eight ranks")
+
+        squares: list[str | None] = []
+        for row in rows:
+            rank: list[str | None] = []
+            for token in row:
+                if token.isdigit():
+                    count = int(token)
+                    if not 1 <= count <= 8:
+                        raise ValueError("FEN empty-square counts must be 1 through 8")
+                    rank.extend([None] * count)
+                elif token.lower() in PIECE_TYPES:
+                    rank.append(token)
+                else:
+                    raise ValueError(f"Invalid FEN placement token: {token!r}")
+            if len(rank) != 8:
+                raise ValueError("Every FEN rank must describe exactly eight squares")
+            squares.extend(rank)
+
+        rights = set() if castling == "-" else set(castling)
+        target = None if en_passant == "-" else parse_square(en_passant)
+        return cls(
+            squares=squares,
+            turn=turn,
+            castling_rights=rights,
+            en_passant=target,
+            halfmove_clock=int(halfmove),
+            fullmove_number=int(fullmove),
+        )
 
     def copy(self) -> "Board":
         """Return an independent copy suitable for search."""
