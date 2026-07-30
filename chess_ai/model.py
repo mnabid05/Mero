@@ -7,12 +7,51 @@ WHITE = "w"
 BLACK = "b"
 COLORS = (WHITE, BLACK)
 
+PIECE_TYPES = "pnbrqk"
+PIECE_VALUES = {
+    "p": 100,
+    "n": 320,
+    "b": 330,
+    "r": 500,
+    "q": 900,
+    "k": 0,
+}
+
+UNICODE_PIECES = {
+    "K": "♔",
+    "Q": "♕",
+    "R": "♖",
+    "B": "♗",
+    "N": "♘",
+    "P": "♙",
+    "k": "♚",
+    "q": "♛",
+    "r": "♜",
+    "b": "♝",
+    "n": "♞",
+    "p": "♟",
+}
+
 
 def opponent(color: str) -> str:
     """Return the color opposite *color*."""
     if color not in COLORS:
         raise ValueError(f"Unknown color: {color!r}")
     return BLACK if color == WHITE else WHITE
+
+
+def piece_color(piece: str) -> str:
+    """Return the color of a one-character piece symbol."""
+    if len(piece) != 1 or piece.lower() not in PIECE_TYPES:
+        raise ValueError(f"Invalid piece: {piece!r}")
+    return WHITE if piece.isupper() else BLACK
+
+
+def make_piece(piece_type: str, color: str) -> str:
+    """Create a board symbol for a piece type and color."""
+    if piece_type.lower() not in PIECE_TYPES or color not in COLORS:
+        raise ValueError(f"Invalid piece request: {piece_type!r}, {color!r}")
+    return piece_type.upper() if color == WHITE else piece_type.lower()
 
 
 def parse_square(name: str) -> int:
