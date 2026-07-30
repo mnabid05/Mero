@@ -20,6 +20,16 @@ from .model import (
 )
 
 STARTING_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+KNIGHT_OFFSETS = (
+    (-2, -1),
+    (-2, 1),
+    (-1, -2),
+    (-1, 2),
+    (1, -2),
+    (1, 2),
+    (2, -1),
+    (2, 1),
+)
 
 
 @dataclass(slots=True)
@@ -156,6 +166,8 @@ class Board:
         for square, piece in self.pieces(moving_color):
             if piece.lower() == "p":
                 moves.extend(self._pawn_moves(square, moving_color))
+            elif piece.lower() == "n":
+                moves.extend(self._knight_moves(square, moving_color))
         return moves
 
     def _pawn_moves(self, square: int, color: str) -> list[Move]:
@@ -195,6 +207,18 @@ class Board:
                 moves.append(Move(from_sq, to_sq, promotion=piece_type))
         else:
             moves.append(Move(from_sq, to_sq))
+
+    def _knight_moves(self, square: int, color: str) -> list[Move]:
+        row, column = row_col(square)
+        moves: list[Move] = []
+        for row_delta, column_delta in KNIGHT_OFFSETS:
+            target = to_index(row + row_delta, column + column_delta)
+            if target is None:
+                continue
+            occupant = self.squares[target]
+            if occupant is None or piece_color(occupant) != color:
+                moves.append(Move(square, target))
+        return moves
 
     def render(self, perspective: str = WHITE, unicode: bool = True) -> str:
         """Render the board with coordinates from either perspective."""
