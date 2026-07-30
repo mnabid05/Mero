@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from .board import Board
-from .model import BLACK, PIECE_VALUES, WHITE, piece_color, row_col
+from .model import Move, PIECE_VALUES, WHITE, piece_color, row_col
 
 MATE_SCORE = 100_000
 
@@ -15,6 +15,7 @@ class ChessAI:
     """A compact chess engine configured by search depth."""
 
     depth: int = 3
+    nodes: int = field(default=0, init=False)
 
     def __post_init__(self) -> None:
         if self.depth < 1:
@@ -50,3 +51,41 @@ class ChessAI:
         """Score the board from the side-to-move's perspective."""
         score = self.evaluate(board)
         return score if board.turn == WHITE else -score
+
+    def choose_move(self, board: Board) -> Move | None:
+        """Choose the strongest move found at the configured depth."""
+        moves = board.legal_moves()
+        if not moves:
+            return None
+
+        self.nodes = 0
+        best_score = -MATE_SCORE
+        best_move = moves[0]
+        for move in moves:
+            score = -self._negamax(
+                board.after(move),
+                depth=self.depth - 1,
+                ply=1,
+            )
+            if score > best_score:
+                best_score = score
+                best_move = move
+        return best_move
+
+    def _negamax(self, board: Board, depth: int, ply: int) -> int:
+        self.nodes += 1
+        moves = board.legal_moves()
+        if not moves:
+            return -MATE_SCORE + ply if board.is_in_check() else 0
+        if depth == 0:
+            return self.evaluate_for_turn(board)
+
+        best_score = -MATE_SCORE
+        for move in moves:
+            score = -self._negamax(
+                board.after(move),
+                depth=depth - 1,
+                ply=ply + 1,
+            )
+            best_score = max(best_score, score)
+        return best_score
