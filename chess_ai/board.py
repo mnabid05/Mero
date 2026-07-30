@@ -30,6 +30,8 @@ KNIGHT_OFFSETS = (
     (2, -1),
     (2, 1),
 )
+DIAGONAL_DIRECTIONS = ((-1, -1), (-1, 1), (1, -1), (1, 1))
+ORTHOGONAL_DIRECTIONS = ((-1, 0), (1, 0), (0, -1), (0, 1))
 
 
 @dataclass(slots=True)
@@ -168,6 +170,22 @@ class Board:
                 moves.extend(self._pawn_moves(square, moving_color))
             elif piece.lower() == "n":
                 moves.extend(self._knight_moves(square, moving_color))
+            elif piece.lower() == "b":
+                moves.extend(
+                    self._sliding_moves(square, moving_color, DIAGONAL_DIRECTIONS)
+                )
+            elif piece.lower() == "r":
+                moves.extend(
+                    self._sliding_moves(square, moving_color, ORTHOGONAL_DIRECTIONS)
+                )
+            elif piece.lower() == "q":
+                moves.extend(
+                    self._sliding_moves(
+                        square,
+                        moving_color,
+                        DIAGONAL_DIRECTIONS + ORTHOGONAL_DIRECTIONS,
+                    )
+                )
         return moves
 
     def _pawn_moves(self, square: int, color: str) -> list[Move]:
@@ -218,6 +236,33 @@ class Board:
             occupant = self.squares[target]
             if occupant is None or piece_color(occupant) != color:
                 moves.append(Move(square, target))
+        return moves
+
+    def _sliding_moves(
+        self,
+        square: int,
+        color: str,
+        directions: tuple[tuple[int, int], ...],
+    ) -> list[Move]:
+        row, column = row_col(square)
+        moves: list[Move] = []
+        for row_delta, column_delta in directions:
+            distance = 1
+            while True:
+                target = to_index(
+                    row + row_delta * distance,
+                    column + column_delta * distance,
+                )
+                if target is None:
+                    break
+                occupant = self.squares[target]
+                if occupant is None:
+                    moves.append(Move(square, target))
+                else:
+                    if piece_color(occupant) != color:
+                        moves.append(Move(square, target))
+                    break
+                distance += 1
         return moves
 
     def render(self, perspective: str = WHITE, unicode: bool = True) -> str:
