@@ -32,6 +32,7 @@ KNIGHT_OFFSETS = (
 )
 DIAGONAL_DIRECTIONS = ((-1, -1), (-1, 1), (1, -1), (1, 1))
 ORTHOGONAL_DIRECTIONS = ((-1, 0), (1, 0), (0, -1), (0, 1))
+KING_DIRECTIONS = DIAGONAL_DIRECTIONS + ORTHOGONAL_DIRECTIONS
 
 
 @dataclass(slots=True)
@@ -183,9 +184,11 @@ class Board:
                     self._sliding_moves(
                         square,
                         moving_color,
-                        DIAGONAL_DIRECTIONS + ORTHOGONAL_DIRECTIONS,
+                        KING_DIRECTIONS,
                     )
                 )
+            elif piece.lower() == "k":
+                moves.extend(self._king_moves(square, moving_color))
         return moves
 
     def _pawn_moves(self, square: int, color: str) -> list[Move]:
@@ -263,6 +266,18 @@ class Board:
                         moves.append(Move(square, target))
                     break
                 distance += 1
+        return moves
+
+    def _king_moves(self, square: int, color: str) -> list[Move]:
+        row, column = row_col(square)
+        moves: list[Move] = []
+        for row_delta, column_delta in KING_DIRECTIONS:
+            target = to_index(row + row_delta, column + column_delta)
+            if target is None:
+                continue
+            occupant = self.squares[target]
+            if occupant is None or piece_color(occupant) != color:
+                moves.append(Move(square, target))
         return moves
 
     def render(self, perspective: str = WHITE, unicode: bool = True) -> str:
