@@ -301,6 +301,22 @@ class Board:
                 moves.extend(self._king_moves(square, moving_color))
         return moves
 
+    def legal_moves(self, color: str | None = None) -> list[Move]:
+        """Generate moves that leave the moving side's king safe."""
+        moving_color = color or self.turn
+        legal: list[Move] = []
+        for move in self.pseudo_legal_moves(moving_color):
+            candidate = self.copy()
+            candidate.turn = moving_color
+            candidate.push(move)
+            if not candidate.is_in_check(moving_color):
+                legal.append(move)
+        return legal
+
+    def is_legal(self, move: Move) -> bool:
+        """Return whether *move* is legal in the current position."""
+        return move in self.legal_moves()
+
     def _pawn_moves(self, square: int, color: str) -> list[Move]:
         row, column = row_col(square)
         direction = -1 if color == WHITE else 1
