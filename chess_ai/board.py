@@ -12,9 +12,9 @@ from .model import (
     WHITE,
     parse_square,
     piece_color,
+    square_name,
 )
 
-STARTING_BACK_RANK = "rnbqkbnr"
 STARTING_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
 
@@ -91,6 +91,38 @@ class Board:
             en_passant=self.en_passant,
             halfmove_clock=self.halfmove_clock,
             fullmove_number=self.fullmove_number,
+        )
+
+    def to_fen(self) -> str:
+        """Serialize the complete position to Forsyth-Edwards Notation."""
+        ranks: list[str] = []
+        for row in range(8):
+            tokens: list[str] = []
+            empty = 0
+            for column in range(8):
+                piece = self.squares[row * 8 + column]
+                if piece is None:
+                    empty += 1
+                    continue
+                if empty:
+                    tokens.append(str(empty))
+                    empty = 0
+                tokens.append(piece)
+            if empty:
+                tokens.append(str(empty))
+            ranks.append("".join(tokens))
+
+        castling = "".join(right for right in "KQkq" if right in self.castling_rights)
+        en_passant = square_name(self.en_passant) if self.en_passant is not None else "-"
+        return " ".join(
+            (
+                "/".join(ranks),
+                self.turn,
+                castling or "-",
+                en_passant,
+                str(self.halfmove_clock),
+                str(self.fullmove_number),
+            )
         )
 
     def piece_at(self, square: int) -> str | None:
