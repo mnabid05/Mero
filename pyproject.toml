@@ -14,6 +14,7 @@ authors = [{ name = "Mohammed Nabid" }]
 [project.scripts]
 mwahaha-chess = "chess_ai.cli:main"
 mwahaha-uci = "chess_ai.uci:main"
+mwahaha-backtest = "chess_ai.backtest:main"
 
 [tool.setuptools.packages.find]
 include = ["chess_ai*"]

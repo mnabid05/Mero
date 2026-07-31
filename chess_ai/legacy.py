@@ -22,6 +22,13 @@ class LegacyAI:
     def name(self) -> str:
         return f"Legacy minimax (depth {self.depth})"
 
+    def reset(self) -> None:
+        self.nodes = 0
+        self.cutoffs = 0
+
+    def close(self) -> None:
+        """Match the engine lifecycle interface."""
+
     def evaluate(self, board: Board) -> int:
         score = 0
         for square, piece in board.pieces():
@@ -40,8 +47,7 @@ class LegacyAI:
         moves = board.legal_moves()
         if not moves:
             return None
-        self.nodes = 0
-        self.cutoffs = 0
+        self.reset()
         best_move = moves[0]
         best_score = -MATE_SCORE
         alpha, beta = -MATE_SCORE, MATE_SCORE
