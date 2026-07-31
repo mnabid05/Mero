@@ -10,6 +10,7 @@ from .board import Board
 from .evaluation import Evaluator, MG_VALUES
 from .hashing import ZobristHasher
 from .model import BLACK, Move, WHITE, opponent, piece_color
+from .native import NativeEvaluator, best_available_evaluator
 
 INFINITY = 1_000_000
 MATE_SCORE = 100_000
@@ -55,7 +56,9 @@ class ChessAI:
     depth: int = 6
     movetime_ms: int = 1000
     table_capacity: int = 250_000
-    evaluator: Evaluator = field(default_factory=Evaluator)
+    evaluator: Evaluator | NativeEvaluator = field(
+        default_factory=best_available_evaluator
+    )
     hasher: ZobristHasher = field(default_factory=ZobristHasher)
     nodes: int = field(default=0, init=False)
     qnodes: int = field(default=0, init=False)
@@ -84,7 +87,8 @@ class ChessAI:
 
     @property
     def name(self) -> str:
-        return f"Mwahaha native engine (depth {self.depth})"
+        language = "Python+C" if isinstance(self.evaluator, NativeEvaluator) else "Python"
+        return f"Mwahaha {language} engine (depth {self.depth})"
 
     @property
     def last_result(self) -> SearchResult:
