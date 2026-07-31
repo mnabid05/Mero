@@ -23,12 +23,26 @@ Commands:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Play chess against a minimax AI.")
+    parser = argparse.ArgumentParser(description="Play against the Mwahaha engine.")
     parser.add_argument(
         "--depth",
         type=int,
-        default=3,
-        help="AI search depth in plies (default: 3)",
+        default=6,
+        help="maximum iterative-deepening depth (default: 6)",
+    )
+    parser.add_argument(
+        "--move-time",
+        type=int,
+        default=1000,
+        metavar="MS",
+        help="thinking time per move in milliseconds (default: 1000)",
+    )
+    parser.add_argument(
+        "--table-size",
+        type=int,
+        default=250_000,
+        metavar="ENTRIES",
+        help="transposition table entry capacity",
     )
     parser.add_argument(
         "--color",
@@ -61,14 +75,19 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         board = Board.from_fen(args.fen) if args.fen else Board.starting()
-        ai = ChessAI(depth=args.depth)
+        ai = ChessAI(
+            depth=args.depth,
+            movetime_ms=args.move_time,
+            table_capacity=args.table_size,
+        )
     except ValueError as error:
         raise SystemExit(str(error)) from error
 
     human_color = WHITE if args.color == "white" else BLACK
     use_unicode = not args.ascii
 
-    print("Simple Chess AI")
+    print("Mwahaha Chess Engine")
+    print(f"Engine: {ai.name}, {ai.movetime_ms} ms/move")
     print("Type 'help' for commands.\n")
 
     while True:
@@ -82,12 +101,18 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
 
         if board.turn != human_color:
-            print(f"\nAI is thinking at depth {ai.depth}...")
+            print(f"\nAI is thinking for up to {ai.movetime_ms} ms...")
             move = ai.choose_move(board)
             if move is None:
                 return 0
             board.push(move)
-            print(f"AI plays {move.uci} ({ai.nodes:,} nodes, {ai.cutoffs:,} cutoffs).\n")
+            pv = " ".join(move.uci for move in ai.principal_variation)
+            print(
+                f"AI plays {move.uci} "
+                f"(depth {ai.depth_reached}, {ai.nodes + ai.qnodes:,} nodes, "
+                f"{ai.tt_hits:,} TT hits, {ai.elapsed_ms} ms).\n"
+                f"PV: {pv}\n"
+            )
             continue
 
         try:
