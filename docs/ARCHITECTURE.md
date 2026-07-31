@@ -2,22 +2,25 @@
 
 ## Hybrid execution
 
-Mwahaha uses two implementation languages:
+Mwahaha uses three implementation languages:
 
-- Python owns board state, legal move generation, search control, UCI, CLI, and
-  test orchestration.
-- Portable C11 owns the static-evaluation hot path and is loaded through
-  `ctypes` when built.
+- C++20 owns the strongest engine's board state, legal move generation,
+  alpha-beta search, transposition table, time control, perft, and UCI.
+- Portable C11 owns the shared static-evaluation hot path.
+- Python owns the terminal UI, readable reference engine, gauntlet, and
+  differential test orchestration.
 
-The compiled layer has a narrow versioned API and no chess-engine dependency.
-If it is missing or explicitly disabled, the pure-Python evaluator preserves a
-fully functional engine.
+The C++ engine links the C evaluator directly. The Python engine loads the same
+kernel through `ctypes`; if it is missing or disabled, the pure-Python evaluator
+preserves a fully functional reference implementation. No layer has a runtime
+chess-engine dependency.
 
 ## Position layer
 
-`Board` stores 64 squares, side to move, castling rights, en passant target, and
-move clocks. It generates pseudo-legal moves for every piece and filters them by
-making the move on an isolated copy and checking king safety.
+Both the Python reference and C++ engine store 64 squares, side to move,
+castling rights, en passant target, and move clocks. They generate pseudo-legal
+moves and filter them by applying the move to an isolated position and checking
+king safety.
 
 The implementation covers normal moves, castling path safety, en passant capture,
 promotion, attack detection, FEN, and terminal states.
@@ -42,9 +45,8 @@ perspective.
 
 ## Search
 
-`ChessAI.choose_move` iterates from depth one to the configured maximum. Every
-fully completed iteration becomes the safe result if the clock expires during a
-deeper iteration.
+Both engines use iterative deepening. Every fully completed iteration becomes
+the safe result if the clock expires during a deeper iteration.
 
 The root and internal nodes use principal variation search. The first move gets a
 full alpha-beta window; later moves receive a null window and are re-searched only
@@ -65,6 +67,11 @@ The search includes:
 The transposition table persists between moves and uses depth-preferred
 replacement. Per-search killer and history tables reset for each move.
 
+The C++20 implementation stores its transposition table in a fixed-size,
+power-of-two array and reaches roughly 1.35 million nodes/second at the tested
+starting position. The Python version remains the slower, easier-to-inspect
+reference.
+
 ## Time management
 
 The terminal interface uses a fixed move budget. The UCI adapter accepts
@@ -78,6 +85,7 @@ last completed iterative-deepening pass.
 
 - `python -m chess_ai` provides a human terminal game.
 - `python -m chess_ai.uci` exposes UCI for chess GUIs.
+- `build/native/mwahaha-engine` exposes the strongest native UCI engine.
 - `python -m chess_ai.perft` validates move generation.
 - `python -m chess_ai.backtest` runs paired strength regressions.
 - `python -m chess_ai.gauntlet` runs calibrated external UCI matches.

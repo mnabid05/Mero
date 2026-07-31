@@ -16,6 +16,32 @@ Every match:
 
 ## Recorded matches
 
+### C++ native engine vs Python+C hybrid
+
+The C++20 engine won all 40 games against the preceding Python+C hybrid at
+30 ms per move. The test used paired openings and reversed colors; all games
+ended in checkmate, with no illegal moves, crashes, or forfeits. Because the
+score was 100%, it establishes a decisive regression win but not a finite
+head-to-head Elo difference.
+
+### C++ native engine Stockfish 18 gauntlet
+
+The native engine played 100 games across five higher Stockfish 18 `UCI_Elo`
+settings under the same one-thread, paired-opening, 30 ms methodology.
+
+| Opponent setting | Wins | Draws | Losses | Score |
+| ---: | ---: | ---: | ---: | ---: |
+| 1500 | 15 | 4 | 1 | 85.0% |
+| 1750 | 6 | 7 | 7 | 47.5% |
+| 2000 | 5 | 4 | 11 | 35.0% |
+| 2250 | 3 | 7 | 10 | 32.5% |
+| 2500 | 1 | 6 | 13 | 20.0% |
+
+The aggregate result was 30 wins, 28 draws, and 42 losses. The logistic fit
+estimates **1921 Elo with a 95% interval of 1827–2015**, a measured increase of
+674 points over the preceding 1247 baseline under the same methodology.
+There were no engine forfeits.
+
 ### Hybrid tactical search vs previous hybrid
 
 The tactical-search build beat the immediately preceding C-accelerated version
@@ -88,6 +114,7 @@ A credible rating estimate requires:
 - confidence intervals and draw-aware Elo calculation;
 - defenses against opening bias.
 
-The next strength milestone is to move board make/unmake and alpha-beta search
-into compiled code, then use several independent opponents and SPRT-style
-testing. Stockfish and other engines remain outside the runtime and repository.
+The next strength milestone is incremental make/unmake with bitboards, stronger
+static exchange evaluation, repetition history, and automated tuning. Future
+changes should use multiple independent opponents and SPRT-style testing.
+Stockfish and other engines remain outside the runtime and repository.
