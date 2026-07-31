@@ -28,3 +28,9 @@ jobs:
         run: python -m compileall -q chess_ai
       - name: Validate starting-position perft
         run: python -m chess_ai.perft --depth 3
+      - name: Validate native-engine perft
+        run: build/native/mwahaha-engine --perft 4
+      - name: Smoke-test native UCI
+        run: |
+          printf 'uci\nisready\nposition startpos\ngo movetime 50\nquit\n' |
+            build/native/mwahaha-engine
