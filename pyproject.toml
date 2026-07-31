@@ -15,6 +15,7 @@ authors = [{ name = "Mohammed Nabid" }]
 mwahaha-chess = "chess_ai.cli:main"
 mwahaha-uci = "chess_ai.uci:main"
 mwahaha-backtest = "chess_ai.backtest:main"
+mwahaha-gauntlet = "chess_ai.gauntlet:main"
 mwahaha-perft = "chess_ai.perft:main"
 
 [tool.setuptools.packages.find]
