@@ -3,16 +3,16 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "simple-chess-ai"
+name = "mwahaha-chess-engine"
 version = "1.0.0"
-description = "A dependency-free command-line chess game with a minimax AI"
+description = "A self-contained original chess engine with advanced native search"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
 authors = [{ name = "Mohammed Nabid" }]
 
 [project.scripts]
-simple-chess = "chess_ai.cli:main"
+mwahaha-chess = "chess_ai.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["chess_ai*"]
