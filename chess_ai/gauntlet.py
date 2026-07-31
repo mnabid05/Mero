@@ -15,7 +15,7 @@ from pathlib import Path
 
 from .backtest import OPENINGS, opening_board, repetition_key
 from .board import Board
-from .model import BLACK, GameStatus, WHITE
+from .model import BLACK, GameStatus, WHITE, opponent
 
 
 @dataclass(frozen=True, slots=True)
@@ -221,13 +221,18 @@ def _play_game(
             notation = engine.choose_move(board, move_time_ms)
             move = board.find_legal_move(notation)
         except (RuntimeError, ValueError) as error:
+            candidate_score = 0.0 if candidate_turn else 1.0
+            candidate_wins = candidate_score == 1.0
+            winning_color = (
+                candidate_color if candidate_wins else opponent(candidate_color)
+            )
             return GauntletGame(
                 game_number,
                 opponent_elo,
                 opening_name,
                 "white" if candidate_color == WHITE else "black",
-                "0-1" if candidate_color == WHITE else "1-0",
-                0.0 if candidate_turn else 1.0,
+                "1-0" if winning_color == WHITE else "0-1",
+                candidate_score,
                 f"engine forfeit: {error}",
                 len(opening_moves) + played,
                 board.to_fen(),
