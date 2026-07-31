@@ -16,11 +16,13 @@ jobs:
         python-version: ["3.11", "3.13"]
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Run unit tests
         run: python -m unittest discover -v
       - name: Compile package
         run: python -m compileall -q chess_ai
+      - name: Validate starting-position perft
+        run: python -m chess_ai.perft --depth 3

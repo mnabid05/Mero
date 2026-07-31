@@ -1,0 +1,95 @@
+{
+  "candidate": "Mwahaha native engine (depth 6)",
+  "candidate_depth": 6,
+  "candidate_movetime_ms": 100,
+  "baseline": "Legacy minimax (depth 2)",
+  "baseline_depth": 2,
+  "games": 8,
+  "max_plies": 160,
+  "candidate_wins": 7,
+  "draws": 1,
+  "baseline_wins": 0,
+  "candidate_score_percent": 93.75,
+  "records": [
+    {
+      "game": 1,
+      "opening": "Open Game",
+      "candidate_color": "white",
+      "result": "1-0",
+      "winner": "Mwahaha native engine (depth 6)",
+      "reason": "checkmate",
+      "plies": 29,
+      "final_fen": "r3kb1r/1p1Qn3/8/p3N2p/8/8/PPP2PPP/R4RK1 b kq - 0 15"
+    },
+    {
+      "game": 2,
+      "opening": "Open Game",
+      "candidate_color": "black",
+      "result": "0-1",
+      "winner": "Mwahaha native engine (depth 6)",
+      "reason": "checkmate",
+      "plies": 34,
+      "final_fen": "r5k1/ppp2rp1/2n5/4p3/Pb4P1/8/7P/R1B2qK1 w - - 2 18"
+    },
+    {
+      "game": 3,
+      "opening": "Queen's Gambit",
+      "candidate_color": "white",
+      "result": "1/2-1/2",
+      "winner": null,
+      "reason": "threefold repetition",
+      "plies": 85,
+      "final_fen": "r7/2k2BP1/2P5/1K2p3/4Nn1P/8/5P2/2R5 b - - 10 43"
+    },
+    {
+      "game": 4,
+      "opening": "Queen's Gambit",
+      "candidate_color": "black",
+      "result": "0-1",
+      "winner": "Mwahaha native engine (depth 6)",
+      "reason": "checkmate",
+      "plies": 70,
+      "final_fen": "6k1/3n1ppp/4p3/2p3PP/1r5K/5r2/p7/R6b w - - 2 36"
+    },
+    {
+      "game": 5,
+      "opening": "English Opening",
+      "candidate_color": "white",
+      "result": "1-0",
+      "winner": "Mwahaha native engine (depth 6)",
+      "reason": "checkmate",
+      "plies": 85,
+      "final_fen": "4Q2k/B4R2/8/3B4/6PP/8/8/6K1 b - - 0 43"
+    },
+    {
+      "game": 6,
+      "opening": "English Opening",
+      "candidate_color": "black",
+      "result": "0-1",
+      "winner": "Mwahaha native engine (depth 6)",
+      "reason": "checkmate",
+      "plies": 50,
+      "final_fen": "1k2r3/ppp2pp1/1P6/8/2np4/6q1/4K3/3Q1B2 w - - 2 26"
+    },
+    {
+      "game": 7,
+      "opening": "King's Indian Attack",
+      "candidate_color": "white",
+      "result": "1-0",
+      "winner": "Mwahaha native engine (depth 6)",
+      "reason": "checkmate",
+      "plies": 37,
+      "final_fen": "4kbnr/3Qp3/4N1p1/4N1Bp/p7/6P1/PPP1PP1P/1K1R3R b - - 0 19"
+    },
+    {
+      "game": 8,
+      "opening": "King's Indian Attack",
+      "candidate_color": "black",
+      "result": "0-1",
+      "winner": "Mwahaha native engine (depth 6)",
+      "reason": "checkmate",
+      "plies": 82,
+      "final_fen": "6k1/4p3/6p1/p4p1p/5P1P/5n2/7q/7K w - - 0 42"
+    }
+  ]
+}

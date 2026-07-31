@@ -519,6 +519,6 @@ class ChessAI:
         return tuple(variation)
 
     def _check_time(self, force: bool = False) -> None:
-        if force or ((self.nodes + self.qnodes) & 1023) == 0:
+        if force or ((self.nodes + self.qnodes) & 255) == 0:
             if time.perf_counter() >= self._deadline:
                 raise SearchTimeout
