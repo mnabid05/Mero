@@ -1,5 +1,18 @@
 # Engine Architecture
 
+## Hybrid execution
+
+Mwahaha uses two implementation languages:
+
+- Python owns board state, legal move generation, search control, UCI, CLI, and
+  test orchestration.
+- Portable C11 owns the static-evaluation hot path and is loaded through
+  `ctypes` when built.
+
+The compiled layer has a narrow versioned API and no chess-engine dependency.
+If it is missing or explicitly disabled, the pure-Python evaluator preserves a
+fully functional engine.
+
 ## Position layer
 
 `Board` stores 64 squares, side to move, castling rights, en passant target, and
@@ -45,6 +58,7 @@ The search includes:
 - late-move reductions for low-priority quiet moves;
 - check extensions near the horizon;
 - quiescence search over captures, promotions, and check evasions;
+- static exchange evaluation, futility pruning, and delta pruning;
 - killer and history updates after quiet cutoffs;
 - PV, transposition, promotion, MVV-LVA, killer, history, and castling ordering.
 
@@ -66,3 +80,4 @@ last completed iterative-deepening pass.
 - `python -m chess_ai.uci` exposes UCI for chess GUIs.
 - `python -m chess_ai.perft` validates move generation.
 - `python -m chess_ai.backtest` runs paired strength regressions.
+- `python -m chess_ai.gauntlet` runs calibrated external UCI matches.
