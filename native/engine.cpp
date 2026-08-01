@@ -711,16 +711,29 @@ private:
         return entry.key == key ? &entry : nullptr;
     }
 
+    static int score_to_table(int score, int ply) {
+        if (score > MATE - MAX_PLY) return score + ply;
+        if (score < -MATE + MAX_PLY) return score - ply;
+        return score;
+    }
+
+    static int score_from_table(int score, int ply) {
+        if (score > MATE - MAX_PLY) return score - ply;
+        if (score < -MATE + MAX_PLY) return score + ply;
+        return score;
+    }
+
     void store(
         uint64_t key,
         int depth,
         int score,
         Bound bound,
-        const Move& move
+        const Move& move,
+        int ply
     ) {
         TTEntry& entry = table_[key & (table_.size() - 1)];
         if (entry.key != key || depth >= entry.depth) {
-            entry = {key, depth, score, bound, move};
+            entry = {key, depth, score_to_table(score, ply), bound, move};
         }
     }
 
@@ -764,7 +777,7 @@ private:
         Bound bound = best_score <= original_alpha
             ? Bound::Upper
             : (best_score >= beta ? Bound::Lower : Bound::Exact);
-        store(key, depth, best_score, bound, best);
+        store(key, depth, best_score, bound, best, 0);
         return {best_score, best};
     }
 
@@ -789,12 +802,13 @@ private:
         uint64_t key = zobrist_.hash(board);
         TTEntry* entry = probe(key);
         if (entry != nullptr && entry->depth >= depth) {
-            if (entry->bound == Bound::Exact) return entry->score;
-            if (entry->bound == Bound::Lower && entry->score >= beta) {
-                return entry->score;
+            int table_score = score_from_table(entry->score, ply);
+            if (entry->bound == Bound::Exact) return table_score;
+            if (entry->bound == Bound::Lower && table_score >= beta) {
+                return table_score;
             }
-            if (entry->bound == Bound::Upper && entry->score <= alpha) {
-                return entry->score;
+            if (entry->bound == Bound::Upper && table_score <= alpha) {
+                return table_score;
             }
         }
         if (board.halfmove >= 100) {
@@ -899,7 +913,7 @@ private:
         Bound bound = best_score <= original_alpha
             ? Bound::Upper
             : (best_score >= beta ? Bound::Lower : Bound::Exact);
-        store(key, depth, best_score, bound, best);
+        store(key, depth, best_score, bound, best, ply);
         return best_score;
     }
 
