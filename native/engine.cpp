@@ -882,6 +882,16 @@ private:
                 return table_score;
             }
         }
+        int static_eval = in_check ? -INF : evaluate(board);
+        if (
+            !in_check
+            && depth <= 3
+            && beta - alpha == 1
+            && std::abs(beta) < MATE - MAX_PLY
+            && static_eval - 85 * depth >= beta
+        ) {
+            return static_eval;
+        }
         if (allow_null && depth >= 3 && !in_check && has_non_pawn_material(board)) {
             Board null_board = board;
             null_board.white_to_move = !null_board.white_to_move;
@@ -920,7 +930,7 @@ private:
         int original_alpha = alpha;
         int best_score = -INF;
         Move best{};
-        int static_score = depth <= 2 && !in_check ? evaluate(board) : -INF;
+        int static_score = depth <= 2 && !in_check ? static_eval : -INF;
         std::vector<Move> quiets_tried;
 
         for (std::size_t index = 0; index < moves.size(); ++index) {
