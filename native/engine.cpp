@@ -798,6 +798,11 @@ private:
         if (ply >= MAX_PLY - 1) {
             return evaluate(board);
         }
+        alpha = std::max(alpha, -MATE + ply);
+        beta = std::min(beta, MATE - ply - 1);
+        if (alpha >= beta) {
+            return alpha;
+        }
 
         uint64_t key = zobrist_.hash(board);
         TTEntry* entry = probe(key);
