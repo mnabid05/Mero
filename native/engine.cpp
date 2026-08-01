@@ -571,6 +571,7 @@ public:
     void clear() {
         std::fill(table_.begin(), table_.end(), TTEntry{});
         history_ = {};
+        capture_history_ = {};
         killers_ = {};
         countermoves_ = {};
     }
@@ -647,6 +648,7 @@ private:
     Zobrist zobrist_;
     std::array<std::array<Move, 2>, MAX_PLY> killers_{};
     std::array<std::array<int, 64>, 128> history_{};
+    std::array<std::array<int, 64>, 128> capture_history_{};
     std::array<std::array<Move, 64>, 128> countermoves_{};
     std::vector<uint64_t> search_history_;
     uint64_t nodes_ = 0;
@@ -689,6 +691,13 @@ private:
         value += bonus - value * std::abs(bonus) / HISTORY_LIMIT;
     }
 
+    void update_capture_history(char piece, int target, int bonus) {
+        constexpr int HISTORY_LIMIT = 16'384;
+        bonus = std::clamp(bonus, -HISTORY_LIMIT, HISTORY_LIMIT);
+        int& value = capture_history_[static_cast<int>(piece)][target];
+        value += bonus - value * std::abs(bonus) / HISTORY_LIMIT;
+    }
+
     void order_moves(
         const Board& board,
         std::vector<Move>& moves,
@@ -706,6 +715,7 @@ private:
             if (victim != '.' || (move.flags & EN_PASSANT)) {
                 value += 1'000'000 + 16 * capture_value(board, move)
                     - PIECE_VALUES[static_cast<int>(piece)];
+                value += capture_history_[static_cast<int>(piece)][move.to];
             }
             if (move.promotion != '\0') {
                 value += 900'000 + PIECE_VALUES[static_cast<int>(move.promotion)];
@@ -969,6 +979,7 @@ private:
         Move best{};
         int static_score = depth <= 2 && !in_check ? static_eval : -INF;
         std::vector<Move> quiets_tried;
+        std::vector<Move> captures_tried;
 
         for (std::size_t index = 0; index < moves.size(); ++index) {
             const Move& move = moves[index];
@@ -1081,11 +1092,27 @@ private:
                             ][previous_move.to] = move;
                         }
                     }
+                } else {
+                    int bonus = std::min(16'384, depth * depth * 24);
+                    update_capture_history(
+                        board.squares[move.from],
+                        move.to,
+                        bonus
+                    );
+                    for (const Move& previous : captures_tried) {
+                        update_capture_history(
+                            board.squares[previous.from],
+                            previous.to,
+                            -bonus / 2
+                        );
+                    }
                 }
                 break;
             }
             if (is_quiet) {
                 quiets_tried.push_back(move);
+            } else {
+                captures_tried.push_back(move);
             }
         }
         Bound bound = best_score <= original_alpha
