@@ -581,8 +581,14 @@ public:
         std::vector<Move> pv;
     };
 
-    Result search(const Board& position, int max_depth, int move_time_ms) {
+    Result search(
+        const Board& position,
+        int max_depth,
+        int move_time_ms,
+        const std::vector<uint64_t>& game_history = {}
+    ) {
         nodes_ = 0;
+        search_history_ = game_history;
         deadline_ = std::chrono::steady_clock::now()
             + std::chrono::milliseconds(std::max(1, move_time_ms));
         auto started = std::chrono::steady_clock::now();
@@ -637,6 +643,7 @@ private:
     Zobrist zobrist_;
     std::array<std::array<Move, 2>, MAX_PLY> killers_{};
     std::array<std::array<int, 64>, 128> history_{};
+    std::vector<uint64_t> search_history_;
     uint64_t nodes_ = 0;
     std::chrono::steady_clock::time_point deadline_{};
 
@@ -805,6 +812,23 @@ private:
         }
 
         uint64_t key = zobrist_.hash(board);
+        int prior_visits = static_cast<int>(
+            std::count(search_history_.begin(), search_history_.end(), key)
+        );
+        if (prior_visits >= 2 || board.halfmove >= 100) {
+            return 0;
+        }
+        struct HistoryGuard {
+            std::vector<uint64_t>& history;
+            explicit HistoryGuard(std::vector<uint64_t>& values, uint64_t key)
+                : history(values) {
+                history.push_back(key);
+            }
+            ~HistoryGuard() {
+                history.pop_back();
+            }
+        } history_guard(search_history_, key);
+
         TTEntry* entry = probe(key);
         if (entry != nullptr && entry->depth >= depth) {
             int table_score = score_from_table(entry->score, ply);
@@ -816,10 +840,6 @@ private:
                 return table_score;
             }
         }
-        if (board.halfmove >= 100) {
-            return 0;
-        }
-
         if (allow_null && depth >= 3 && !in_check && has_non_pawn_material(board)) {
             Board null_board = board;
             null_board.white_to_move = !null_board.white_to_move;
@@ -1017,7 +1037,12 @@ std::vector<std::string> split(const std::string& input) {
     return tokens;
 }
 
-void parse_position(Board& board, const std::string& command) {
+void parse_position(
+    Board& board,
+    const std::string& command,
+    std::vector<uint64_t>& history,
+    const Zobrist& hasher
+) {
     auto tokens = split(command);
     if (tokens.size() < 2) {
         throw std::invalid_argument("incomplete position command");
@@ -1048,9 +1073,12 @@ void parse_position(Board& board, const std::string& command) {
     } else {
         throw std::invalid_argument("position requires startpos or fen");
     }
+    history.clear();
+    history.push_back(hasher.hash(board));
     for (std::size_t index = moves_index; index < tokens.size(); ++index) {
         Move move = board.find_move(tokens[index]);
         board.make_move(move);
+        history.push_back(hasher.hash(board));
     }
 }
 
@@ -1065,6 +1093,8 @@ int option_value(const std::vector<std::string>& tokens, const std::string& name
 int uci_loop() {
     Board board = Board::starting();
     Engine engine;
+    Zobrist history_hasher;
+    std::vector<uint64_t> game_history{history_hasher.hash(board)};
     int overhead = 10;
     std::string line;
     while (std::getline(std::cin, line)) {
@@ -1079,6 +1109,7 @@ int uci_loop() {
                 std::cout << "readyok\n" << std::flush;
             } else if (line == "ucinewgame") {
                 board = Board::starting();
+                game_history = {history_hasher.hash(board)};
                 engine.clear();
             } else if (line.rfind("setoption name Hash value ", 0) == 0) {
                 engine.resize_table(static_cast<std::size_t>(
@@ -1089,7 +1120,7 @@ int uci_loop() {
             ) {
                 overhead = std::max(0, std::stoi(line.substr(39)));
             } else if (line.rfind("position ", 0) == 0) {
-                parse_position(board, line);
+                parse_position(board, line, game_history, history_hasher);
             } else if (line.rfind("go", 0) == 0) {
                 auto tokens = split(line);
                 int requested_depth = option_value(tokens, "depth");
@@ -1110,7 +1141,12 @@ int uci_loop() {
                 if (requested_depth > 0 && option_value(tokens, "movetime") < 0) {
                     move_time = 3'600'000;
                 }
-                Engine::Result result = engine.search(board, depth, move_time);
+                Engine::Result result = engine.search(
+                    board,
+                    depth,
+                    move_time,
+                    game_history
+                );
                 uint64_t nps = result.nodes * 1000
                     / static_cast<uint64_t>(std::max<long long>(1, result.elapsed_ms));
                 std::cout << "info depth " << result.depth
