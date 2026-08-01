@@ -951,6 +951,16 @@ private:
             Board child = board;
             child.make_move(move);
             bool gives_check = child.in_check();
+            if (
+                depth <= 2
+                && index >= static_cast<std::size_t>(8 + depth * 4)
+                && is_quiet
+                && !in_check
+                && !gives_check
+                && static_eval + 110 * depth <= alpha
+            ) {
+                continue;
+            }
             if (depth == 1 && index > 0 && is_quiet && !gives_check
                 && static_score + 140 <= alpha) {
                 continue;
