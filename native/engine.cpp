@@ -924,6 +924,14 @@ private:
             }
         }
 
+        if (
+            depth >= 6
+            && beta - alpha == 1
+            && (entry == nullptr || !entry->move.valid())
+        ) {
+            --depth;
+        }
+
         auto moves = board.legal_moves();
         if (moves.empty()) {
             return in_check ? -MATE + ply : 0;
