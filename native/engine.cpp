@@ -892,6 +892,18 @@ private:
         ) {
             return static_eval;
         }
+        if (
+            !in_check
+            && depth == 1
+            && beta - alpha == 1
+            && std::abs(alpha) < MATE - MAX_PLY
+            && static_eval + 240 < alpha
+        ) {
+            int razor_score = quiescence(board, alpha, beta, ply, 0);
+            if (razor_score < alpha) {
+                return razor_score;
+            }
+        }
         if (allow_null && depth >= 3 && !in_check && has_non_pawn_material(board)) {
             Board null_board = board;
             null_board.white_to_move = !null_board.white_to_move;
