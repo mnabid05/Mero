@@ -546,6 +546,7 @@ struct TTEntry {
     int score = 0;
     Bound bound = Bound::Exact;
     Move move{};
+    uint16_t generation = 0;
 };
 
 class Timeout final : public std::exception {};
@@ -588,6 +589,7 @@ public:
         const std::vector<uint64_t>& game_history = {}
     ) {
         nodes_ = 0;
+        ++generation_;
         search_history_ = game_history;
         deadline_ = std::chrono::steady_clock::now()
             + std::chrono::milliseconds(std::max(1, move_time_ms));
@@ -645,6 +647,7 @@ private:
     std::array<std::array<int, 64>, 128> history_{};
     std::vector<uint64_t> search_history_;
     uint64_t nodes_ = 0;
+    uint16_t generation_ = 0;
     std::chrono::steady_clock::time_point deadline_{};
 
     void check_time() {
@@ -739,8 +742,20 @@ private:
         int ply
     ) {
         TTEntry& entry = table_[key & (table_.size() - 1)];
-        if (entry.key != key || depth >= entry.depth) {
-            entry = {key, depth, score_to_table(score, ply), bound, move};
+        bool same_position = entry.key == key;
+        bool stale = entry.generation != generation_;
+        if (
+            (same_position && depth >= entry.depth)
+            || (!same_position && (stale || depth + 2 >= entry.depth))
+        ) {
+            entry = {
+                key,
+                depth,
+                score_to_table(score, ply),
+                bound,
+                move,
+                generation_
+            };
         }
     }
 
