@@ -679,6 +679,13 @@ private:
             && !(move.flags & EN_PASSANT) && move.promotion == '\0';
     }
 
+    void update_history(char piece, int target, int bonus) {
+        constexpr int HISTORY_LIMIT = 16'384;
+        bonus = std::clamp(bonus, -HISTORY_LIMIT, HISTORY_LIMIT);
+        int& value = history_[static_cast<int>(piece)][target];
+        value += bonus - value * std::abs(bonus) / HISTORY_LIMIT;
+    }
+
     void order_moves(
         const Board& board,
         std::vector<Move>& moves,
@@ -884,6 +891,7 @@ private:
         int best_score = -INF;
         Move best{};
         int static_score = depth <= 2 && !in_check ? evaluate(board) : -INF;
+        std::vector<Move> quiets_tried;
 
         for (std::size_t index = 0; index < moves.size(); ++index) {
             const Move& move = moves[index];
@@ -935,19 +943,25 @@ private:
             }
             if (score > alpha) {
                 alpha = score;
-                if (is_quiet) {
-                    int& value = history_[
-                        static_cast<int>(board.squares[move.from])
-                    ][move.to];
-                    value = std::min(1'000'000, value + depth * depth);
-                }
             }
             if (alpha >= beta) {
                 if (is_quiet) {
+                    int bonus = std::min(16'384, depth * depth * 32);
+                    update_history(board.squares[move.from], move.to, bonus);
+                    for (const Move& previous : quiets_tried) {
+                        update_history(
+                            board.squares[previous.from],
+                            previous.to,
+                            -bonus / 2
+                        );
+                    }
                     killers_[ply][1] = killers_[ply][0];
                     killers_[ply][0] = move;
                 }
                 break;
+            }
+            if (is_quiet) {
+                quiets_tried.push_back(move);
             }
         }
         Bound bound = best_score <= original_alpha
