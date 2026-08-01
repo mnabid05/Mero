@@ -179,6 +179,69 @@ static int king_shelter(const char board[64], int color) {
     return 0;
 }
 
+static int pawn_protects(const char board[64], int square, int color) {
+    int row = row_of(square);
+    int column = column_of(square);
+    int source_row = row + (color == WHITE ? 1 : -1);
+    char pawn = color == WHITE ? 'P' : 'p';
+    for (int delta = -1; delta <= 1; delta += 2) {
+        int source_column = column + delta;
+        if (
+            in_bounds(source_row, source_column)
+            && board[source_row * 8 + source_column] == pawn
+        ) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static int enemy_pawn_attacks(const char board[64], int square, int color) {
+    return pawn_protects(board, square, color == WHITE ? BLACK : WHITE);
+}
+
+static void piece_features(
+    const char board[64],
+    int square,
+    char type,
+    int color,
+    int *middle,
+    int *end
+) {
+    int row = row_of(square);
+    int column = column_of(square);
+    int relative_rank = color == WHITE ? 7 - row : row;
+    char friendly_pawn = color == WHITE ? 'P' : 'p';
+
+    if (type == 'p') {
+        for (int file_delta = -1; file_delta <= 1; file_delta += 2) {
+            int neighbor_file = column + file_delta;
+            for (int rank_delta = -1; rank_delta <= 1; ++rank_delta) {
+                int neighbor_row = row + rank_delta;
+                if (
+                    in_bounds(neighbor_row, neighbor_file)
+                    && board[neighbor_row * 8 + neighbor_file] == friendly_pawn
+                ) {
+                    *middle += 5;
+                    *end += 8;
+                    return;
+                }
+            }
+        }
+    } else if (
+        type == 'n'
+        && relative_rank >= 3
+        && pawn_protects(board, square, color)
+        && !enemy_pawn_attacks(board, square, color)
+    ) {
+        *middle += 18 + relative_rank * 2;
+        *end += 10;
+    } else if (type == 'r' && relative_rank == 6) {
+        *middle += 18;
+        *end += 28;
+    }
+}
+
 static int ray_mobility(
     const char board[64],
     int square,
@@ -307,6 +370,18 @@ MWAHAHA_EXPORT int mwahaha_evaluate(const char board[64]) {
         end += sign * (
             end_values[index] + square_bonus(square, type, color, 1)
         );
+        int feature_middle = 0;
+        int feature_end = 0;
+        piece_features(
+            board,
+            square,
+            type,
+            color,
+            &feature_middle,
+            &feature_end
+        );
+        middle += sign * feature_middle;
+        end += sign * feature_end;
     }
 
     for (int color = WHITE; color <= BLACK; ++color) {
