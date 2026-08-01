@@ -166,12 +166,12 @@ Both matches alternate colors within paired openings. Every decisive game ended
 in checkmate. See [strength methodology](docs/STRENGTH.md) and the
 [machine-readable reports](backtests/).
 
-The C++ engine won all 40 version-regression games against the preceding
-Python+C engine. Its calibrated 100-game Stockfish 18 gauntlet produced 30 wins,
-28 draws, and 42 losses. The fitted estimate is **1921 Elo (95% interval
-1827–2015)** on the tested Apple Silicon hardware at 30 ms per move, compared
-with 1247 for the previous engine under the same methodology. This is not a
-chess.com rating.
+Version 2.1 scored 18 wins, 27 draws, and 15 losses against version 2.0. Its
+fresh 100-game Stockfish 18 gauntlet produced 37 wins, 31 draws, and 32 losses.
+The fitted estimate is **2033 Elo (95% interval 1939–2127)** on the tested Apple
+Silicon hardware at 30 ms per move, compared with 1921 for version 2.0 and 1247
+for the Python+C engine under the same methodology. This is not a chess.com
+rating.
 
 Run the external-opponent methodology with:
 

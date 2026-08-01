@@ -54,14 +54,16 @@ when they prove interesting.
 
 The search includes:
 
+- mate-distance pruning and ply-normalized transposition scores;
+- game-history and search-path repetition detection;
 - aspiration windows around the previous iteration's score;
-- transposition table bounds keyed by deterministic Zobrist hashes;
-- null-move pruning outside check and pawn-only endings;
-- late-move reductions for low-priority quiet moves;
+- generation-aged transposition bounds keyed by deterministic Zobrist hashes;
+- verified null-move pruning outside check and pawn-only endings;
+- dynamic late-move reductions and frontier pruning;
 - check extensions near the horizon;
 - quiescence search over captures, promotions, and check evasions;
-- static exchange evaluation, futility pruning, and delta pruning;
-- killer and history updates after quiet cutoffs;
+- razoring, reverse futility pruning, and delta pruning;
+- killer, countermove, quiet-history, and capture-history updates;
 - PV, transposition, promotion, MVV-LVA, killer, history, and castling ordering.
 
 The transposition table persists between moves and uses depth-preferred

@@ -16,6 +16,29 @@ Every match:
 
 ## Recorded matches
 
+### Native 2.1 vs native 2.0
+
+The 14-contribution engine upgrade scored 18 wins, 27 draws, and 15 losses
+against the exact 2.0 baseline across 60 games at 30 ms per move. Its 52.5%
+score is approximately +17 Elo head-to-head. The direction is positive, though
+this self-match alone is not statistically decisive.
+
+### Native 2.1 Stockfish 18 gauntlet
+
+The independent 100-game rerun produced 37 wins, 31 draws, and 32 losses:
+
+| Opponent setting | Wins | Draws | Losses | Score |
+| ---: | ---: | ---: | ---: | ---: |
+| 1500 | 18 | 2 | 0 | 95.0% |
+| 1750 | 8 | 11 | 1 | 67.5% |
+| 2000 | 5 | 6 | 9 | 40.0% |
+| 2250 | 5 | 5 | 10 | 37.5% |
+| 2500 | 1 | 7 | 12 | 22.5% |
+
+The logistic fit estimates **2033 Elo with a 95% interval of 1939–2127**, a
+112-point increase over the 2.0 estimate under the identical methodology. No
+game ended by engine crash, illegal move, or forfeit.
+
 ### C++ native engine vs Python+C hybrid
 
 The C++20 engine won all 40 games against the preceding Python+C hybrid at
