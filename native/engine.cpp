@@ -920,7 +920,24 @@ private:
                 Move{}
             );
             if (score >= beta) {
-                return score;
+                if (prior_visits > 0) {
+                    // Avoid null cutoffs near an actual repetition cycle.
+                } else if (depth < 7) {
+                    return score;
+                } else {
+                    int verification = negamax(
+                        board,
+                        depth - 1 - reduction,
+                        beta - 1,
+                        beta,
+                        ply,
+                        false,
+                        previous_move
+                    );
+                    if (verification >= beta) {
+                        return verification;
+                    }
+                }
             }
         }
 
