@@ -1280,7 +1280,7 @@ int uci_loop() {
     while (std::getline(std::cin, line)) {
         try {
             if (line == "uci") {
-                std::cout << "id name Mwahaha Native Engine 2.0\n";
+                std::cout << "id name Mwahaha Native Engine 2.1\n";
                 std::cout << "id author Mohammed Nabid\n";
                 std::cout << "option name Hash type spin default 64 min 1 max 2048\n";
                 std::cout << "option name Move Overhead type spin default 10 min 0 max 5000\n";
