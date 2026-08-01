@@ -2,6 +2,7 @@
 #include <array>
 #include <chrono>
 #include <cctype>
+#include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
@@ -937,8 +938,30 @@ private:
                 ++next_depth;
             }
             int reduction = 0;
-            if (depth >= 3 && index >= 4 && is_quiet && !in_check) {
-                reduction = 1 + (depth >= 6 && index >= 8);
+            if (
+                depth >= 3
+                && index >= 3
+                && is_quiet
+                && !in_check
+                && !gives_check
+            ) {
+                reduction = static_cast<int>(
+                    0.75
+                    + std::log(static_cast<double>(depth))
+                    * std::log(static_cast<double>(index + 1))
+                    / 2.15
+                );
+                int history_score = history_[
+                    static_cast<int>(board.squares[move.from])
+                ][move.to];
+                if (
+                    history_score > 4'000
+                    || move == killers_[ply][0]
+                    || move == counter_move
+                ) {
+                    --reduction;
+                }
+                reduction = std::clamp(reduction, 1, std::max(1, next_depth - 1));
             }
 
             int score;
