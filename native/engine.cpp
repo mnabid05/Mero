@@ -571,6 +571,7 @@ public:
         std::fill(table_.begin(), table_.end(), TTEntry{});
         history_ = {};
         killers_ = {};
+        countermoves_ = {};
     }
 
     struct Result {
@@ -645,6 +646,7 @@ private:
     Zobrist zobrist_;
     std::array<std::array<Move, 2>, MAX_PLY> killers_{};
     std::array<std::array<int, 64>, 128> history_{};
+    std::array<std::array<Move, 64>, 128> countermoves_{};
     std::vector<uint64_t> search_history_;
     uint64_t nodes_ = 0;
     uint16_t generation_ = 0;
@@ -690,7 +692,8 @@ private:
         const Board& board,
         std::vector<Move>& moves,
         const Move& tt_move,
-        int ply
+        int ply,
+        const Move& counter_move = Move{}
     ) {
         auto score = [&](const Move& move) {
             if (tt_move.valid() && move == tt_move) {
@@ -709,6 +712,9 @@ private:
             if (ply < MAX_PLY) {
                 if (move == killers_[ply][0]) value += 700'000;
                 if (move == killers_[ply][1]) value += 690'000;
+            }
+            if (counter_move.valid() && move == counter_move) {
+                value += 680'000;
             }
             value += history_[static_cast<int>(piece)][move.to];
             if (move.flags & CASTLING) value += 25'000;
@@ -787,11 +793,23 @@ private:
             child.make_move(moves[index]);
             int score;
             if (index == 0) {
-                score = -negamax(child, depth - 1, -beta, -alpha, 1, true);
+                score = -negamax(
+                    child, depth - 1, -beta, -alpha, 1, true, moves[index]
+                );
             } else {
-                score = -negamax(child, depth - 1, -alpha - 1, -alpha, 1, true);
+                score = -negamax(
+                    child,
+                    depth - 1,
+                    -alpha - 1,
+                    -alpha,
+                    1,
+                    true,
+                    moves[index]
+                );
                 if (score > alpha && score < beta) {
-                    score = -negamax(child, depth - 1, -beta, -alpha, 1, true);
+                    score = -negamax(
+                        child, depth - 1, -beta, -alpha, 1, true, moves[index]
+                    );
                 }
             }
             if (score > best_score) {
@@ -816,7 +834,8 @@ private:
         int alpha,
         int beta,
         int ply,
-        bool allow_null
+        bool allow_null,
+        const Move& previous_move
     ) {
         ++nodes_;
         check_time();
@@ -874,7 +893,8 @@ private:
                 -beta,
                 -beta + 1,
                 ply + 1,
-                false
+                false,
+                Move{}
             );
             if (score >= beta) {
                 return score;
@@ -886,7 +906,16 @@ private:
             return in_check ? -MATE + ply : 0;
         }
         Move tt_move = entry == nullptr ? Move{} : entry->move;
-        order_moves(board, moves, tt_move, ply);
+        Move counter_move{};
+        if (previous_move.valid()) {
+            char previous_piece = board.squares[previous_move.to];
+            if (previous_piece != '.') {
+                counter_move = countermoves_[
+                    static_cast<int>(previous_piece)
+                ][previous_move.to];
+            }
+        }
+        order_moves(board, moves, tt_move, ply, counter_move);
         int original_alpha = alpha;
         int best_score = -INF;
         Move best{};
@@ -915,7 +944,7 @@ private:
             int score;
             if (index == 0) {
                 score = -negamax(
-                    child, next_depth, -beta, -alpha, ply + 1, true
+                    child, next_depth, -beta, -alpha, ply + 1, true, move
                 );
             } else {
                 score = -negamax(
@@ -924,16 +953,23 @@ private:
                     -alpha - 1,
                     -alpha,
                     ply + 1,
-                    true
+                    true,
+                    move
                 );
                 if (reduction != 0 && score > alpha) {
                     score = -negamax(
-                        child, next_depth, -alpha - 1, -alpha, ply + 1, true
+                        child,
+                        next_depth,
+                        -alpha - 1,
+                        -alpha,
+                        ply + 1,
+                        true,
+                        move
                     );
                 }
                 if (score > alpha && score < beta) {
                     score = -negamax(
-                        child, next_depth, -beta, -alpha, ply + 1, true
+                        child, next_depth, -beta, -alpha, ply + 1, true, move
                     );
                 }
             }
@@ -957,6 +993,14 @@ private:
                     }
                     killers_[ply][1] = killers_[ply][0];
                     killers_[ply][0] = move;
+                    if (previous_move.valid()) {
+                        char previous_piece = board.squares[previous_move.to];
+                        if (previous_piece != '.') {
+                            countermoves_[
+                                static_cast<int>(previous_piece)
+                            ][previous_move.to] = move;
+                        }
+                    }
                 }
                 break;
             }
