@@ -1,12 +1,38 @@
 # Mwahaha Chess Engine
 
-A self-contained original chess engine written in Python.
+A self-contained original chess engine written in Python, C, and C++.
 
 **No Stockfish. No engine wrapper. No chess library. No runtime dependency.**
 
 The project implements its own board representation, legal move generator,
 evaluation, search, time management, UCI protocol, terminal game, and strength
-regression harness.
+regression harness. The strongest UCI engine runs board logic and search in
+C++20, shares the portable C11 evaluation kernel, and keeps Python as a readable
+reference implementation and testing layer.
+
+## Native acceleration
+
+Build the C11 evaluator and C++20 native engine:
+
+```bash
+python3 scripts/build_native.py
+```
+
+The build produces:
+
+```text
+build/native/mwahaha-engine
+build/native/libmwahaha_eval.so    # .dylib on macOS
+```
+
+Use `build/native/mwahaha-engine` as the UCI executable in a chess GUI. The
+Python engine detects the native evaluator library automatically. Without it,
+the dependency-free Python evaluator is used; set `MWAHAHA_PURE_PYTHON=1` to
+force that reference path.
+
+At a 500 ms starting-position search, the C++ engine reached depth 9 at roughly
+1.35 million nodes/second. The Python+C engine searched roughly 22 thousand
+nodes/second on the same machine.
 
 ## Search
 
@@ -20,6 +46,8 @@ regression harness.
 - Check extensions
 - Killer-move and history heuristics
 - MVV-LVA capture ordering
+- Static exchange evaluation for capture ordering
+- Futility and delta pruning
 - Repetition and fifty-move detection inside search
 
 ## Evaluation
@@ -73,11 +101,11 @@ Inside the game, enter `moves`, `fen`, `help`, or `quit`.
 The engine exposes the Universal Chess Interface:
 
 ```bash
-python3 -m chess_ai.uci
+build/native/mwahaha-engine
 ```
 
-After installation, configure the `mwahaha-uci` executable in a UCI-compatible
-GUI.
+The reference Python UCI remains available as `python3 -m chess_ai.uci` or
+`mwahaha-uci`.
 
 ```bash
 python3 -m pip install .
@@ -87,9 +115,10 @@ mwahaha-uci
 
 ## Validation
 
-Run the 33-test suite:
+Build the native engine and run the 43-test suite:
 
 ```bash
+python3 scripts/build_native.py
 python3 -m unittest discover -v
 ```
 
@@ -97,6 +126,7 @@ Validate the legal move generator:
 
 ```bash
 python3 -m chess_ai.perft --depth 4
+build/native/mwahaha-engine --perft 5
 ```
 
 The standard starting position matches the canonical counts:
@@ -106,6 +136,8 @@ The standard starting position matches the canonical counts:
 | 1 | 20 |
 | 2 | 400 |
 | 3 | 8,902 |
+| 4 | 197,281 |
+| 5 | 4,865,609 |
 
 ## Backtesting
 
@@ -127,14 +159,35 @@ Checked-in results:
 | --- | ---: | ---: | ---: | ---: |
 | Native engine vs legacy depth 3 | 4 | 0 | 0 | 100% |
 | Native engine vs legacy depth 2 | 7 | 1 | 0 | 93.75% |
+| Hybrid tactical search vs previous hybrid | 22 | 3 | 15 | 58.75% |
+| C++ native engine vs Python+C hybrid | 40 | 0 | 0 | 100% |
 
 Both matches alternate colors within paired openings. Every decisive game ended
 in checkmate. See [strength methodology](docs/STRENGTH.md) and the
 [machine-readable reports](backtests/).
 
-These results prove a large improvement over the original engine; they do not
-establish a human-platform Elo rating. Strength must be built through continued
-matches against progressively stronger independent opponents.
+Version 2.1 scored 18 wins, 27 draws, and 15 losses against version 2.0. Its
+fresh 100-game Stockfish 18 gauntlet produced 37 wins, 31 draws, and 32 losses.
+The fitted estimate is **2033 Elo (95% interval 1939–2127)** on the tested Apple
+Silicon hardware at 30 ms per move, compared with 1921 for version 2.0 and 1247
+for the Python+C engine under the same methodology. This is not a chess.com
+rating.
+
+Run the external-opponent methodology with:
+
+```bash
+python3 -m chess_ai.gauntlet \
+  --candidate build/native/mwahaha-engine \
+  --opponent /path/to/an/external/uci-engine \
+  --opponent-elo 1750 \
+  --opponent-elo 2000 \
+  --games-per-level 20 \
+  --move-time 30 \
+  --json-out gauntlet.json
+```
+
+External engines are test opponents only and are not included in or required by
+Mwahaha.
 
 ## Project layout
 
@@ -143,6 +196,8 @@ chess_ai/
   board.py       board state, FEN, move generation, and game rules
   model.py       chess constants, coordinates, pieces, and moves
   evaluation.py tapered positional evaluation
+  native.py      optional C evaluator bridge
+  see.py         static exchange evaluation
   hashing.py     deterministic Zobrist keys
   engine.py      advanced native search
   legacy.py      frozen regression baseline
@@ -150,6 +205,11 @@ chess_ai/
   uci.py         chess GUI protocol
   perft.py       move-generator validation
   backtest.py    color-balanced engine matches
+  gauntlet.py    external UCI matches and Elo intervals
+native/
+  evaluation.c   portable C11 evaluation kernel
+  engine.cpp     standalone C++20 board, search, and UCI engine
+scripts/         native build tooling
 backtests/       machine-readable match reports
 docs/            architecture and strength methodology
 tests/           standard-library test suite

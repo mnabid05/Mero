@@ -1,0 +1,24 @@
+{
+  "candidate": "Mwahaha Native Engine 2.1",
+  "baseline": "Mwahaha Native Engine 2.0",
+  "move_time_ms": 30,
+  "max_plies_after_opening": 160,
+  "paired_openings": true,
+  "games": 60,
+  "wins": 18,
+  "draws": 27,
+  "losses": 15,
+  "score_percent": 52.5,
+  "head_to_head_elo_difference": 17,
+  "termination_reasons": {
+    "checkmate": 33,
+    "threefold_repetition": 24,
+    "maximum_plies": 3,
+    "engine_forfeit": 0
+  },
+  "notes": [
+    "The candidate is the 14-contribution search and evaluation upgrade.",
+    "The baseline is the exact previously calibrated 2.0 commit.",
+    "The positive head-to-head result is not statistically decisive by itself."
+  ]
+}

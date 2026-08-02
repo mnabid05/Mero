@@ -1,0 +1,71 @@
+{
+  "candidate": "Mwahaha Native Engine 2.1",
+  "opponent": "Stockfish 18 (external benchmark only)",
+  "hardware": "Apple Silicon, one engine thread",
+  "move_time_ms": 30,
+  "max_plies_after_opening": 160,
+  "paired_openings": true,
+  "total_games": 100,
+  "wins": 37,
+  "draws": 31,
+  "losses": 32,
+  "score_percent": 52.5,
+  "estimated_elo": 2033,
+  "confidence_interval_95": {
+    "low": 1939,
+    "high": 2127
+  },
+  "levels": [
+    {
+      "opponent_elo": 1500,
+      "games": 20,
+      "wins": 18,
+      "draws": 2,
+      "losses": 0,
+      "score_percent": 95.0
+    },
+    {
+      "opponent_elo": 1750,
+      "games": 20,
+      "wins": 8,
+      "draws": 11,
+      "losses": 1,
+      "score_percent": 67.5
+    },
+    {
+      "opponent_elo": 2000,
+      "games": 20,
+      "wins": 5,
+      "draws": 6,
+      "losses": 9,
+      "score_percent": 40.0
+    },
+    {
+      "opponent_elo": 2250,
+      "games": 20,
+      "wins": 5,
+      "draws": 5,
+      "losses": 10,
+      "score_percent": 37.5
+    },
+    {
+      "opponent_elo": 2500,
+      "games": 20,
+      "wins": 1,
+      "draws": 7,
+      "losses": 12,
+      "score_percent": 22.5
+    }
+  ],
+  "termination_reasons": {
+    "checkmate": 69,
+    "threefold_repetition": 16,
+    "maximum_plies": 15,
+    "engine_forfeit": 0
+  },
+  "notes": [
+    "Stockfish was used only as an external UCI test opponent.",
+    "The interval measures this hardware and 30 ms per move control.",
+    "Stockfish UCI_Elo labels are calibration targets, not chess.com ratings."
+  ]
+}

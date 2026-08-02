@@ -1,0 +1,17 @@
+{
+  "candidate": "Python+C engine with SEE and selective pruning",
+  "baseline": "Python+C engine before tactical search changes",
+  "move_time_ms": 30,
+  "max_plies_after_opening": 160,
+  "paired_openings": true,
+  "games": 40,
+  "wins": 22,
+  "draws": 3,
+  "losses": 15,
+  "score_percent": 58.75,
+  "head_to_head_elo_difference": 61,
+  "notes": [
+    "Both versions used the same C11 evaluator and Python board implementation.",
+    "This is a version regression result, not an absolute rating."
+  ]
+}

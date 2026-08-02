@@ -1,0 +1,21 @@
+{
+  "candidate": "Mwahaha Native Engine 2.0",
+  "baseline": "Mwahaha Chess Engine 1.1 Hybrid",
+  "move_time_ms": 30,
+  "max_plies_after_opening": 160,
+  "paired_openings": true,
+  "games": 40,
+  "wins": 40,
+  "draws": 0,
+  "losses": 0,
+  "score_percent": 100.0,
+  "termination_reasons": {
+    "checkmate": 40,
+    "engine_forfeit": 0
+  },
+  "notes": [
+    "The native candidate and Python hybrid share the original C11 evaluator.",
+    "The result isolates compiled move generation, board updates, and search.",
+    "A perfect score does not produce a finite head-to-head Elo estimate."
+  ]
+}

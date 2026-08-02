@@ -10,6 +10,8 @@ from .board import Board
 from .evaluation import Evaluator, MG_VALUES
 from .hashing import ZobristHasher
 from .model import BLACK, Move, WHITE, opponent, piece_color
+from .native import NativeEvaluator, best_available_evaluator
+from .see import capture_value, static_exchange_evaluation
 
 INFINITY = 1_000_000
 MATE_SCORE = 100_000
@@ -55,7 +57,9 @@ class ChessAI:
     depth: int = 6
     movetime_ms: int = 1000
     table_capacity: int = 250_000
-    evaluator: Evaluator = field(default_factory=Evaluator)
+    evaluator: Evaluator | NativeEvaluator = field(
+        default_factory=best_available_evaluator
+    )
     hasher: ZobristHasher = field(default_factory=ZobristHasher)
     nodes: int = field(default=0, init=False)
     qnodes: int = field(default=0, init=False)
@@ -84,7 +88,8 @@ class ChessAI:
 
     @property
     def name(self) -> str:
-        return f"Mwahaha native engine (depth {self.depth})"
+        language = "Python+C" if isinstance(self.evaluator, NativeEvaluator) else "Python"
+        return f"Mwahaha {language} engine (depth {self.depth})"
 
     @property
     def last_result(self) -> SearchResult:
@@ -294,13 +299,29 @@ class ChessAI:
         best_move: Move | None = None
         table_move = entry.best_move if entry else None
         ordered = self._order_moves(board, moves, table_move, ply)
+        static_score = (
+            self.evaluator.evaluate_for_turn(board)
+            if depth <= 2 and not in_check
+            else -INFINITY
+        )
         path[key] = prior_visits + 1
 
         try:
             for index, move in enumerate(ordered):
                 quiet = self._is_quiet(board, move)
                 child = board.after(move)
+                gives_check = child.is_in_check()
+                if (
+                    depth == 1
+                    and index > 0
+                    and quiet
+                    and not gives_check
+                    and static_score + 140 <= alpha
+                ):
+                    continue
                 next_depth = depth - 1
+                if gives_check and depth <= 2:
+                    next_depth += 1
                 reduction = 0
                 if (
                     depth >= 3
@@ -417,8 +438,16 @@ class ChessAI:
 
         ordered = self._order_moves(board, moves, None, ply)
         for move in ordered:
+            child = board.after(move)
+            if (
+                not in_check
+                and not move.promotion
+                and stand_pat + capture_value(board, move) + 140 < alpha
+                and not child.is_in_check()
+            ):
+                continue
             score = -self._quiescence(
-                board.after(move),
+                child,
                 -beta,
                 -alpha,
                 ply + 1,
@@ -448,7 +477,9 @@ class ChessAI:
                 victim = "p" if piece and piece.isupper() else "P"
             score = 0
             if victim and piece:
-                score += 1_000_000
+                exchange = static_exchange_evaluation(board, move)
+                score += 1_000_000 if exchange >= 0 else 150_000
+                score += exchange * 32
                 score += 16 * MG_VALUES[victim.lower()] - MG_VALUES[piece.lower()]
             if move.promotion:
                 score += 900_000 + MG_VALUES[move.promotion]

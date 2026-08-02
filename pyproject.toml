@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mwahaha-chess-engine"
-version = "1.0.0"
-description = "A self-contained original chess engine with advanced native search"
+version = "2.1.0"
+description = "An original Python, C, and C++ chess engine with native search"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
@@ -15,6 +15,7 @@ authors = [{ name = "Mohammed Nabid" }]
 mwahaha-chess = "chess_ai.cli:main"
 mwahaha-uci = "chess_ai.uci:main"
 mwahaha-backtest = "chess_ai.backtest:main"
+mwahaha-gauntlet = "chess_ai.gauntlet:main"
 mwahaha-perft = "chess_ai.perft:main"
 
 [tool.setuptools.packages.find]
