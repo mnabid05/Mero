@@ -1033,12 +1033,16 @@ private:
                 ? entry->static_eval
                 : evaluate(board));
         static_evals_[ply] = static_eval;
+        bool improving = !in_check
+            && ply >= 2
+            && static_evals_[ply - 2] != -INF
+            && static_eval > static_evals_[ply - 2];
         if (
             !in_check
             && depth <= 3
             && beta - alpha == 1
             && std::abs(beta) < MATE - MAX_PLY
-            && static_eval - 85 * depth >= beta
+            && static_eval - (improving ? 65 : 90) * depth >= beta
         ) {
             return static_eval;
         }
@@ -1132,7 +1136,9 @@ private:
                 bool gives_check = board.in_check();
                 if (
                     depth <= 2
-                    && index >= static_cast<std::size_t>(8 + depth * 4)
+                    && index >= static_cast<std::size_t>(
+                        8 + depth * 4 + (improving ? 4 : 0)
+                    )
                     && is_quiet
                     && !in_check
                     && !gives_check
@@ -1171,6 +1177,9 @@ private:
                             || move == killers_[ply][0]
                             || move == counter_move
                         ) {
+                            --reduction;
+                        }
+                        if (improving) {
                             --reduction;
                         }
                         reduction = std::clamp(
