@@ -622,6 +622,7 @@ struct TTEntry {
     uint64_t key = 0;
     int depth = -1;
     int score = 0;
+    int static_eval = INF;
     Bound bound = Bound::Exact;
     Move move{};
     uint16_t generation = 0;
@@ -863,7 +864,8 @@ private:
         int score,
         Bound bound,
         const Move& move,
-        int ply
+        int ply,
+        int static_eval = INF
     ) {
         TTCluster& cluster = table_[key & (table_.size() - 1)];
         TTEntry* target = &cluster.entries[0];
@@ -886,6 +888,7 @@ private:
                 key,
                 depth,
                 score_to_table(score, ply),
+                static_eval,
                 bound,
                 move,
                 generation_
@@ -1001,7 +1004,11 @@ private:
                 return table_score;
             }
         }
-        int static_eval = in_check ? -INF : evaluate(board);
+        int static_eval = in_check
+            ? -INF
+            : (entry != nullptr && entry->static_eval != INF
+                ? entry->static_eval
+                : evaluate(board));
         if (
             !in_check
             && depth <= 3
@@ -1251,7 +1258,7 @@ private:
         Bound bound = best_score <= original_alpha
             ? Bound::Upper
             : (best_score >= beta ? Bound::Lower : Bound::Exact);
-        store(key, depth, best_score, bound, best, ply);
+        store(key, depth, best_score, bound, best, ply, static_eval);
         return best_score;
     }
 
