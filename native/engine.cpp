@@ -550,6 +550,24 @@ struct Board {
     }
 };
 
+class ScopedMove {
+public:
+    ScopedMove(Board& board, const Move& move)
+        : board_(board), move_(move), undo_(board.make_move(move)) {}
+
+    ScopedMove(const ScopedMove&) = delete;
+    ScopedMove& operator=(const ScopedMove&) = delete;
+
+    ~ScopedMove() {
+        board_.unmake_move(move_, undo_);
+    }
+
+private:
+    Board& board_;
+    Move move_;
+    Board::UndoState undo_;
+};
+
 uint64_t splitmix64(uint64_t& state) {
     uint64_t value = (state += 0x9e3779b97f4a7c15ULL);
     value = (value ^ (value >> 30)) * 0xbf58476d1ce4e5b9ULL;
