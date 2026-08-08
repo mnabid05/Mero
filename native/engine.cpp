@@ -627,6 +627,11 @@ struct TTEntry {
     uint16_t generation = 0;
 };
 
+struct TTCluster {
+    static constexpr std::size_t SIZE = 3;
+    std::array<TTEntry, SIZE> entries{};
+};
+
 class Timeout final : public std::exception {};
 
 class Engine {
@@ -637,16 +642,19 @@ public:
 
     void resize_table(std::size_t megabytes) {
         std::size_t bytes = std::max<std::size_t>(1, megabytes) * 1024 * 1024;
-        std::size_t entries = std::max<std::size_t>(1024, bytes / sizeof(TTEntry));
+        std::size_t entries = std::max<std::size_t>(
+            256,
+            bytes / sizeof(TTCluster)
+        );
         std::size_t power = 1;
         while (power * 2 <= entries) {
             power *= 2;
         }
-        table_.assign(power, TTEntry{});
+        table_.assign(power, TTCluster{});
     }
 
     void clear() {
-        std::fill(table_.begin(), table_.end(), TTEntry{});
+        std::fill(table_.begin(), table_.end(), TTCluster{});
         history_ = {};
         capture_history_ = {};
         killers_ = {};
@@ -722,7 +730,7 @@ public:
     }
 
 private:
-    std::vector<TTEntry> table_;
+    std::vector<TTCluster> table_;
     Zobrist zobrist_;
     std::array<std::array<Move, 2>, MAX_PLY> killers_{};
     std::array<std::array<int, 64>, 128> history_{};
@@ -828,8 +836,13 @@ private:
     }
 
     TTEntry* probe(uint64_t key) {
-        TTEntry& entry = table_[key & (table_.size() - 1)];
-        return entry.key == key ? &entry : nullptr;
+        TTCluster& cluster = table_[key & (table_.size() - 1)];
+        for (TTEntry& entry : cluster.entries) {
+            if (entry.depth >= 0 && entry.key == key) {
+                return &entry;
+            }
+        }
+        return nullptr;
     }
 
     static int score_to_table(int score, int ply) {
@@ -852,14 +865,24 @@ private:
         const Move& move,
         int ply
     ) {
-        TTEntry& entry = table_[key & (table_.size() - 1)];
-        bool same_position = entry.key == key;
-        bool stale = entry.generation != generation_;
-        if (
-            (same_position && depth >= entry.depth)
-            || (!same_position && (stale || depth + 2 >= entry.depth))
-        ) {
-            entry = {
+        TTCluster& cluster = table_[key & (table_.size() - 1)];
+        TTEntry* target = &cluster.entries[0];
+        for (TTEntry& candidate : cluster.entries) {
+            if (candidate.depth >= 0 && candidate.key == key) {
+                target = &candidate;
+                break;
+            }
+            int candidate_priority = candidate.depth
+                - (candidate.generation == generation_ ? 0 : 8);
+            int target_priority = target->depth
+                - (target->generation == generation_ ? 0 : 8);
+            if (candidate_priority < target_priority) {
+                target = &candidate;
+            }
+        }
+        bool same_position = target->depth >= 0 && target->key == key;
+        if (!same_position || depth >= target->depth || bound == Bound::Exact) {
+            *target = {
                 key,
                 depth,
                 score_to_table(score, ply),
