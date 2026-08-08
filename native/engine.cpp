@@ -522,17 +522,22 @@ struct Board {
         }
     }
 
-    std::vector<Move> legal_moves(bool captures_only = false) const {
+    std::vector<Move> legal_moves_in_place(bool captures_only = false) {
         std::vector<Move> legal;
         bool moving_white = white_to_move;
         for (const Move& move : pseudo_moves(captures_only)) {
-            Board child = *this;
-            child.make_move(move);
-            if (!child.in_check(moving_white)) {
+            UndoState undo = make_move(move);
+            if (!in_check(moving_white)) {
                 legal.push_back(move);
             }
+            unmake_move(move, undo);
         }
         return legal;
+    }
+
+    std::vector<Move> legal_moves(bool captures_only = false) const {
+        Board position = *this;
+        return position.legal_moves_in_place(captures_only);
     }
 
     Move find_move(const std::string& uci) const {
@@ -1262,7 +1267,7 @@ uint64_t perft_in_place(Board& board, int depth) {
         return 1;
     }
     uint64_t nodes = 0;
-    for (const Move& move : board.legal_moves()) {
+    for (const Move& move : board.legal_moves_in_place()) {
         Board::UndoState undo = board.make_move(move);
         nodes += perft_in_place(board, depth - 1);
         board.unmake_move(move, undo);
