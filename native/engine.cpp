@@ -62,6 +62,43 @@ std::string square_name(int square) {
     return result;
 }
 
+uint64_t splitmix64(uint64_t& state) {
+    uint64_t value = (state += 0x9e3779b97f4a7c15ULL);
+    value = (value ^ (value >> 30)) * 0xbf58476d1ce4e5b9ULL;
+    value = (value ^ (value >> 27)) * 0x94d049bb133111ebULL;
+    return value ^ (value >> 31);
+}
+
+struct Board;
+
+struct Zobrist {
+    std::array<std::array<uint64_t, 64>, 12> pieces{};
+    std::array<uint64_t, 16> castling{};
+    std::array<uint64_t, 8> ep_file{};
+    uint64_t turn = 0;
+
+    Zobrist() {
+        uint64_t state = 0x4d77616861686121ULL;
+        for (auto& piece : pieces) {
+            for (uint64_t& square : piece) {
+                square = splitmix64(state);
+            }
+        }
+        for (uint64_t& value : castling) value = splitmix64(state);
+        for (uint64_t& value : ep_file) value = splitmix64(state);
+        turn = splitmix64(state);
+    }
+
+    static int piece_index(char piece) {
+        std::string symbols = "PNBRQKpnbrqk";
+        return static_cast<int>(symbols.find(piece));
+    }
+
+    uint64_t hash(const Board& board) const;
+};
+
+extern const Zobrist ZOBRIST;
+
 struct Move {
     int from = -1;
     int to = -1;
@@ -568,53 +605,24 @@ private:
     Board::UndoState undo_;
 };
 
-uint64_t splitmix64(uint64_t& state) {
-    uint64_t value = (state += 0x9e3779b97f4a7c15ULL);
-    value = (value ^ (value >> 30)) * 0xbf58476d1ce4e5b9ULL;
-    value = (value ^ (value >> 27)) * 0x94d049bb133111ebULL;
-    return value ^ (value >> 31);
+uint64_t Zobrist::hash(const Board& board) const {
+    uint64_t key = 0;
+    for (int square = 0; square < 64; ++square) {
+        if (board.squares[square] != '.') {
+            key ^= pieces[piece_index(board.squares[square])][square];
+        }
+    }
+    key ^= castling[board.castling];
+    if (board.en_passant >= 0) {
+        key ^= ep_file[board.en_passant % 8];
+    }
+    if (!board.white_to_move) {
+        key ^= turn;
+    }
+    return key;
 }
 
-struct Zobrist {
-    std::array<std::array<uint64_t, 64>, 12> pieces{};
-    std::array<uint64_t, 16> castling{};
-    std::array<uint64_t, 8> ep_file{};
-    uint64_t turn = 0;
-
-    Zobrist() {
-        uint64_t state = 0x4d77616861686121ULL;
-        for (auto& piece : pieces) {
-            for (uint64_t& square : piece) {
-                square = splitmix64(state);
-            }
-        }
-        for (uint64_t& value : castling) value = splitmix64(state);
-        for (uint64_t& value : ep_file) value = splitmix64(state);
-        turn = splitmix64(state);
-    }
-
-    static int piece_index(char piece) {
-        std::string symbols = "PNBRQKpnbrqk";
-        return static_cast<int>(symbols.find(piece));
-    }
-
-    uint64_t hash(const Board& board) const {
-        uint64_t key = 0;
-        for (int square = 0; square < 64; ++square) {
-            if (board.squares[square] != '.') {
-                key ^= pieces[piece_index(board.squares[square])][square];
-            }
-        }
-        key ^= castling[board.castling];
-        if (board.en_passant >= 0) {
-            key ^= ep_file[board.en_passant % 8];
-        }
-        if (!board.white_to_move) {
-            key ^= turn;
-        }
-        return key;
-    }
-};
+const Zobrist ZOBRIST{};
 
 enum class Bound : uint8_t { Exact, Lower, Upper };
 
