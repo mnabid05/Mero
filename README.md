@@ -30,9 +30,10 @@ Python engine detects the native evaluator library automatically. Without it,
 the dependency-free Python evaluator is used; set `MWAHAHA_PURE_PYTHON=1` to
 force that reference path.
 
-At a 500 ms starting-position search, the C++ engine reached depth 9 at roughly
-1.35 million nodes/second. The Python+C engine searched roughly 22 thousand
-nodes/second on the same machine.
+Across three 500 ms starting-position probes, the architecture build averaged
+roughly 1.447 million nodes/second, up from 1.188 million for its frozen native
+baseline. The Python+C engine searched roughly 22 thousand nodes/second on the
+same machine.
 
 ## Search
 
@@ -40,11 +41,14 @@ nodes/second on the same machine.
 - Principal variation search
 - Alpha-beta pruning with aspiration windows
 - Zobrist-keyed transposition table
+- Incremental Zobrist updates with verified make/unmake state
+- Three-entry transposition clusters with cached static evaluation
 - Quiescence search for tactical stability
 - Null-move pruning
 - Late-move reductions
 - Check extensions
 - Killer-move and history heuristics
+- Continuation history and threat-aware quiet ordering
 - MVV-LVA capture ordering
 - Static exchange evaluation for capture ordering
 - Futility and delta pruning
@@ -115,7 +119,7 @@ mwahaha-uci
 
 ## Validation
 
-Build the native engine and run the 43-test suite:
+Build the native engine and run the 46-test suite:
 
 ```bash
 python3 scripts/build_native.py
@@ -157,6 +161,7 @@ Checked-in results:
 
 | Match | Wins | Draws | Losses | Score |
 | --- | ---: | ---: | ---: | ---: |
+| Architecture candidate vs promotion-search baseline | 7 | 12 | 1 | 65% |
 | Native engine vs legacy depth 3 | 4 | 0 | 0 | 100% |
 | Native engine vs legacy depth 2 | 7 | 1 | 0 | 93.75% |
 | Hybrid tactical search vs previous hybrid | 22 | 3 | 15 | 58.75% |
