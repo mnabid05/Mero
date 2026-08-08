@@ -1272,9 +1272,35 @@ private:
         ++nodes_;
         check_time();
         bool in_check = board.in_check();
-        int stand_pat = evaluate(board);
+        uint64_t key = zobrist_.hash(board);
+        TTEntry* entry = probe(key);
+        if (entry != nullptr && entry->depth >= 0) {
+            int table_score = score_from_table(entry->score, ply);
+            if (entry->bound == Bound::Exact) return table_score;
+            if (entry->bound == Bound::Lower && table_score >= beta) {
+                return table_score;
+            }
+            if (entry->bound == Bound::Upper && table_score <= alpha) {
+                return table_score;
+            }
+        }
+        int original_alpha = alpha;
+        int stand_pat = in_check
+            ? -INF
+            : (entry != nullptr && entry->static_eval != INF
+                ? entry->static_eval
+                : evaluate(board));
         if (!in_check) {
             if (stand_pat >= beta) {
+                store(
+                    key,
+                    0,
+                    stand_pat,
+                    Bound::Lower,
+                    Move{},
+                    ply,
+                    stand_pat
+                );
                 return stand_pat;
             }
             alpha = std::max(alpha, stand_pat);
@@ -1286,7 +1312,9 @@ private:
         if (moves.empty()) {
             return in_check ? -MATE + ply : alpha;
         }
-        order_moves(board, moves, Move{}, ply);
+        Move tt_move = entry == nullptr ? Move{} : entry->move;
+        order_moves(board, moves, tt_move, ply);
+        Move best{};
         for (const Move& move : moves) {
             if (!in_check && move.promotion == '\0'
                 && stand_pat + capture_value(board, move) + 140 < alpha) {
@@ -1295,10 +1323,32 @@ private:
             ScopedMove applied(board, move);
             int score = -quiescence(board, -beta, -alpha, ply + 1, qply + 1);
             if (score >= beta) {
+                store(
+                    key,
+                    0,
+                    score,
+                    Bound::Lower,
+                    move,
+                    ply,
+                    in_check ? INF : stand_pat
+                );
                 return score;
             }
-            alpha = std::max(alpha, score);
+            if (score > alpha) {
+                alpha = score;
+                best = move;
+            }
         }
+        Bound bound = alpha > original_alpha ? Bound::Exact : Bound::Upper;
+        store(
+            key,
+            0,
+            alpha,
+            bound,
+            best,
+            ply,
+            in_check ? INF : stand_pat
+        );
         return alpha;
     }
 
