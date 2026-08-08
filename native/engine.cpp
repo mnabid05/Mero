@@ -137,6 +137,7 @@ struct Board {
         int en_passant = -1;
         int halfmove = 0;
         int fullmove = 1;
+        uint64_t key = 0;
     };
 
     std::array<char, 64> squares{};
@@ -475,7 +476,8 @@ struct Board {
             castling,
             en_passant,
             halfmove,
-            fullmove
+            fullmove,
+            key
         };
         if (move.flags & EN_PASSANT) {
             captured_square = move.to + (moving_white ? 8 : -8);
@@ -485,24 +487,46 @@ struct Board {
             squares[captured_square] = '.';
         }
 
+        key ^= ZOBRIST.castling[castling];
+        if (en_passant >= 0) {
+            key ^= ZOBRIST.ep_file[en_passant % 8];
+        }
+        key ^= ZOBRIST.turn;
+        key ^= ZOBRIST.pieces[Zobrist::piece_index(piece)][move.from];
+        if (captured != '.') {
+            key ^= ZOBRIST.pieces[
+                Zobrist::piece_index(captured)
+            ][captured_square];
+        }
+
         squares[move.from] = '.';
-        squares[move.to] = move.promotion == '\0'
+        char placed = move.promotion == '\0'
             ? piece
             : static_cast<char>(
                 moving_white ? std::toupper(move.promotion) : move.promotion
             );
+        squares[move.to] = placed;
+        key ^= ZOBRIST.pieces[Zobrist::piece_index(placed)][move.to];
 
         if (move.flags & CASTLING) {
             if (move.to == 62) {
+                key ^= ZOBRIST.pieces[Zobrist::piece_index('R')][63];
+                key ^= ZOBRIST.pieces[Zobrist::piece_index('R')][61];
                 squares[61] = squares[63];
                 squares[63] = '.';
             } else if (move.to == 58) {
+                key ^= ZOBRIST.pieces[Zobrist::piece_index('R')][56];
+                key ^= ZOBRIST.pieces[Zobrist::piece_index('R')][59];
                 squares[59] = squares[56];
                 squares[56] = '.';
             } else if (move.to == 6) {
+                key ^= ZOBRIST.pieces[Zobrist::piece_index('r')][7];
+                key ^= ZOBRIST.pieces[Zobrist::piece_index('r')][5];
                 squares[5] = squares[7];
                 squares[7] = '.';
             } else if (move.to == 2) {
+                key ^= ZOBRIST.pieces[Zobrist::piece_index('r')][0];
+                key ^= ZOBRIST.pieces[Zobrist::piece_index('r')][3];
                 squares[3] = squares[0];
                 squares[0] = '.';
             }
@@ -526,6 +550,10 @@ struct Board {
             ++fullmove;
         }
         white_to_move = !white_to_move;
+        key ^= ZOBRIST.castling[castling];
+        if (en_passant >= 0) {
+            key ^= ZOBRIST.ep_file[en_passant % 8];
+        }
         return undo;
     }
 
@@ -535,6 +563,7 @@ struct Board {
         en_passant = undo.en_passant;
         halfmove = undo.halfmove;
         fullmove = undo.fullmove;
+        key = undo.key;
 
         if (move.flags & CASTLING) {
             if (move.to == 62) {
