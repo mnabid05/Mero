@@ -926,7 +926,7 @@ private:
     }
 
     int negamax(
-        const Board& board,
+        Board& board,
         int depth,
         int alpha,
         int beta,
@@ -1045,7 +1045,7 @@ private:
             --depth;
         }
 
-        auto moves = board.legal_moves();
+        auto moves = board.legal_moves_in_place();
         if (moves.empty()) {
             return in_check ? -MATE + ply : 0;
         }
@@ -1070,85 +1070,109 @@ private:
         for (std::size_t index = 0; index < moves.size(); ++index) {
             const Move& move = moves[index];
             bool is_quiet = quiet(board, move);
-            Board child = board;
-            child.make_move(move);
-            bool gives_check = child.in_check();
-            if (
-                depth <= 2
-                && index >= static_cast<std::size_t>(8 + depth * 4)
-                && is_quiet
-                && !in_check
-                && !gives_check
-                && static_eval + 110 * depth <= alpha
-            ) {
-                continue;
-            }
-            if (depth == 1 && index > 0 && is_quiet && !gives_check
-                && static_score + 140 <= alpha) {
-                continue;
-            }
-            int next_depth = depth - 1;
-            if (gives_check && depth <= 2) {
-                ++next_depth;
-            }
-            int reduction = 0;
-            if (
-                depth >= 3
-                && index >= 3
-                && is_quiet
-                && !in_check
-                && !gives_check
-            ) {
-                reduction = static_cast<int>(
-                    0.75
-                    + std::log(static_cast<double>(depth))
-                    * std::log(static_cast<double>(index + 1))
-                    / 2.15
-                );
-                int history_score = history_[
-                    static_cast<int>(board.squares[move.from])
-                ][move.to];
+            char moving_piece = board.squares[move.from];
+            int score = -INF;
+            bool pruned = false;
+            {
+                ScopedMove applied(board, move);
+                bool gives_check = board.in_check();
                 if (
-                    history_score > 4'000
-                    || move == killers_[ply][0]
-                    || move == counter_move
+                    depth <= 2
+                    && index >= static_cast<std::size_t>(8 + depth * 4)
+                    && is_quiet
+                    && !in_check
+                    && !gives_check
+                    && static_eval + 110 * depth <= alpha
                 ) {
-                    --reduction;
+                    pruned = true;
                 }
-                reduction = std::clamp(reduction, 1, std::max(1, next_depth - 1));
-            }
+                if (depth == 1 && index > 0 && is_quiet && !gives_check
+                    && static_score + 140 <= alpha) {
+                    pruned = true;
+                }
+                if (!pruned) {
+                    int next_depth = depth - 1;
+                    if (gives_check && depth <= 2) {
+                        ++next_depth;
+                    }
+                    int reduction = 0;
+                    if (
+                        depth >= 3
+                        && index >= 3
+                        && is_quiet
+                        && !in_check
+                        && !gives_check
+                    ) {
+                        reduction = static_cast<int>(
+                            0.75
+                            + std::log(static_cast<double>(depth))
+                            * std::log(static_cast<double>(index + 1))
+                            / 2.15
+                        );
+                        int history_score = history_[
+                            static_cast<int>(moving_piece)
+                        ][move.to];
+                        if (
+                            history_score > 4'000
+                            || move == killers_[ply][0]
+                            || move == counter_move
+                        ) {
+                            --reduction;
+                        }
+                        reduction = std::clamp(
+                            reduction,
+                            1,
+                            std::max(1, next_depth - 1)
+                        );
+                    }
 
-            int score;
-            if (index == 0) {
-                score = -negamax(
-                    child, next_depth, -beta, -alpha, ply + 1, true, move
-                );
-            } else {
-                score = -negamax(
-                    child,
-                    std::max(0, next_depth - reduction),
-                    -alpha - 1,
-                    -alpha,
-                    ply + 1,
-                    true,
-                    move
-                );
-                if (reduction != 0 && score > alpha) {
-                    score = -negamax(
-                        child,
-                        next_depth,
-                        -alpha - 1,
-                        -alpha,
-                        ply + 1,
-                        true,
-                        move
-                    );
+                    if (index == 0) {
+                        score = -negamax(
+                            board,
+                            next_depth,
+                            -beta,
+                            -alpha,
+                            ply + 1,
+                            true,
+                            move
+                        );
+                    } else {
+                        score = -negamax(
+                            board,
+                            std::max(0, next_depth - reduction),
+                            -alpha - 1,
+                            -alpha,
+                            ply + 1,
+                            true,
+                            move
+                        );
+                        if (reduction != 0 && score > alpha) {
+                            score = -negamax(
+                                board,
+                                next_depth,
+                                -alpha - 1,
+                                -alpha,
+                                ply + 1,
+                                true,
+                                move
+                            );
+                        }
+                        if (score > alpha && score < beta) {
+                            score = -negamax(
+                                board,
+                                next_depth,
+                                -beta,
+                                -alpha,
+                                ply + 1,
+                                true,
+                                move
+                            );
+                        }
+                    }
                 }
-                if (score > alpha && score < beta) {
-                    score = -negamax(
-                        child, next_depth, -beta, -alpha, ply + 1, true, move
-                    );
-                }
+            }
+            if (pruned) {
+                continue;
             }
             if (score > best_score) {
                 best_score = score;
@@ -1160,7 +1184,7 @@ private:
             if (alpha >= beta) {
                 if (is_quiet) {
                     int bonus = std::min(16'384, depth * depth * 32);
-                    update_history(board.squares[move.from], move.to, bonus);
+                    update_history(moving_piece, move.to, bonus);
                     for (const Move& previous : quiets_tried) {
                         update_history(
                             board.squares[previous.from],
@@ -1181,7 +1205,7 @@ private:
                 } else {
                     int bonus = std::min(16'384, depth * depth * 24);
                     update_capture_history(
-                        board.squares[move.from],
+                        moving_piece,
                         move.to,
                         bonus
                     );
