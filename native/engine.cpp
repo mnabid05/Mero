@@ -1528,6 +1528,25 @@ uint64_t perft(Board board, int depth) {
     return perft_in_place(board, depth);
 }
 
+bool verify_keys(Board& board, int depth) {
+    if (board.key != ZOBRIST.hash(board)) {
+        return false;
+    }
+    if (depth == 0) {
+        return true;
+    }
+    uint64_t original_key = board.key;
+    for (const Move& move : board.legal_moves_in_place()) {
+        Board::UndoState undo = board.make_move(move);
+        bool valid = verify_keys(board, depth - 1);
+        board.unmake_move(move, undo);
+        if (!valid || board.key != original_key) {
+            return false;
+        }
+    }
+    return true;
+}
+
 std::vector<std::string> split(const std::string& input) {
     std::istringstream stream(input);
     std::vector<std::string> tokens;
@@ -1678,6 +1697,24 @@ int uci_loop() {
 }  // namespace
 
 int main(int argc, char** argv) {
+    if (argc == 3 && std::string(argv[1]) == "--verify-keys") {
+        Board board = Board::starting();
+        bool valid = verify_keys(board, std::stoi(argv[2]));
+        std::cout << (valid ? "keys ok\n" : "key mismatch\n");
+        return valid ? 0 : 1;
+    }
+    if (argc >= 4 && std::string(argv[1]) == "--verify-keys-fen") {
+        int depth = std::stoi(argv[2]);
+        std::ostringstream fen;
+        for (int index = 3; index < argc; ++index) {
+            if (index != 3) fen << ' ';
+            fen << argv[index];
+        }
+        Board board = Board::from_fen(fen.str());
+        bool valid = verify_keys(board, depth);
+        std::cout << (valid ? "keys ok\n" : "key mismatch\n");
+        return valid ? 0 : 1;
+    }
     if (argc == 3 && std::string(argv[1]) == "--perft") {
         int depth = std::stoi(argv[2]);
         auto started = std::chrono::steady_clock::now();
