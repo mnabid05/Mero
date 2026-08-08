@@ -681,6 +681,7 @@ public:
     ) {
         nodes_ = 0;
         node_limit_ = node_limit;
+        static_evals_.fill(-INF);
         ++generation_;
         search_history_ = game_history;
         deadline_ = std::chrono::steady_clock::now()
@@ -741,6 +742,7 @@ private:
     std::array<std::array<int, 64>, 128> history_{};
     std::array<std::array<int, 64>, 128> capture_history_{};
     std::array<std::array<Move, 64>, 128> countermoves_{};
+    std::array<int, MAX_PLY> static_evals_{};
     std::vector<uint64_t> search_history_;
     uint64_t nodes_ = 0;
     uint64_t node_limit_ = 0;
@@ -1030,6 +1032,7 @@ private:
             : (entry != nullptr && entry->static_eval != INF
                 ? entry->static_eval
                 : evaluate(board));
+        static_evals_[ply] = static_eval;
         if (
             !in_check
             && depth <= 3
