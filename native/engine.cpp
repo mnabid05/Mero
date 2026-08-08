@@ -146,6 +146,7 @@ struct Board {
     int en_passant = -1;
     int halfmove = 0;
     int fullmove = 1;
+    uint64_t key = 0;
 
     Board() {
         squares.fill('.');
@@ -195,6 +196,7 @@ struct Board {
             board.castling |= BLACK_QUEEN_SIDE;
         }
         board.en_passant = ep == "-" ? -1 : square_from_name(ep);
+        board.key = ZOBRIST.hash(board);
         return board;
     }
 
