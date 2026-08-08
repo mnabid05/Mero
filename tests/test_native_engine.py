@@ -31,11 +31,25 @@ class NativeEngineTests(unittest.TestCase):
         self.assertIsNotNone(match, result.stdout)
         return int(match.group(1))
 
+    def native_verify_keys(self, fen: str, depth: int) -> None:
+        result = subprocess.run(
+            [NATIVE_ENGINE, "--verify-keys-fen", str(depth), fen],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.stdout.strip(), "keys ok")
+
     def test_special_rule_positions_match_reference(self):
         for fen in POSITIONS:
             with self.subTest(fen=fen):
                 expected = perft(Board.from_fen(fen), 3)
                 self.assertEqual(self.native_perft(fen, 3), expected)
+
+    def test_incremental_keys_cover_special_moves(self):
+        for fen in POSITIONS:
+            with self.subTest(fen=fen):
+                self.native_verify_keys(fen, 3)
 
     def test_native_uci_returns_legal_move(self):
         commands = "uci\nisready\nposition startpos\ngo movetime 50\nquit\n"
