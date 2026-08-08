@@ -67,6 +67,22 @@ class NativeEngineTests(unittest.TestCase):
         )
         self.assertIn("bestmove h2a2", result.stdout)
 
+    def test_native_uci_honors_node_limit_and_reports_hashfull(self):
+        commands = "uci\nposition startpos\ngo nodes 10000\nquit\n"
+        result = subprocess.run(
+            [NATIVE_ENGINE],
+            input=commands,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        nodes = re.search(r"\bnodes (\d+)", result.stdout)
+        hashfull = re.search(r"\bhashfull (\d+)", result.stdout)
+        self.assertIsNotNone(nodes, result.stdout)
+        self.assertIsNotNone(hashfull, result.stdout)
+        self.assertLessEqual(int(nodes.group(1)), 12048)
+        self.assertGreaterEqual(int(hashfull.group(1)), 0)
+
 
 if __name__ == "__main__":
     unittest.main()
