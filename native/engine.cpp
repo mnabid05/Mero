@@ -1233,7 +1233,7 @@ private:
     }
 
     int quiescence(
-        const Board& board,
+        Board& board,
         int alpha,
         int beta,
         int ply,
@@ -1252,7 +1252,7 @@ private:
                 return stand_pat;
             }
         }
-        auto moves = board.legal_moves(!in_check);
+        auto moves = board.legal_moves_in_place(!in_check);
         if (moves.empty()) {
             return in_check ? -MATE + ply : alpha;
         }
@@ -1262,9 +1262,8 @@ private:
                 && stand_pat + capture_value(board, move) + 140 < alpha) {
                 continue;
             }
-            Board child = board;
-            child.make_move(move);
-            int score = -quiescence(child, -beta, -alpha, ply + 1, qply + 1);
+            ScopedMove applied(board, move);
+            int score = -quiescence(board, -beta, -alpha, ply + 1, qply + 1);
             if (score >= beta) {
                 return score;
             }
