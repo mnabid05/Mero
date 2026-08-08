@@ -16,6 +16,18 @@ Every match:
 
 ## Recorded matches
 
+### Architecture candidate vs promotion-search baseline
+
+The reversible-state and cache architecture build scored 7 wins, 12 draws, and
+1 loss against commit `c017e04` across 20 paired games at 50 ms per move. Its
+65% score is approximately +108 Elo head-to-head. The candidate scored 7/10 as
+White and 6/10 as Black, with no illegal moves, crashes, or forfeits.
+
+The same build averaged roughly 1.447 million nodes/second over three 500 ms
+starting-position runs, versus 1.188 million for the frozen baseline. This
+20-game result is a positive regression gate, not a statistically conclusive
+rating claim. See `backtests/native-architecture-vs-2.1-20.json`.
+
 ### Native 2.1 vs native 2.0
 
 The 14-contribution engine upgrade scored 18 wins, 27 draws, and 15 losses
