@@ -1257,17 +1257,21 @@ private:
     }
 };
 
-uint64_t perft(const Board& board, int depth) {
+uint64_t perft_in_place(Board& board, int depth) {
     if (depth == 0) {
         return 1;
     }
     uint64_t nodes = 0;
     for (const Move& move : board.legal_moves()) {
-        Board child = board;
-        child.make_move(move);
-        nodes += perft(child, depth - 1);
+        Board::UndoState undo = board.make_move(move);
+        nodes += perft_in_place(board, depth - 1);
+        board.unmake_move(move, undo);
     }
     return nodes;
+}
+
+uint64_t perft(Board board, int depth) {
+    return perft_in_place(board, depth);
 }
 
 std::vector<std::string> split(const std::string& input) {
