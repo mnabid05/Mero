@@ -667,6 +667,7 @@ public:
         int score = 0;
         int depth = 0;
         uint64_t nodes = 0;
+        int hashfull = 0;
         long long elapsed_ms = 0;
         std::vector<Move> pv;
     };
@@ -723,6 +724,7 @@ public:
             }
         }
         result.nodes = nodes_;
+        result.hashfull = hashfull();
         result.elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::steady_clock::now() - started
         ).count();
@@ -741,6 +743,20 @@ private:
     uint64_t nodes_ = 0;
     uint16_t generation_ = 0;
     std::chrono::steady_clock::time_point deadline_{};
+
+    int hashfull() const {
+        std::size_t sample = std::min<std::size_t>(1000, table_.size());
+        std::size_t occupied = 0;
+        for (std::size_t index = 0; index < sample; ++index) {
+            for (const TTEntry& entry : table_[index].entries) {
+                occupied += entry.depth >= 0
+                    && entry.generation == generation_;
+            }
+        }
+        return static_cast<int>(
+            occupied * 1000 / std::max<std::size_t>(1, sample * TTCluster::SIZE)
+        );
+    }
 
     void check_time() {
         if ((nodes_ & 2047ULL) == 0
@@ -1526,6 +1542,7 @@ int uci_loop() {
                     << " score cp " << result.score
                     << " nodes " << result.nodes
                     << " nps " << nps
+                    << " hashfull " << result.hashfull
                     << " time " << result.elapsed_ms
                     << " pv";
                 for (const Move& move : result.pv) {
