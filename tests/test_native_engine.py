@@ -34,8 +34,8 @@ class NativeEngineTests(unittest.TestCase):
     def test_special_rule_positions_match_reference(self):
         for fen in POSITIONS:
             with self.subTest(fen=fen):
-                expected = perft(Board.from_fen(fen), 2)
-                self.assertEqual(self.native_perft(fen, 2), expected)
+                expected = perft(Board.from_fen(fen), 3)
+                self.assertEqual(self.native_perft(fen, 3), expected)
 
     def test_native_uci_returns_legal_move(self):
         commands = "uci\nisready\nposition startpos\ngo movetime 50\nquit\n"
