@@ -1541,8 +1541,7 @@ std::vector<std::string> split(const std::string& input) {
 void parse_position(
     Board& board,
     const std::string& command,
-    std::vector<uint64_t>& history,
-    const Zobrist& hasher
+    std::vector<uint64_t>& history
 ) {
     auto tokens = split(command);
     if (tokens.size() < 2) {
@@ -1575,11 +1574,11 @@ void parse_position(
         throw std::invalid_argument("position requires startpos or fen");
     }
     history.clear();
-    history.push_back(hasher.hash(board));
+    history.push_back(board.key);
     for (std::size_t index = moves_index; index < tokens.size(); ++index) {
         Move move = board.find_move(tokens[index]);
         board.make_move(move);
-        history.push_back(hasher.hash(board));
+        history.push_back(board.key);
     }
 }
 
@@ -1594,8 +1593,7 @@ int option_value(const std::vector<std::string>& tokens, const std::string& name
 int uci_loop() {
     Board board = Board::starting();
     Engine engine;
-    Zobrist history_hasher;
-    std::vector<uint64_t> game_history{history_hasher.hash(board)};
+    std::vector<uint64_t> game_history{board.key};
     int overhead = 10;
     std::string line;
     while (std::getline(std::cin, line)) {
@@ -1610,7 +1608,7 @@ int uci_loop() {
                 std::cout << "readyok\n" << std::flush;
             } else if (line == "ucinewgame") {
                 board = Board::starting();
-                game_history = {history_hasher.hash(board)};
+                game_history = {board.key};
                 engine.clear();
             } else if (line.rfind("setoption name Hash value ", 0) == 0) {
                 engine.resize_table(static_cast<std::size_t>(
@@ -1621,7 +1619,7 @@ int uci_loop() {
             ) {
                 overhead = std::max(0, std::stoi(line.substr(39)));
             } else if (line.rfind("position ", 0) == 0) {
-                parse_position(board, line, game_history, history_hasher);
+                parse_position(board, line, game_history);
             } else if (line.rfind("go", 0) == 0) {
                 auto tokens = split(line);
                 int requested_depth = option_value(tokens, "depth");
