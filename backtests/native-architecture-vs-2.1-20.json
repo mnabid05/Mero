@@ -1,0 +1,249 @@
+{
+  "candidate": "Mwahaha architecture candidate (c7ec9b1)",
+  "opponent": "Mwahaha promotion-search baseline (c017e04)",
+  "move_time_ms": 50,
+  "max_plies": 160,
+  "total_games": 20,
+  "wins": 7,
+  "draws": 12,
+  "losses": 1,
+  "score_percent": 65.0,
+  "estimate": {
+    "elo": 2108,
+    "confidence_low": 1948,
+    "confidence_high": 2267,
+    "confidence_percent": 95
+  },
+  "levels": [
+    {
+      "opponent_elo": 2000,
+      "games": 20,
+      "wins": 7,
+      "draws": 12,
+      "losses": 1,
+      "score_percent": 65.0
+    }
+  ],
+  "games": [
+    {
+      "game": 1,
+      "opponent_elo": 2000,
+      "opening": "Open Game",
+      "candidate_color": "white",
+      "result": "1/2-1/2",
+      "candidate_score": 0.5,
+      "reason": "threefold repetition",
+      "plies": 86,
+      "final_fen": "8/5p1k/6p1/Q1P4p/2q5/3b1P2/2r2BPP/4R1K1 w - - 26 44"
+    },
+    {
+      "game": 2,
+      "opponent_elo": 2000,
+      "opening": "Open Game",
+      "candidate_color": "black",
+      "result": "1/2-1/2",
+      "candidate_score": 0.5,
+      "reason": "threefold repetition",
+      "plies": 129,
+      "final_fen": "2Q5/8/1P1K4/Q7/8/5k2/8/8 b - - 8 65"
+    },
+    {
+      "game": 3,
+      "opponent_elo": 2000,
+      "opening": "Queen's Gambit",
+      "candidate_color": "white",
+      "result": "1/2-1/2",
+      "candidate_score": 0.5,
+      "reason": "threefold repetition",
+      "plies": 70,
+      "final_fen": "4k3/2R3pp/2n1rp2/p7/2p3PP/4B3/4rP2/2KR4 w - - 14 36"
+    },
+    {
+      "game": 4,
+      "opponent_elo": 2000,
+      "opening": "Queen's Gambit",
+      "candidate_color": "black",
+      "result": "0-1",
+      "candidate_score": 1.0,
+      "reason": "checkmate",
+      "plies": 108,
+      "final_fen": "6k1/1p4r1/2q4p/1K6/r7/8/5P2/1R6 w - - 6 55"
+    },
+    {
+      "game": 5,
+      "opponent_elo": 2000,
+      "opening": "English Opening",
+      "candidate_color": "white",
+      "result": "1/2-1/2",
+      "candidate_score": 0.5,
+      "reason": "threefold repetition",
+      "plies": 91,
+      "final_fen": "2R4k/7p/6r1/8/p1B2P2/2P5/P1K5/8 b - - 9 46"
+    },
+    {
+      "game": 6,
+      "opponent_elo": 2000,
+      "opening": "English Opening",
+      "candidate_color": "black",
+      "result": "0-1",
+      "candidate_score": 1.0,
+      "reason": "checkmate",
+      "plies": 76,
+      "final_fen": "7k/7p/3pbq2/2q4K/5p2/4PP2/4r1PP/3N3R w - - 4 39"
+    },
+    {
+      "game": 7,
+      "opponent_elo": 2000,
+      "opening": "King's Indian Attack",
+      "candidate_color": "white",
+      "result": "1-0",
+      "candidate_score": 1.0,
+      "reason": "checkmate",
+      "plies": 87,
+      "final_fen": "6Q1/8/4Qk2/5P2/2P4p/8/7P/3K4 b - - 5 44"
+    },
+    {
+      "game": 8,
+      "opponent_elo": 2000,
+      "opening": "King's Indian Attack",
+      "candidate_color": "black",
+      "result": "1/2-1/2",
+      "candidate_score": 0.5,
+      "reason": "threefold repetition",
+      "plies": 123,
+      "final_fen": "8/8/3kp1p1/5p1p/5P1P/r4NP1/5K2/8 b - - 17 62"
+    },
+    {
+      "game": 9,
+      "opponent_elo": 2000,
+      "opening": "Sicilian Defense",
+      "candidate_color": "white",
+      "result": "1/2-1/2",
+      "candidate_score": 0.5,
+      "reason": "threefold repetition",
+      "plies": 112,
+      "final_fen": "8/1p1k4/p3p1p1/P3Pp2/1PR2P1P/4r3/6K1/8 w - - 13 57"
+    },
+    {
+      "game": 10,
+      "opponent_elo": 2000,
+      "opening": "Sicilian Defense",
+      "candidate_color": "black",
+      "result": "1/2-1/2",
+      "candidate_score": 0.5,
+      "reason": "maximum plies",
+      "plies": 164,
+      "final_fen": "8/4k3/8/1b1pp3/2p5/5K2/8/8 w - - 0 83"
+    },
+    {
+      "game": 11,
+      "opponent_elo": 2000,
+      "opening": "King's Indian Defense",
+      "candidate_color": "white",
+      "result": "1-0",
+      "candidate_score": 1.0,
+      "reason": "checkmate",
+      "plies": 121,
+      "final_fen": "1R6/8/8/5K2/kQ4PP/8/8/8 b - - 2 61"
+    },
+    {
+      "game": 12,
+      "opponent_elo": 2000,
+      "opening": "King's Indian Defense",
+      "candidate_color": "black",
+      "result": "1/2-1/2",
+      "candidate_score": 0.5,
+      "reason": "maximum plies",
+      "plies": 164,
+      "final_fen": "8/8/4k3/R7/8/3K4/7r/8 w - - 33 83"
+    },
+    {
+      "game": 13,
+      "opponent_elo": 2000,
+      "opening": "Open Game",
+      "candidate_color": "white",
+      "result": "1-0",
+      "candidate_score": 1.0,
+      "reason": "checkmate",
+      "plies": 151,
+      "final_fen": "8/8/6K1/4Q1B1/8/8/8/2Rk4 b - - 10 76"
+    },
+    {
+      "game": 14,
+      "opponent_elo": 2000,
+      "opening": "Open Game",
+      "candidate_color": "black",
+      "result": "1/2-1/2",
+      "candidate_score": 0.5,
+      "reason": "threefold repetition",
+      "plies": 40,
+      "final_fen": "r2r2k1/1pp1qppp/2p5/p1b5/4P3/P1N1PNPb/1PP2R1P/R3Q1K1 w - - 8 21"
+    },
+    {
+      "game": 15,
+      "opponent_elo": 2000,
+      "opening": "Queen's Gambit",
+      "candidate_color": "white",
+      "result": "1/2-1/2",
+      "candidate_score": 0.5,
+      "reason": "threefold repetition",
+      "plies": 157,
+      "final_fen": "4K3/4R3/4P3/3k4/8/8/8/5r2 b - - 8 79"
+    },
+    {
+      "game": 16,
+      "opponent_elo": 2000,
+      "opening": "Queen's Gambit",
+      "candidate_color": "black",
+      "result": "1-0",
+      "candidate_score": 0.0,
+      "reason": "checkmate",
+      "plies": 161,
+      "final_fen": "Q7/2R5/8/1k6/8/8/1Q3K2/8 b - - 2 81"
+    },
+    {
+      "game": 17,
+      "opponent_elo": 2000,
+      "opening": "English Opening",
+      "candidate_color": "white",
+      "result": "1-0",
+      "candidate_score": 1.0,
+      "reason": "checkmate",
+      "plies": 103,
+      "final_fen": "2k2Q2/5R2/8/2p3P1/3p4/8/4K3/8 b - - 4 52"
+    },
+    {
+      "game": 18,
+      "opponent_elo": 2000,
+      "opening": "English Opening",
+      "candidate_color": "black",
+      "result": "0-1",
+      "candidate_score": 1.0,
+      "reason": "checkmate",
+      "plies": 66,
+      "final_fen": "2r3k1/1p1b3p/p7/2b5/qPP2pp1/K7/P3P1PP/1r3B1R w - - 0 34"
+    },
+    {
+      "game": 19,
+      "opponent_elo": 2000,
+      "opening": "King's Indian Attack",
+      "candidate_color": "white",
+      "result": "1/2-1/2",
+      "candidate_score": 0.5,
+      "reason": "threefold repetition",
+      "plies": 68,
+      "final_fen": "r4kbR/8/8/p4p2/7P/2B3P1/PP2PK2/7r w - - 9 35"
+    },
+    {
+      "game": 20,
+      "opponent_elo": 2000,
+      "opening": "King's Indian Attack",
+      "candidate_color": "black",
+      "result": "1/2-1/2",
+      "candidate_score": 0.5,
+      "reason": "threefold repetition",
+      "plies": 101,
+      "final_fen": "Q1k5/2b5/8/p1P3pp/2P4r/P7/4P1K1/8 b - - 9 51"
+    }
+  ]
+}
