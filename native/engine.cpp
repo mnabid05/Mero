@@ -660,6 +660,7 @@ public:
         capture_history_ = {};
         killers_ = {};
         countermoves_ = {};
+        continuation_history_ = {};
     }
 
     struct Result {
@@ -742,6 +743,7 @@ private:
     std::array<std::array<int, 64>, 128> history_{};
     std::array<std::array<int, 64>, 128> capture_history_{};
     std::array<std::array<Move, 64>, 128> countermoves_{};
+    std::array<std::array<int, 64>, 64> continuation_history_{};
     std::array<int, MAX_PLY> static_evals_{};
     std::vector<uint64_t> search_history_;
     uint64_t nodes_ = 0;
@@ -808,12 +810,20 @@ private:
         value += bonus - value * std::abs(bonus) / HISTORY_LIMIT;
     }
 
+    void update_continuation_history(int previous, int target, int bonus) {
+        constexpr int HISTORY_LIMIT = 16'384;
+        bonus = std::clamp(bonus, -HISTORY_LIMIT, HISTORY_LIMIT);
+        int& value = continuation_history_[previous][target];
+        value += bonus - value * std::abs(bonus) / HISTORY_LIMIT;
+    }
+
     void order_moves(
         const Board& board,
         std::vector<Move>& moves,
         const Move& tt_move,
         int ply,
-        const Move& counter_move = Move{}
+        const Move& counter_move = Move{},
+        const Move& previous_move = Move{}
     ) {
         auto score = [&](const Move& move) {
             if (tt_move.valid() && move == tt_move) {
@@ -839,6 +849,9 @@ private:
                 value += 680'000;
             }
             value += history_[static_cast<int>(piece)][move.to];
+            if (previous_move.valid() && quiet(board, move)) {
+                value += continuation_history_[previous_move.to][move.to];
+            }
             if (move.flags & CASTLING) value += 25'000;
             return value;
         };
@@ -1117,7 +1130,7 @@ private:
                 ][previous_move.to];
             }
         }
-        order_moves(board, moves, tt_move, ply, counter_move);
+        order_moves(board, moves, tt_move, ply, counter_move, previous_move);
         int original_alpha = alpha;
         int best_score = -INF;
         Move best{};
@@ -1248,12 +1261,26 @@ private:
                 if (is_quiet) {
                     int bonus = std::min(16'384, depth * depth * 32);
                     update_history(moving_piece, move.to, bonus);
+                    if (previous_move.valid()) {
+                        update_continuation_history(
+                            previous_move.to,
+                            move.to,
+                            bonus
+                        );
+                    }
                     for (const Move& previous : quiets_tried) {
                         update_history(
                             board.squares[previous.from],
                             previous.to,
                             -bonus / 2
                         );
+                        if (previous_move.valid()) {
+                            update_continuation_history(
+                                previous_move.to,
+                                previous.to,
+                                -bonus / 2
+                            );
+                        }
                     }
                     killers_[ply][1] = killers_[ply][0];
                     killers_[ply][0] = move;
