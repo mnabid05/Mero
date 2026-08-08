@@ -675,7 +675,8 @@ public:
             + std::chrono::milliseconds(std::max(1, move_time_ms));
         auto started = std::chrono::steady_clock::now();
         Result result;
-        auto legal = position.legal_moves();
+        Board board = position;
+        auto legal = board.legal_moves_in_place();
         if (legal.empty()) {
             return result;
         }
@@ -688,7 +689,7 @@ public:
             int beta = std::min(INF, previous + window);
             try {
                 while (true) {
-                    auto [score, move] = root(position, depth, alpha, beta);
+                    auto [score, move] = root(board, depth, alpha, beta);
                     if (score <= alpha && alpha > -INF) {
                         window *= 2;
                         alpha = std::max(-INF, score - window);
@@ -870,7 +871,7 @@ private:
     }
 
     std::pair<int, Move> root(
-        const Board& board,
+        Board& board,
         int depth,
         int alpha,
         int beta
@@ -879,23 +880,22 @@ private:
         uint64_t key = zobrist_.hash(board);
         TTEntry* entry = probe(key);
         Move tt_move = entry == nullptr ? Move{} : entry->move;
-        auto moves = board.legal_moves();
+        auto moves = board.legal_moves_in_place();
         order_moves(board, moves, tt_move, 0);
         Move best = moves.front();
         int best_score = -INF;
         int original_alpha = alpha;
 
         for (std::size_t index = 0; index < moves.size(); ++index) {
-            Board child = board;
-            child.make_move(moves[index]);
+            ScopedMove applied(board, moves[index]);
             int score;
             if (index == 0) {
                 score = -negamax(
-                    child, depth - 1, -beta, -alpha, 1, true, moves[index]
+                    board, depth - 1, -beta, -alpha, 1, true, moves[index]
                 );
             } else {
                 score = -negamax(
-                    child,
+                    board,
                     depth - 1,
                     -alpha - 1,
                     -alpha,
@@ -905,7 +905,7 @@ private:
                 );
                 if (score > alpha && score < beta) {
                     score = -negamax(
-                        child, depth - 1, -beta, -alpha, 1, true, moves[index]
+                        board, depth - 1, -beta, -alpha, 1, true, moves[index]
                     );
                 }
             }
