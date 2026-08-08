@@ -796,6 +796,22 @@ private:
             && !(move.flags & EN_PASSANT) && move.promotion == '\0';
     }
 
+    bool pawn_attacked(const Board& board, int target, bool by_white) const {
+        int row = target / 8;
+        int column = target % 8;
+        int source_row = row + (by_white ? 1 : -1);
+        char pawn = by_white ? 'P' : 'p';
+        for (int delta : {-1, 1}) {
+            int source_column = column + delta;
+            if (source_row >= 0 && source_row < 8
+                && source_column >= 0 && source_column < 8
+                && board.squares[source_row * 8 + source_column] == pawn) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     void update_history(char piece, int target, int bonus) {
         constexpr int HISTORY_LIMIT = 16'384;
         bonus = std::clamp(bonus, -HISTORY_LIMIT, HISTORY_LIMIT);
@@ -851,6 +867,16 @@ private:
             value += history_[static_cast<int>(piece)][move.to];
             if (previous_move.valid() && quiet(board, move)) {
                 value += continuation_history_[previous_move.to][move.to];
+            }
+            if (quiet(board, move)) {
+                bool enemy_white = !is_white(piece);
+                int threat_delta = static_cast<int>(
+                    pawn_attacked(board, move.from, enemy_white)
+                ) - static_cast<int>(
+                    pawn_attacked(board, move.to, enemy_white)
+                );
+                value += threat_delta
+                    * PIECE_VALUES[static_cast<int>(piece)] * 8;
             }
             if (move.flags & CASTLING) value += 25'000;
             return value;
