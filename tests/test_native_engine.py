@@ -51,6 +51,22 @@ class NativeEngineTests(unittest.TestCase):
         board = Board.starting()
         board.find_legal_move(match.group(1))
 
+    def test_native_quiescence_sees_quiet_promotion_threat(self):
+        commands = (
+            "uci\n"
+            "position fen 4k3/7r/8/8/8/8/p6Q/6K1 w - - 0 1\n"
+            "go depth 1\n"
+            "quit\n"
+        )
+        result = subprocess.run(
+            [NATIVE_ENGINE],
+            input=commands,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        self.assertIn("bestmove h2a2", result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

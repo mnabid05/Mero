@@ -306,12 +306,12 @@ struct Board {
                 int promotion_row = white_to_move ? 0 : 7;
                 int start_row = white_to_move ? 6 : 1;
                 int next_row = row + direction;
-                if (!captures_only && next_row >= 0 && next_row < 8) {
+                if (next_row >= 0 && next_row < 8) {
                     int one = next_row * 8 + column;
                     if (squares[one] == '.') {
                         if (next_row == promotion_row) {
                             add_promotions(moves, from, one, 0);
-                        } else {
+                        } else if (!captures_only) {
                             moves.push_back({from, one, '\0', 0});
                             int two = (row + 2 * direction) * 8 + column;
                             if (row == start_row && squares[two] == '.') {
@@ -718,7 +718,8 @@ private:
                 value += capture_history_[static_cast<int>(piece)][move.to];
             }
             if (move.promotion != '\0') {
-                value += 900'000 + PIECE_VALUES[static_cast<int>(move.promotion)];
+                value += 1'500'000
+                    + PIECE_VALUES[static_cast<int>(move.promotion)];
             }
             if (ply < MAX_PLY) {
                 if (move == killers_[ply][0]) value += 700'000;
@@ -731,13 +732,21 @@ private:
             if (move.flags & CASTLING) value += 25'000;
             return value;
         };
+        std::vector<std::pair<int, Move>> scored;
+        scored.reserve(moves.size());
+        for (const Move& move : moves) {
+            scored.emplace_back(score(move), move);
+        }
         std::stable_sort(
-            moves.begin(),
-            moves.end(),
-            [&](const Move& left, const Move& right) {
-                return score(left) > score(right);
+            scored.begin(),
+            scored.end(),
+            [](const auto& left, const auto& right) {
+                return left.first > right.first;
             }
         );
+        for (std::size_t index = 0; index < moves.size(); ++index) {
+            moves[index] = scored[index].second;
+        }
     }
 
     TTEntry* probe(uint64_t key) {
