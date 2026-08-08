@@ -777,7 +777,6 @@ public:
 
 private:
     std::vector<TTCluster> table_;
-    Zobrist zobrist_;
     std::array<std::array<Move, 2>, MAX_PLY> killers_{};
     std::array<std::array<int, 64>, 128> history_{};
     std::array<std::array<int, 64>, 128> capture_history_{};
@@ -1004,7 +1003,7 @@ private:
         int beta
     ) {
         check_time();
-        uint64_t key = zobrist_.hash(board);
+        uint64_t key = board.key;
         TTEntry* entry = probe(key);
         Move tt_move = entry == nullptr ? Move{} : entry->move;
         auto moves = board.legal_moves_in_place();
@@ -1076,7 +1075,7 @@ private:
             return alpha;
         }
 
-        uint64_t key = zobrist_.hash(board);
+        uint64_t key = board.key;
         int prior_visits = static_cast<int>(
             std::count(search_history_.begin(), search_history_.end(), key)
         );
@@ -1138,6 +1137,10 @@ private:
         }
         if (allow_null && depth >= 3 && !in_check && has_non_pawn_material(board)) {
             Board null_board = board;
+            null_board.key ^= ZOBRIST.turn;
+            if (null_board.en_passant >= 0) {
+                null_board.key ^= ZOBRIST.ep_file[null_board.en_passant % 8];
+            }
             null_board.white_to_move = !null_board.white_to_move;
             null_board.en_passant = -1;
             ++null_board.halfmove;
@@ -1397,7 +1400,7 @@ private:
         ++nodes_;
         check_time();
         bool in_check = board.in_check();
-        uint64_t key = zobrist_.hash(board);
+        uint64_t key = board.key;
         TTEntry* entry = probe(key);
         if (entry != nullptr && entry->depth >= 0) {
             int table_score = score_from_table(entry->score, ply);
@@ -1492,7 +1495,7 @@ private:
     std::vector<Move> principal_variation(Board board, int depth) {
         std::vector<Move> pv;
         for (int index = 0; index < depth; ++index) {
-            TTEntry* entry = probe(zobrist_.hash(board));
+            TTEntry* entry = probe(board.key);
             if (entry == nullptr || !entry->move.valid()) {
                 break;
             }
