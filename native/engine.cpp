@@ -676,9 +676,11 @@ public:
         const Board& position,
         int max_depth,
         int move_time_ms,
-        const std::vector<uint64_t>& game_history = {}
+        const std::vector<uint64_t>& game_history = {},
+        uint64_t node_limit = 0
     ) {
         nodes_ = 0;
+        node_limit_ = node_limit;
         ++generation_;
         search_history_ = game_history;
         deadline_ = std::chrono::steady_clock::now()
@@ -741,6 +743,7 @@ private:
     std::array<std::array<Move, 64>, 128> countermoves_{};
     std::vector<uint64_t> search_history_;
     uint64_t nodes_ = 0;
+    uint64_t node_limit_ = 0;
     uint16_t generation_ = 0;
     std::chrono::steady_clock::time_point deadline_{};
 
@@ -759,9 +762,11 @@ private:
     }
 
     void check_time() {
-        if ((nodes_ & 2047ULL) == 0
-            && std::chrono::steady_clock::now() >= deadline_) {
-            throw Timeout{};
+        if ((nodes_ & 2047ULL) == 0) {
+            if ((node_limit_ != 0 && nodes_ >= node_limit_)
+                || std::chrono::steady_clock::now() >= deadline_) {
+                throw Timeout{};
+            }
         }
     }
 
@@ -1513,6 +1518,7 @@ int uci_loop() {
             } else if (line.rfind("go", 0) == 0) {
                 auto tokens = split(line);
                 int requested_depth = option_value(tokens, "depth");
+                int requested_nodes = option_value(tokens, "nodes");
                 int move_time = option_value(tokens, "movetime");
                 if (move_time < 0) {
                     std::string clock_name = board.white_to_move ? "wtime" : "btime";
@@ -1530,11 +1536,15 @@ int uci_loop() {
                 if (requested_depth > 0 && option_value(tokens, "movetime") < 0) {
                     move_time = 3'600'000;
                 }
+                if (requested_nodes > 0) {
+                    move_time = 3'600'000;
+                }
                 Engine::Result result = engine.search(
                     board,
                     depth,
                     move_time,
-                    game_history
+                    game_history,
+                    static_cast<uint64_t>(std::max(0, requested_nodes))
                 );
                 uint64_t nps = result.nodes * 1000
                     / static_cast<uint64_t>(std::max<long long>(1, result.elapsed_ms));
