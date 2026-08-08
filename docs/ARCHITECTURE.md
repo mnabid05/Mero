@@ -22,6 +22,12 @@ castling rights, en passant target, and move clocks. They generate pseudo-legal
 moves and filter them by applying the move to an isolated position and checking
 king safety.
 
+The native engine keeps a compact undo record for every searched move. Search,
+quiescence, legal filtering, and perft can therefore make and unmake moves on
+one board instead of copying a full position for every child. The board also
+updates its Zobrist key incrementally across normal moves, captures, castling,
+en passant, promotions, and null moves.
+
 The implementation covers normal moves, castling path safety, en passant capture,
 promotion, attack detection, FEN, and terminal states.
 
@@ -58,21 +64,38 @@ The search includes:
 - game-history and search-path repetition detection;
 - aspiration windows around the previous iteration's score;
 - generation-aged transposition bounds keyed by deterministic Zobrist hashes;
+- three-entry transposition clusters with depth-and-age replacement;
+- cached static evaluations and quiescence bounds in the transposition table;
 - verified null-move pruning outside check and pawn-only endings;
 - dynamic late-move reductions and frontier pruning;
 - check extensions near the horizon;
 - quiescence search over captures, promotions, and check evasions;
 - razoring, reverse futility pruning, and delta pruning;
 - killer, countermove, quiet-history, and capture-history updates;
+- continuation history and pawn-threat-aware quiet ordering;
+- improving-position context for pruning and late-move reductions;
 - PV, transposition, promotion, MVV-LVA, killer, history, and castling ordering.
 
 The transposition table persists between moves and uses depth-preferred
-replacement. Per-search killer and history tables reset for each move.
+replacement within each cluster. Killer, counter, capture, quiet, and
+continuation histories persist within a game and reset on `ucinewgame`.
 
-The C++20 implementation stores its transposition table in a fixed-size,
-power-of-two array and reaches roughly 1.35 million nodes/second at the tested
-starting position. The Python version remains the slower, easier-to-inspect
-reference.
+The C++20 implementation stores its transposition table in fixed-size,
+power-of-two clusters. In the recorded three-run, 500 ms starting-position
+probe, the architecture build averaged roughly 1.447 million nodes/second,
+compared with 1.188 million for its frozen baseline. The Python version remains
+the slower, easier-to-inspect reference.
+
+## Design influences
+
+Mwahaha remains an original implementation and does not copy or embed another
+engine. Its reversible position state, clustered transposition table, search
+stack, and staged history ideas are informed by the public architecture of
+[Stockfish](https://github.com/official-stockfish/Stockfish). Its cache-first
+evaluation direction is also informed by
+[Leela Chess Zero](https://github.com/LeelaChessZero/lc0), while deliberately
+retaining alpha-beta search because this project does not ship a trained policy
+and value network.
 
 ## Time management
 
@@ -82,6 +105,9 @@ overhead and computes a conservative allocation.
 
 Search checks the monotonic clock periodically and returns the best move from the
 last completed iterative-deepening pass.
+
+The UCI engine also accepts `go nodes` for deterministic development probes and
+reports `hashfull` occupancy with each completed search.
 
 ## Interfaces
 
