@@ -92,6 +92,16 @@ struct Move {
 };
 
 struct Board {
+    struct UndoState {
+        char moved = '.';
+        char captured = '.';
+        int captured_square = -1;
+        int castling = 0;
+        int en_passant = -1;
+        int halfmove = 0;
+        int fullmove = 1;
+    };
+
     std::array<char, 64> squares{};
     bool white_to_move = true;
     int castling = WHITE_KING_SIDE | WHITE_QUEEN_SIDE
@@ -414,14 +424,25 @@ struct Board {
         return moves;
     }
 
-    void make_move(const Move& move) {
+    UndoState make_move(const Move& move) {
         char piece = squares[move.from];
         bool moving_white = is_white(piece);
         char captured = squares[move.to];
         int captured_square = move.to;
+        UndoState undo{
+            piece,
+            captured,
+            captured_square,
+            castling,
+            en_passant,
+            halfmove,
+            fullmove
+        };
         if (move.flags & EN_PASSANT) {
             captured_square = move.to + (moving_white ? 8 : -8);
             captured = squares[captured_square];
+            undo.captured = captured;
+            undo.captured_square = captured_square;
             squares[captured_square] = '.';
         }
 
@@ -466,6 +487,39 @@ struct Board {
             ++fullmove;
         }
         white_to_move = !white_to_move;
+        return undo;
+    }
+
+    void unmake_move(const Move& move, const UndoState& undo) {
+        white_to_move = !white_to_move;
+        castling = undo.castling;
+        en_passant = undo.en_passant;
+        halfmove = undo.halfmove;
+        fullmove = undo.fullmove;
+
+        if (move.flags & CASTLING) {
+            if (move.to == 62) {
+                squares[63] = squares[61];
+                squares[61] = '.';
+            } else if (move.to == 58) {
+                squares[56] = squares[59];
+                squares[59] = '.';
+            } else if (move.to == 6) {
+                squares[7] = squares[5];
+                squares[5] = '.';
+            } else if (move.to == 2) {
+                squares[0] = squares[3];
+                squares[3] = '.';
+            }
+        }
+
+        squares[move.from] = undo.moved;
+        squares[move.to] = undo.captured_square == move.to
+            ? undo.captured
+            : '.';
+        if (undo.captured_square != move.to) {
+            squares[undo.captured_square] = undo.captured;
+        }
     }
 
     std::vector<Move> legal_moves(bool captures_only = false) const {
