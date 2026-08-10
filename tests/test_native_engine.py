@@ -49,6 +49,15 @@ class NativeEngineTests(unittest.TestCase):
         )
         self.assertEqual(result.stdout.strip(), "bitboards ok")
 
+    def native_see(self, fen: str, move: str) -> int:
+        result = subprocess.run(
+            [NATIVE_ENGINE, "--see-fen", move, fen],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        return int(result.stdout.strip())
+
     def test_special_rule_positions_match_reference(self):
         for fen in POSITIONS:
             with self.subTest(fen=fen):
@@ -64,6 +73,12 @@ class NativeEngineTests(unittest.TestCase):
         for fen in POSITIONS:
             with self.subTest(fen=fen):
                 self.native_verify_bitboards(fen, 3)
+
+    def test_native_static_exchange_evaluation(self):
+        free_queen = "7k/8/8/8/8/8/q7/R6K w - - 0 1"
+        poisoned_pawn = "3q3k/8/8/3p4/8/8/8/3Q3K w - - 0 1"
+        self.assertGreaterEqual(self.native_see(free_queen, "a1a2"), 900)
+        self.assertLess(self.native_see(poisoned_pawn, "d1d5"), -700)
 
     def test_native_uci_returns_legal_move(self):
         commands = "uci\nisready\nposition startpos\ngo movetime 50\nquit\n"

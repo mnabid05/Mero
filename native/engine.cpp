@@ -863,6 +863,10 @@ public:
         return hashfull();
     }
 
+    int see(const Board& position, const Move& move) const {
+        return static_exchange_evaluation(position, move);
+    }
+
     std::vector<Move> line_after_move(
         const Board& position,
         const Move& move,
@@ -2223,6 +2227,18 @@ int uci_loop() {
 }  // namespace
 
 int main(int argc, char** argv) {
+    if (argc >= 4 && std::string(argv[1]) == "--see-fen") {
+        std::ostringstream fen;
+        for (int index = 3; index < argc; ++index) {
+            if (index != 3) fen << ' ';
+            fen << argv[index];
+        }
+        Board board = Board::from_fen(fen.str());
+        Move move = board.find_move(argv[2]);
+        Engine engine(1);
+        std::cout << engine.see(board, move) << '\n';
+        return 0;
+    }
     if (argc == 3 && std::string(argv[1]) == "--verify-bitboards") {
         Board board = Board::starting();
         bool valid = verify_bitboards(board, std::stoi(argv[2]));
