@@ -996,6 +996,92 @@ private:
         return value;
     }
 
+    int least_valuable_attacker(
+        const Board& board,
+        int target,
+        bool white
+    ) const {
+        uint64_t target_bit = square_bit(target);
+        uint64_t pawn_sources = white
+            ? ((target_bit & ~FILE_A) << 7)
+                | ((target_bit & ~FILE_H) << 9)
+            : ((target_bit & ~FILE_H) >> 7)
+                | ((target_bit & ~FILE_A) >> 9);
+        uint64_t pawn = pawn_sources & board.piece_boards[
+            Zobrist::piece_index(white ? 'P' : 'p')
+        ];
+        if (pawn != 0) {
+            return static_cast<int>(std::countr_zero(pawn));
+        }
+        uint64_t knight = KNIGHT_ATTACKS[target] & board.piece_boards[
+            Zobrist::piece_index(white ? 'N' : 'n')
+        ];
+        if (knight != 0) {
+            return static_cast<int>(std::countr_zero(knight));
+        }
+        uint64_t bishop_attacker = board.bishop_attacks(target)
+            & board.piece_boards[Zobrist::piece_index(white ? 'B' : 'b')];
+        if (bishop_attacker != 0) {
+            return static_cast<int>(std::countr_zero(bishop_attacker));
+        }
+        uint64_t rook_attacker = board.rook_attacks(target)
+            & board.piece_boards[Zobrist::piece_index(white ? 'R' : 'r')];
+        if (rook_attacker != 0) {
+            return static_cast<int>(std::countr_zero(rook_attacker));
+        }
+        uint64_t queen = (
+            board.bishop_attacks(target) | board.rook_attacks(target)
+        ) & board.piece_boards[Zobrist::piece_index(white ? 'Q' : 'q')];
+        if (queen != 0) {
+            return static_cast<int>(std::countr_zero(queen));
+        }
+        uint64_t king = KING_ATTACKS[target] & board.piece_boards[
+            Zobrist::piece_index(white ? 'K' : 'k')
+        ];
+        return king == 0 ? -1 : static_cast<int>(std::countr_zero(king));
+    }
+
+    int static_exchange_evaluation(const Board& board, const Move& move) const {
+        std::array<int, 32> gains{};
+        gains[0] = capture_value(board, move);
+        Board position = board;
+        position.make_move(move);
+        int target = move.to;
+        int count = 1;
+
+        while (count < static_cast<int>(gains.size())) {
+            int source = least_valuable_attacker(
+                position,
+                target,
+                position.white_to_move
+            );
+            if (source < 0 || position.squares[target] == '.') {
+                break;
+            }
+            char attacker = position.squares[source];
+            char captured = position.squares[target];
+            int promotion_gain = 0;
+            int target_row = target / 8;
+            if (std::tolower(attacker) == 'p'
+                && (target_row == 0 || target_row == 7)) {
+                promotion_gain = PIECE_VALUES[static_cast<int>('q')]
+                    - PIECE_VALUES[static_cast<int>('p')];
+                attacker = position.white_to_move ? 'Q' : 'q';
+            }
+            gains[count] = PIECE_VALUES[static_cast<int>(captured)]
+                + promotion_gain - gains[count - 1];
+            position.remove_piece(source);
+            position.remove_piece(target);
+            position.place_piece(attacker, target);
+            position.white_to_move = !position.white_to_move;
+            ++count;
+        }
+        while (--count > 0) {
+            gains[count - 1] = -std::max(-gains[count - 1], gains[count]);
+        }
+        return gains[0];
+    }
+
     bool quiet(const Board& board, const Move& move) const {
         return board.squares[move.to] == '.'
             && !(move.flags & EN_PASSANT) && move.promotion == '\0';
@@ -1042,8 +1128,11 @@ private:
             char victim = board.squares[move.to];
             int value = 0;
             if (victim != '.' || (move.flags & EN_PASSANT)) {
-                value += 1'000'000 + 16 * capture_value(board, move)
-                    - PIECE_VALUES[static_cast<int>(piece)];
+                int exchange = static_exchange_evaluation(board, move);
+                value += (exchange >= 0 ? 1'000'000 : -100'000)
+                    + 16 * capture_value(board, move)
+                    - PIECE_VALUES[static_cast<int>(piece)]
+                    + 32 * exchange;
                 value += capture_history_[static_cast<int>(piece)][move.to];
             }
             if (move.promotion != '\0') {
