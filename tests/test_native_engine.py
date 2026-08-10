@@ -79,6 +79,19 @@ class NativeEngineTests(unittest.TestCase):
         board = Board.starting()
         board.find_legal_move(match.group(1))
 
+    def test_native_uci_advertises_thread_control(self):
+        result = subprocess.run(
+            [NATIVE_ENGINE],
+            input="uci\nquit\n",
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        self.assertIn(
+            "option name Threads type spin default 1 min 1 max 64",
+            result.stdout,
+        )
+
     def test_native_quiescence_sees_quiet_promotion_threat(self):
         commands = (
             "uci\n"
