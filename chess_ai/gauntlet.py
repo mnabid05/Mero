@@ -54,6 +54,7 @@ class GauntletReport:
     candidate: str
     candidate_threads: int
     opponent: str
+    opponent_threads: int
     move_time_ms: int
     max_plies: int
     total_games: int
@@ -295,6 +296,7 @@ def run_gauntlet(
     move_time_ms: int,
     max_plies: int,
     candidate_threads: int = 1,
+    opponent_threads: int = 1,
     show_progress: bool = False,
 ) -> GauntletReport:
     if games_per_level < 2 or games_per_level % 2:
@@ -305,6 +307,8 @@ def run_gauntlet(
         raise ValueError("Move time must be at least 10 ms")
     if candidate_threads < 1 or candidate_threads > 64:
         raise ValueError("Candidate threads must be between 1 and 64")
+    if opponent_threads < 1 or opponent_threads > 64:
+        raise ValueError("Opponent threads must be between 1 and 64")
 
     games: list[GauntletGame] = []
     with UCIEngine(
@@ -317,7 +321,7 @@ def run_gauntlet(
     ) as candidate, UCIEngine(
         opponent_command,
         {
-            "Threads": 1,
+            "Threads": opponent_threads,
             "Hash": 64,
             "Move Overhead": 0,
             "UCI_LimitStrength": True,
@@ -376,6 +380,7 @@ def run_gauntlet(
             candidate.name,
             candidate_threads,
             opponent.name,
+            opponent_threads,
             move_time_ms,
             max_plies,
             len(games),
@@ -409,6 +414,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--move-time", type=int, default=50, metavar="MS")
     parser.add_argument("--max-plies", type=int, default=160)
     parser.add_argument("--candidate-threads", type=int, default=1)
+    parser.add_argument("--opponent-threads", type=int, default=1)
     parser.add_argument("--json-out", type=Path)
     args = parser.parse_args(argv)
 
@@ -420,6 +426,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         args.move_time,
         args.max_plies,
         candidate_threads=args.candidate_threads,
+        opponent_threads=args.opponent_threads,
         show_progress=True,
     )
     print(
