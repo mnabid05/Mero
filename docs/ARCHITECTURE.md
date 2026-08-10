@@ -17,16 +17,20 @@ chess-engine dependency.
 
 ## Position layer
 
-Both the Python reference and C++ engine store 64 squares, side to move,
-castling rights, en passant target, and move clocks. They generate pseudo-legal
-moves and filter them by applying the move to an isolated position and checking
-king safety.
+The Python reference stores 64 squares. The C++ engine uses a synchronized
+hybrid representation: a 64-square array, 12 piece bitboards, two color
+occupancy masks, and one combined occupancy mask. Leaper and sliding attacks,
+king lookup, pawn threats, move generation, and search material queries use the
+bitboards. The array remains available to the portable C evaluator and FEN
+interface.
 
 The native engine keeps a compact undo record for every searched move. Search,
 quiescence, legal filtering, and perft can therefore make and unmake moves on
 one board instead of copying a full position for every child. The board also
 updates its Zobrist key incrementally across normal moves, captures, castling,
-en passant, promotions, and null moves.
+en passant, promotions, and null moves. A recursive verifier rebuilds every
+bitboard from the square array after make/unmake sequences and covers castling,
+en passant, captures, and all promotion types.
 
 The implementation covers normal moves, castling path safety, en passant capture,
 promotion, attack detection, FEN, and terminal states.
@@ -73,8 +77,16 @@ The search includes:
 - razoring, reverse futility pruning, and delta pruning;
 - killer, countermove, quiet-history, and capture-history updates;
 - continuation history and pawn-threat-aware quiet ordering;
+- bitboard-backed static exchange evaluation for capture ordering;
 - improving-position context for pruning and late-move reductions;
 - PV, transposition, promotion, MVV-LVA, killer, history, and castling ordering.
+
+With `Threads` greater than one, the native engine searches the principal root
+move first and distributes the remaining root candidates across isolated
+workers. Each worker owns its history tables and a slice of the configured hash
+budget, avoiding data races. A root depth is published only after every move at
+that depth finishes, so timeouts cannot select from a partially searched move
+set. Deterministic `go nodes` searches deliberately fall back to one worker.
 
 The transposition table persists between moves and uses depth-preferred
 replacement within each cluster. Killer, counter, capture, quiet, and
@@ -82,9 +94,9 @@ continuation histories persist within a game and reset on `ucinewgame`.
 
 The C++20 implementation stores its transposition table in fixed-size,
 power-of-two clusters. In the recorded three-run, 500 ms starting-position
-probe, the architecture build averaged roughly 1.447 million nodes/second,
-compared with 1.188 million for its frozen baseline. The Python version remains
-the slower, easier-to-inspect reference.
+probe, the four-thread bitboard build averaged roughly 2.19 million aggregate
+nodes/second, versus roughly 1.30 million with one thread. The Python version
+remains the slower, easier-to-inspect reference.
 
 ## Design influences
 
@@ -106,8 +118,9 @@ overhead and computes a conservative allocation.
 Search checks the monotonic clock periodically and returns the best move from the
 last completed iterative-deepening pass.
 
-The UCI engine also accepts `go nodes` for deterministic development probes and
-reports `hashfull` occupancy with each completed search.
+The UCI engine exposes `Threads`, `Hash`, and `Move Overhead` options. It also
+accepts `go nodes` for deterministic development probes and reports `hashfull`
+occupancy with each completed search.
 
 ## Interfaces
 
