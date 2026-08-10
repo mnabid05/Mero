@@ -1646,6 +1646,29 @@ bool verify_keys(Board& board, int depth) {
     return true;
 }
 
+bool verify_bitboards(Board& board, int depth) {
+    if (!board.bitboards_valid()) {
+        return false;
+    }
+    if (depth == 0) {
+        return true;
+    }
+    auto original_pieces = board.piece_boards;
+    auto original_colors = board.color_boards;
+    uint64_t original_occupied = board.occupied;
+    for (const Move& move : board.legal_moves_in_place()) {
+        Board::UndoState undo = board.make_move(move);
+        bool valid = verify_bitboards(board, depth - 1);
+        board.unmake_move(move, undo);
+        if (!valid || board.piece_boards != original_pieces
+            || board.color_boards != original_colors
+            || board.occupied != original_occupied) {
+            return false;
+        }
+    }
+    return true;
+}
+
 std::vector<std::string> split(const std::string& input) {
     std::istringstream stream(input);
     std::vector<std::string> tokens;
@@ -1796,6 +1819,24 @@ int uci_loop() {
 }  // namespace
 
 int main(int argc, char** argv) {
+    if (argc == 3 && std::string(argv[1]) == "--verify-bitboards") {
+        Board board = Board::starting();
+        bool valid = verify_bitboards(board, std::stoi(argv[2]));
+        std::cout << (valid ? "bitboards ok\n" : "bitboard mismatch\n");
+        return valid ? 0 : 1;
+    }
+    if (argc >= 4 && std::string(argv[1]) == "--verify-bitboards-fen") {
+        int depth = std::stoi(argv[2]);
+        std::ostringstream fen;
+        for (int index = 3; index < argc; ++index) {
+            if (index != 3) fen << ' ';
+            fen << argv[index];
+        }
+        Board board = Board::from_fen(fen.str());
+        bool valid = verify_bitboards(board, depth);
+        std::cout << (valid ? "bitboards ok\n" : "bitboard mismatch\n");
+        return valid ? 0 : 1;
+    }
     if (argc == 3 && std::string(argv[1]) == "--verify-keys") {
         Board board = Board::starting();
         bool valid = verify_keys(board, std::stoi(argv[2]));
