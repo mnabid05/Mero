@@ -92,6 +92,32 @@ class NativeEngineTests(unittest.TestCase):
             result.stdout,
         )
 
+    def test_native_parallel_search_returns_legal_move(self):
+        commands = (
+            "uci\n"
+            "setoption name Hash value 32\n"
+            "setoption name Threads value 4\n"
+            "position startpos moves e2e4 e7e5\n"
+            "go movetime 100\n"
+            "quit\n"
+        )
+        result = subprocess.run(
+            [NATIVE_ENGINE],
+            input=commands,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        match = re.search(r"bestmove ([a-h][1-8][a-h][1-8][qrbn]?)", result.stdout)
+        self.assertIsNotNone(match, result.stdout)
+        depth = re.search(r"\bdepth (\d+)", result.stdout)
+        self.assertIsNotNone(depth, result.stdout)
+        self.assertGreater(int(depth.group(1)), 0)
+        board = Board.starting()
+        board.play_uci("e2e4")
+        board.play_uci("e7e5")
+        board.find_legal_move(match.group(1))
+
     def test_native_quiescence_sees_quiet_promotion_threat(self):
         commands = (
             "uci\n"
