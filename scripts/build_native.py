@@ -79,6 +79,7 @@ def build(
         "-Wall",
         "-Wextra",
         "-Werror",
+        "-pthread",
         str(engine_source),
         str(object_file),
         "-o",
