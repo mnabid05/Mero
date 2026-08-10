@@ -934,19 +934,7 @@ private:
     }
 
     bool pawn_attacked(const Board& board, int target, bool by_white) const {
-        int row = target / 8;
-        int column = target % 8;
-        int source_row = row + (by_white ? 1 : -1);
-        char pawn = by_white ? 'P' : 'p';
-        for (int delta : {-1, 1}) {
-            int source_column = column + delta;
-            if (source_row >= 0 && source_row < 8
-                && source_column >= 0 && source_column < 8
-                && board.squares[source_row * 8 + source_column] == pawn) {
-                return true;
-            }
-        }
-        return false;
+        return (board.pawn_attacks(by_white) & square_bit(target)) != 0;
     }
 
     void update_history(char piece, int target, int bonus) {
@@ -1580,15 +1568,16 @@ private:
     }
 
     bool has_non_pawn_material(const Board& board) const {
-        for (char piece : board.squares) {
-            if (piece != '.' && is_white(piece) == board.white_to_move) {
-                char type = static_cast<char>(std::tolower(piece));
-                if (type != 'p' && type != 'k') {
-                    return true;
-                }
-            }
-        }
-        return false;
+        uint64_t side = board.color_boards[
+            Board::color_index(board.white_to_move)
+        ];
+        uint64_t pawns = board.piece_boards[
+            Zobrist::piece_index(board.white_to_move ? 'P' : 'p')
+        ];
+        uint64_t king = board.piece_boards[
+            Zobrist::piece_index(board.white_to_move ? 'K' : 'k')
+        ];
+        return (side & ~(pawns | king)) != 0;
     }
 
     std::vector<Move> principal_variation(Board board, int depth) {
