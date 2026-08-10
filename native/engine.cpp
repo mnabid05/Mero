@@ -811,6 +811,74 @@ public:
         std::vector<Move> pv;
     };
 
+    struct RootMoveResult {
+        bool complete = false;
+        int score = -INF;
+        uint64_t nodes = 0;
+    };
+
+    void begin_parallel_search() {
+        ++generation_;
+    }
+
+    RootMoveResult search_root_move(
+        const Board& position,
+        const Move& move,
+        int depth,
+        int alpha,
+        int beta,
+        const std::vector<uint64_t>& game_history,
+        std::chrono::steady_clock::time_point deadline
+    ) {
+        nodes_ = 0;
+        node_limit_ = 0;
+        static_evals_.fill(-INF);
+        search_history_ = game_history;
+        deadline_ = deadline;
+        RootMoveResult result;
+        if (std::chrono::steady_clock::now() >= deadline_) {
+            return result;
+        }
+        Board board = position;
+        board.make_move(move);
+        try {
+            result.score = -negamax(
+                board,
+                depth - 1,
+                -beta,
+                -alpha,
+                1,
+                true,
+                move
+            );
+            result.complete = true;
+        } catch (const Timeout&) {
+            result.complete = false;
+        }
+        result.nodes = nodes_;
+        return result;
+    }
+
+    int table_hashfull() const {
+        return hashfull();
+    }
+
+    std::vector<Move> line_after_move(
+        const Board& position,
+        const Move& move,
+        int depth
+    ) {
+        std::vector<Move> line{move};
+        if (depth <= 1) {
+            return line;
+        }
+        Board board = position;
+        board.make_move(move);
+        auto tail = principal_variation(board, depth - 1);
+        line.insert(line.end(), tail.begin(), tail.end());
+        return line;
+    }
+
     Result search(
         const Board& position,
         int max_depth,
