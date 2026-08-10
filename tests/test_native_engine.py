@@ -40,6 +40,15 @@ class NativeEngineTests(unittest.TestCase):
         )
         self.assertEqual(result.stdout.strip(), "keys ok")
 
+    def native_verify_bitboards(self, fen: str, depth: int) -> None:
+        result = subprocess.run(
+            [NATIVE_ENGINE, "--verify-bitboards-fen", str(depth), fen],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.stdout.strip(), "bitboards ok")
+
     def test_special_rule_positions_match_reference(self):
         for fen in POSITIONS:
             with self.subTest(fen=fen):
@@ -50,6 +59,11 @@ class NativeEngineTests(unittest.TestCase):
         for fen in POSITIONS:
             with self.subTest(fen=fen):
                 self.native_verify_keys(fen, 3)
+
+    def test_bitboards_cover_special_moves(self):
+        for fen in POSITIONS:
+            with self.subTest(fen=fen):
+                self.native_verify_bitboards(fen, 3)
 
     def test_native_uci_returns_legal_move(self):
         commands = "uci\nisready\nposition startpos\ngo movetime 50\nquit\n"
