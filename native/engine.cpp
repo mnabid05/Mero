@@ -2143,7 +2143,7 @@ int uci_loop() {
     while (std::getline(std::cin, line)) {
         try {
             if (line == "uci") {
-                std::cout << "id name Mwahaha Native Engine 2.2\n";
+                std::cout << "id name Mwahaha Native Engine 2.3\n";
                 std::cout << "id author Mohammed Nabid\n";
                 std::cout << "option name Hash type spin default 64 min 1 max 2048\n";
                 std::cout << "option name Threads type spin default 1 min 1 max 64\n";
