@@ -1667,6 +1667,259 @@ private:
     }
 };
 
+class EnginePool {
+public:
+    explicit EnginePool(std::size_t hash_megabytes = 64)
+        : hash_megabytes_(hash_megabytes) {
+        rebuild();
+    }
+
+    void resize_table(std::size_t megabytes) {
+        hash_megabytes_ = std::max<std::size_t>(1, megabytes);
+        rebuild();
+    }
+
+    void set_threads(int threads) {
+        int selected = std::clamp(threads, 1, 64);
+        if (selected != thread_count_) {
+            thread_count_ = selected;
+            rebuild();
+        }
+    }
+
+    int threads() const {
+        return thread_count_;
+    }
+
+    void clear() {
+        for (const auto& worker : workers_) {
+            worker->clear();
+        }
+    }
+
+    Engine::Result search(
+        const Board& position,
+        int max_depth,
+        int move_time_ms,
+        const std::vector<uint64_t>& game_history = {},
+        uint64_t node_limit = 0
+    ) {
+        if (thread_count_ == 1 || node_limit != 0) {
+            return workers_.front()->search(
+                position,
+                max_depth,
+                move_time_ms,
+                game_history,
+                node_limit
+            );
+        }
+        return parallel_search(
+            position,
+            max_depth,
+            move_time_ms,
+            game_history
+        );
+    }
+
+private:
+    std::size_t hash_megabytes_ = 64;
+    int thread_count_ = 1;
+    std::vector<std::unique_ptr<Engine>> workers_;
+
+    void rebuild() {
+        workers_.clear();
+        std::size_t per_worker = std::max<std::size_t>(
+            1,
+            hash_megabytes_ / static_cast<std::size_t>(thread_count_)
+        );
+        workers_.reserve(static_cast<std::size_t>(thread_count_));
+        for (int index = 0; index < thread_count_; ++index) {
+            workers_.push_back(std::make_unique<Engine>(per_worker));
+        }
+    }
+
+    int average_hashfull() const {
+        int total = 0;
+        for (const auto& worker : workers_) {
+            total += worker->table_hashfull();
+        }
+        return total / std::max(1, thread_count_);
+    }
+
+    Engine::Result parallel_search(
+        const Board& position,
+        int max_depth,
+        int move_time_ms,
+        const std::vector<uint64_t>& game_history
+    ) {
+        auto started = std::chrono::steady_clock::now();
+        auto deadline = started
+            + std::chrono::milliseconds(std::max(1, move_time_ms));
+        Engine::Result result;
+        auto moves = position.legal_moves();
+        if (moves.empty()) {
+            return result;
+        }
+        result.move = moves.front();
+        result.pv = {result.move};
+        for (const auto& worker : workers_) {
+            worker->begin_parallel_search();
+        }
+        uint64_t total_nodes = 0;
+
+        for (int depth = 1; depth <= max_depth; ++depth) {
+            if (std::chrono::steady_clock::now() >= deadline) {
+                break;
+            }
+            std::vector<int> scores(moves.size(), -INF);
+            Engine::RootMoveResult first = workers_.front()->search_root_move(
+                position,
+                moves.front(),
+                depth,
+                -INF,
+                INF,
+                game_history,
+                deadline
+            );
+            total_nodes += first.nodes;
+            if (!first.complete) {
+                break;
+            }
+            scores.front() = first.score;
+            std::atomic<std::size_t> next_index{1};
+            std::atomic<int> shared_alpha{first.score};
+            std::atomic<uint64_t> parallel_nodes{0};
+            std::atomic<bool> complete{true};
+            int best_score = first.score;
+            std::size_t best_index = 0;
+            int best_worker = 0;
+            std::mutex best_mutex;
+            int active_workers = std::min<int>(
+                thread_count_,
+                static_cast<int>(moves.size() - 1)
+            );
+            std::vector<std::thread> threads;
+            threads.reserve(static_cast<std::size_t>(active_workers));
+
+            for (int worker_index = 0;
+                worker_index < active_workers;
+                ++worker_index) {
+                threads.emplace_back([&, worker_index] {
+                    Engine& worker = *workers_[worker_index];
+                    while (complete.load(std::memory_order_relaxed)) {
+                        std::size_t index = next_index.fetch_add(
+                            1,
+                            std::memory_order_relaxed
+                        );
+                        if (index >= moves.size()) {
+                            break;
+                        }
+                        int alpha = shared_alpha.load(std::memory_order_relaxed);
+                        Engine::RootMoveResult probe = worker.search_root_move(
+                            position,
+                            moves[index],
+                            depth,
+                            alpha,
+                            alpha + 1,
+                            game_history,
+                            deadline
+                        );
+                        parallel_nodes.fetch_add(
+                            probe.nodes,
+                            std::memory_order_relaxed
+                        );
+                        if (!probe.complete) {
+                            complete.store(false, std::memory_order_relaxed);
+                            break;
+                        }
+                        scores[index] = probe.score;
+                        if (probe.score <= alpha) {
+                            continue;
+                        }
+                        Engine::RootMoveResult exact = worker.search_root_move(
+                            position,
+                            moves[index],
+                            depth,
+                            alpha,
+                            INF,
+                            game_history,
+                            deadline
+                        );
+                        parallel_nodes.fetch_add(
+                            exact.nodes,
+                            std::memory_order_relaxed
+                        );
+                        if (!exact.complete) {
+                            complete.store(false, std::memory_order_relaxed);
+                            break;
+                        }
+                        scores[index] = exact.score;
+                        {
+                            std::lock_guard<std::mutex> lock(best_mutex);
+                            if (exact.score > best_score) {
+                                best_score = exact.score;
+                                best_index = index;
+                                best_worker = worker_index;
+                            }
+                        }
+                        int current = shared_alpha.load(
+                            std::memory_order_relaxed
+                        );
+                        while (exact.score > current
+                            && !shared_alpha.compare_exchange_weak(
+                                current,
+                                exact.score,
+                                std::memory_order_relaxed
+                            )) {}
+                    }
+                });
+            }
+            for (std::thread& thread : threads) {
+                thread.join();
+            }
+            total_nodes += parallel_nodes.load(std::memory_order_relaxed);
+            if (!complete.load(std::memory_order_relaxed)) {
+                break;
+            }
+
+            result.move = moves[best_index];
+            result.score = best_score;
+            result.depth = depth;
+            result.pv = workers_[best_worker]->line_after_move(
+                position,
+                result.move,
+                depth
+            );
+            std::vector<std::size_t> order(moves.size());
+            for (std::size_t index = 0; index < order.size(); ++index) {
+                order[index] = index;
+            }
+            std::stable_sort(
+                order.begin(),
+                order.end(),
+                [&](std::size_t left, std::size_t right) {
+                    return scores[left] > scores[right];
+                }
+            );
+            std::vector<Move> ordered_moves;
+            ordered_moves.reserve(moves.size());
+            for (std::size_t index : order) {
+                ordered_moves.push_back(moves[index]);
+            }
+            moves = std::move(ordered_moves);
+            if (std::abs(result.score) > MATE - MAX_PLY) {
+                break;
+            }
+        }
+        result.nodes = total_nodes;
+        result.hashfull = average_hashfull();
+        result.elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - started
+        ).count();
+        return result;
+    }
+};
+
 uint64_t perft_in_place(Board& board, int depth) {
     if (depth == 0) {
         return 1;
