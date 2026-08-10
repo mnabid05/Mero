@@ -1,5 +1,7 @@
 #include <algorithm>
 #include <array>
+#include <atomic>
+#include <bit>
 #include <chrono>
 #include <cctype>
 #include <cmath>
@@ -7,9 +9,12 @@
 #include <cstdlib>
 #include <iostream>
 #include <limits>
+#include <memory>
+#include <mutex>
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -27,6 +32,60 @@ constexpr int BLACK_KING_SIDE = 4;
 constexpr int BLACK_QUEEN_SIDE = 8;
 constexpr int EN_PASSANT = 1;
 constexpr int CASTLING = 2;
+constexpr uint64_t FILE_A = 0x0101010101010101ULL;
+constexpr uint64_t FILE_H = 0x8080808080808080ULL;
+
+constexpr uint64_t square_bit(int square) {
+    return 1ULL << square;
+}
+
+constexpr std::array<uint64_t, 64> build_knight_attacks() {
+    std::array<uint64_t, 64> attacks{};
+    constexpr int offsets[8][2] = {
+        {-2, -1}, {-2, 1}, {-1, -2}, {-1, 2},
+        {1, -2}, {1, 2}, {2, -1}, {2, 1}
+    };
+    for (int square = 0; square < 64; ++square) {
+        int row = square / 8;
+        int column = square % 8;
+        for (const auto& offset : offsets) {
+            int target_row = row + offset[0];
+            int target_column = column + offset[1];
+            if (target_row >= 0 && target_row < 8
+                && target_column >= 0 && target_column < 8) {
+                attacks[square] |= square_bit(target_row * 8 + target_column);
+            }
+        }
+    }
+    return attacks;
+}
+
+constexpr std::array<uint64_t, 64> build_king_attacks() {
+    std::array<uint64_t, 64> attacks{};
+    for (int square = 0; square < 64; ++square) {
+        int row = square / 8;
+        int column = square % 8;
+        for (int row_delta = -1; row_delta <= 1; ++row_delta) {
+            for (int column_delta = -1; column_delta <= 1; ++column_delta) {
+                if (row_delta == 0 && column_delta == 0) {
+                    continue;
+                }
+                int target_row = row + row_delta;
+                int target_column = column + column_delta;
+                if (target_row >= 0 && target_row < 8
+                    && target_column >= 0 && target_column < 8) {
+                    attacks[square] |= square_bit(
+                        target_row * 8 + target_column
+                    );
+                }
+            }
+        }
+    }
+    return attacks;
+}
+
+constexpr auto KNIGHT_ATTACKS = build_knight_attacks();
+constexpr auto KING_ATTACKS = build_king_attacks();
 
 constexpr std::array<int, 128> PIECE_VALUES = [] {
     std::array<int, 128> values{};
@@ -141,6 +200,9 @@ struct Board {
     };
 
     std::array<char, 64> squares{};
+    std::array<uint64_t, 12> piece_boards{};
+    std::array<uint64_t, 2> color_boards{};
+    uint64_t occupied = 0;
     bool white_to_move = true;
     int castling = WHITE_KING_SIDE | WHITE_QUEEN_SIDE
         | BLACK_KING_SIDE | BLACK_QUEEN_SIDE;
@@ -151,6 +213,54 @@ struct Board {
 
     Board() {
         squares.fill('.');
+    }
+
+    static int color_index(bool white) {
+        return white ? 0 : 1;
+    }
+
+    void place_piece(char piece, int square) {
+        uint64_t bit = square_bit(square);
+        squares[square] = piece;
+        piece_boards[Zobrist::piece_index(piece)] |= bit;
+        color_boards[color_index(is_white(piece))] |= bit;
+        occupied |= bit;
+    }
+
+    char remove_piece(int square) {
+        char piece = squares[square];
+        if (piece == '.') {
+            return piece;
+        }
+        uint64_t bit = square_bit(square);
+        squares[square] = '.';
+        piece_boards[Zobrist::piece_index(piece)] &= ~bit;
+        color_boards[color_index(is_white(piece))] &= ~bit;
+        occupied &= ~bit;
+        return piece;
+    }
+
+    void rebuild_bitboards() {
+        piece_boards.fill(0);
+        color_boards.fill(0);
+        occupied = 0;
+        for (int square = 0; square < 64; ++square) {
+            char piece = squares[square];
+            if (piece != '.') {
+                uint64_t bit = square_bit(square);
+                piece_boards[Zobrist::piece_index(piece)] |= bit;
+                color_boards[color_index(is_white(piece))] |= bit;
+                occupied |= bit;
+            }
+        }
+    }
+
+    bool bitboards_valid() const {
+        Board rebuilt = *this;
+        rebuilt.rebuild_bitboards();
+        return rebuilt.piece_boards == piece_boards
+            && rebuilt.color_boards == color_boards
+            && rebuilt.occupied == occupied;
     }
 
     static Board from_fen(const std::string& fen) {
@@ -197,6 +307,7 @@ struct Board {
             board.castling |= BLACK_QUEEN_SIDE;
         }
         board.en_passant = ep == "-" ? -1 : square_from_name(ep);
+        board.rebuild_bitboards();
         board.key = ZOBRIST.hash(board);
         return board;
     }
@@ -244,76 +355,85 @@ struct Board {
         return output.str();
     }
 
-    bool attacked(int target, bool by_white) const {
-        int row = target / 8;
-        int column = target % 8;
-        int pawn_source_row = row + (by_white ? 1 : -1);
-        char pawn = by_white ? 'P' : 'p';
-        for (int delta : {-1, 1}) {
-            int source_column = column + delta;
-            if (pawn_source_row >= 0 && pawn_source_row < 8
-                && source_column >= 0 && source_column < 8
-                && squares[pawn_source_row * 8 + source_column] == pawn) {
-                return true;
-            }
-        }
-
-        constexpr int knight_offsets[8][2] = {
-            {-2, -1}, {-2, 1}, {-1, -2}, {-1, 2},
-            {1, -2}, {1, 2}, {2, -1}, {2, 1}
-        };
-        char knight = by_white ? 'N' : 'n';
-        for (const auto& offset : knight_offsets) {
-            int source_row = row + offset[0];
-            int source_column = column + offset[1];
-            if (source_row >= 0 && source_row < 8
-                && source_column >= 0 && source_column < 8
-                && squares[source_row * 8 + source_column] == knight) {
-                return true;
-            }
-        }
-
+    uint64_t sliding_attacks(int from, int start, int stop) const {
         constexpr int directions[8][2] = {
             {-1, -1}, {-1, 1}, {1, -1}, {1, 1},
             {-1, 0}, {1, 0}, {0, -1}, {0, 1}
         };
-        char king = by_white ? 'K' : 'k';
-        for (int index = 0; index < 8; ++index) {
-            int source_row = row + directions[index][0];
-            int source_column = column + directions[index][1];
-            if (source_row >= 0 && source_row < 8
-                && source_column >= 0 && source_column < 8
-                && squares[source_row * 8 + source_column] == king) {
-                return true;
-            }
-            while (source_row >= 0 && source_row < 8
-                && source_column >= 0 && source_column < 8) {
-                char piece = squares[source_row * 8 + source_column];
-                if (piece != '.') {
-                    if (is_white(piece) == by_white) {
-                        char type = static_cast<char>(std::tolower(piece));
-                        bool diagonal = index < 4;
-                        if (type == 'q'
-                            || (diagonal && type == 'b')
-                            || (!diagonal && type == 'r')) {
-                            return true;
-                        }
-                    }
+        uint64_t attacks = 0;
+        int row = from / 8;
+        int column = from % 8;
+        for (int index = start; index < stop; ++index) {
+            int target_row = row + directions[index][0];
+            int target_column = column + directions[index][1];
+            while (target_row >= 0 && target_row < 8
+                && target_column >= 0 && target_column < 8) {
+                int target = target_row * 8 + target_column;
+                uint64_t bit = square_bit(target);
+                attacks |= bit;
+                if (occupied & bit) {
                     break;
                 }
-                source_row += directions[index][0];
-                source_column += directions[index][1];
+                target_row += directions[index][0];
+                target_column += directions[index][1];
             }
         }
-        return false;
+        return attacks;
+    }
+
+    uint64_t bishop_attacks(int from) const {
+        return sliding_attacks(from, 0, 4);
+    }
+
+    uint64_t rook_attacks(int from) const {
+        return sliding_attacks(from, 4, 8);
+    }
+
+    uint64_t pawn_attacks(bool by_white) const {
+        uint64_t pawns = piece_boards[
+            Zobrist::piece_index(by_white ? 'P' : 'p')
+        ];
+        if (by_white) {
+            return ((pawns & ~FILE_A) >> 9) | ((pawns & ~FILE_H) >> 7);
+        }
+        return ((pawns & ~FILE_H) << 9) | ((pawns & ~FILE_A) << 7);
+    }
+
+    bool attacked(int target, bool by_white) const {
+        uint64_t target_bit = square_bit(target);
+        if (pawn_attacks(by_white) & target_bit) {
+            return true;
+        }
+        uint64_t knights = piece_boards[
+            Zobrist::piece_index(by_white ? 'N' : 'n')
+        ];
+        if (KNIGHT_ATTACKS[target] & knights) {
+            return true;
+        }
+        uint64_t kings = piece_boards[
+            Zobrist::piece_index(by_white ? 'K' : 'k')
+        ];
+        if (KING_ATTACKS[target] & kings) {
+            return true;
+        }
+        uint64_t bishops = piece_boards[
+            Zobrist::piece_index(by_white ? 'B' : 'b')
+        ];
+        uint64_t rooks = piece_boards[
+            Zobrist::piece_index(by_white ? 'R' : 'r')
+        ];
+        uint64_t queens = piece_boards[
+            Zobrist::piece_index(by_white ? 'Q' : 'q')
+        ];
+        return (bishop_attacks(target) & (bishops | queens))
+            || (rook_attacks(target) & (rooks | queens));
     }
 
     int king_square(bool white) const {
-        char king = white ? 'K' : 'k';
-        auto found = std::find(squares.begin(), squares.end(), king);
-        return found == squares.end()
-            ? -1
-            : static_cast<int>(std::distance(squares.begin(), found));
+        uint64_t king = piece_boards[
+            Zobrist::piece_index(white ? 'K' : 'k')
+        ];
+        return king == 0 ? -1 : static_cast<int>(std::countr_zero(king));
     }
 
     bool in_check(bool white) const {
@@ -484,7 +604,6 @@ struct Board {
             captured = squares[captured_square];
             undo.captured = captured;
             undo.captured_square = captured_square;
-            squares[captured_square] = '.';
         }
 
         key ^= ZOBRIST.castling[castling];
@@ -499,36 +618,39 @@ struct Board {
             ][captured_square];
         }
 
-        squares[move.from] = '.';
+        remove_piece(move.from);
+        if (captured != '.') {
+            remove_piece(captured_square);
+        }
         char placed = move.promotion == '\0'
             ? piece
             : static_cast<char>(
                 moving_white ? std::toupper(move.promotion) : move.promotion
             );
-        squares[move.to] = placed;
+        place_piece(placed, move.to);
         key ^= ZOBRIST.pieces[Zobrist::piece_index(placed)][move.to];
 
         if (move.flags & CASTLING) {
             if (move.to == 62) {
                 key ^= ZOBRIST.pieces[Zobrist::piece_index('R')][63];
                 key ^= ZOBRIST.pieces[Zobrist::piece_index('R')][61];
-                squares[61] = squares[63];
-                squares[63] = '.';
+                remove_piece(63);
+                place_piece('R', 61);
             } else if (move.to == 58) {
                 key ^= ZOBRIST.pieces[Zobrist::piece_index('R')][56];
                 key ^= ZOBRIST.pieces[Zobrist::piece_index('R')][59];
-                squares[59] = squares[56];
-                squares[56] = '.';
+                remove_piece(56);
+                place_piece('R', 59);
             } else if (move.to == 6) {
                 key ^= ZOBRIST.pieces[Zobrist::piece_index('r')][7];
                 key ^= ZOBRIST.pieces[Zobrist::piece_index('r')][5];
-                squares[5] = squares[7];
-                squares[7] = '.';
+                remove_piece(7);
+                place_piece('r', 5);
             } else if (move.to == 2) {
                 key ^= ZOBRIST.pieces[Zobrist::piece_index('r')][0];
                 key ^= ZOBRIST.pieces[Zobrist::piece_index('r')][3];
-                squares[3] = squares[0];
-                squares[0] = '.';
+                remove_piece(0);
+                place_piece('r', 3);
             }
         }
 
@@ -567,26 +689,24 @@ struct Board {
 
         if (move.flags & CASTLING) {
             if (move.to == 62) {
-                squares[63] = squares[61];
-                squares[61] = '.';
+                remove_piece(61);
+                place_piece('R', 63);
             } else if (move.to == 58) {
-                squares[56] = squares[59];
-                squares[59] = '.';
+                remove_piece(59);
+                place_piece('R', 56);
             } else if (move.to == 6) {
-                squares[7] = squares[5];
-                squares[5] = '.';
+                remove_piece(5);
+                place_piece('r', 7);
             } else if (move.to == 2) {
-                squares[0] = squares[3];
-                squares[3] = '.';
+                remove_piece(3);
+                place_piece('r', 0);
             }
         }
 
-        squares[move.from] = undo.moved;
-        squares[move.to] = undo.captured_square == move.to
-            ? undo.captured
-            : '.';
-        if (undo.captured_square != move.to) {
-            squares[undo.captured_square] = undo.captured;
+        remove_piece(move.to);
+        place_piece(undo.moved, move.from);
+        if (undo.captured != '.') {
+            place_piece(undo.captured, undo.captured_square);
         }
     }
 
@@ -638,9 +758,12 @@ private:
 
 uint64_t Zobrist::hash(const Board& board) const {
     uint64_t key = 0;
-    for (int square = 0; square < 64; ++square) {
-        if (board.squares[square] != '.') {
-            key ^= pieces[piece_index(board.squares[square])][square];
+    for (int piece = 0; piece < 12; ++piece) {
+        uint64_t remaining = board.piece_boards[piece];
+        while (remaining != 0) {
+            int square = static_cast<int>(std::countr_zero(remaining));
+            key ^= pieces[piece][square];
+            remaining &= remaining - 1;
         }
     }
     key ^= castling[board.castling];
