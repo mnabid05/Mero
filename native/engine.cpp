@@ -1,5 +1,7 @@
 #include <algorithm>
 #include <array>
+#include <atomic>
+#include <bit>
 #include <chrono>
 #include <cctype>
 #include <cmath>
@@ -7,9 +9,12 @@
 #include <cstdlib>
 #include <iostream>
 #include <limits>
+#include <memory>
+#include <mutex>
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -27,6 +32,60 @@ constexpr int BLACK_KING_SIDE = 4;
 constexpr int BLACK_QUEEN_SIDE = 8;
 constexpr int EN_PASSANT = 1;
 constexpr int CASTLING = 2;
+constexpr uint64_t FILE_A = 0x0101010101010101ULL;
+constexpr uint64_t FILE_H = 0x8080808080808080ULL;
+
+constexpr uint64_t square_bit(int square) {
+    return 1ULL << square;
+}
+
+constexpr std::array<uint64_t, 64> build_knight_attacks() {
+    std::array<uint64_t, 64> attacks{};
+    constexpr int offsets[8][2] = {
+        {-2, -1}, {-2, 1}, {-1, -2}, {-1, 2},
+        {1, -2}, {1, 2}, {2, -1}, {2, 1}
+    };
+    for (int square = 0; square < 64; ++square) {
+        int row = square / 8;
+        int column = square % 8;
+        for (const auto& offset : offsets) {
+            int target_row = row + offset[0];
+            int target_column = column + offset[1];
+            if (target_row >= 0 && target_row < 8
+                && target_column >= 0 && target_column < 8) {
+                attacks[square] |= square_bit(target_row * 8 + target_column);
+            }
+        }
+    }
+    return attacks;
+}
+
+constexpr std::array<uint64_t, 64> build_king_attacks() {
+    std::array<uint64_t, 64> attacks{};
+    for (int square = 0; square < 64; ++square) {
+        int row = square / 8;
+        int column = square % 8;
+        for (int row_delta = -1; row_delta <= 1; ++row_delta) {
+            for (int column_delta = -1; column_delta <= 1; ++column_delta) {
+                if (row_delta == 0 && column_delta == 0) {
+                    continue;
+                }
+                int target_row = row + row_delta;
+                int target_column = column + column_delta;
+                if (target_row >= 0 && target_row < 8
+                    && target_column >= 0 && target_column < 8) {
+                    attacks[square] |= square_bit(
+                        target_row * 8 + target_column
+                    );
+                }
+            }
+        }
+    }
+    return attacks;
+}
+
+constexpr auto KNIGHT_ATTACKS = build_knight_attacks();
+constexpr auto KING_ATTACKS = build_king_attacks();
 
 constexpr std::array<int, 128> PIECE_VALUES = [] {
     std::array<int, 128> values{};
@@ -62,6 +121,43 @@ std::string square_name(int square) {
     return result;
 }
 
+uint64_t splitmix64(uint64_t& state) {
+    uint64_t value = (state += 0x9e3779b97f4a7c15ULL);
+    value = (value ^ (value >> 30)) * 0xbf58476d1ce4e5b9ULL;
+    value = (value ^ (value >> 27)) * 0x94d049bb133111ebULL;
+    return value ^ (value >> 31);
+}
+
+struct Board;
+
+struct Zobrist {
+    std::array<std::array<uint64_t, 64>, 12> pieces{};
+    std::array<uint64_t, 16> castling{};
+    std::array<uint64_t, 8> ep_file{};
+    uint64_t turn = 0;
+
+    Zobrist() {
+        uint64_t state = 0x4d77616861686121ULL;
+        for (auto& piece : pieces) {
+            for (uint64_t& square : piece) {
+                square = splitmix64(state);
+            }
+        }
+        for (uint64_t& value : castling) value = splitmix64(state);
+        for (uint64_t& value : ep_file) value = splitmix64(state);
+        turn = splitmix64(state);
+    }
+
+    static int piece_index(char piece) {
+        std::string symbols = "PNBRQKpnbrqk";
+        return static_cast<int>(symbols.find(piece));
+    }
+
+    uint64_t hash(const Board& board) const;
+};
+
+extern const Zobrist ZOBRIST;
+
 struct Move {
     int from = -1;
     int to = -1;
@@ -92,16 +188,79 @@ struct Move {
 };
 
 struct Board {
+    struct UndoState {
+        char moved = '.';
+        char captured = '.';
+        int captured_square = -1;
+        int castling = 0;
+        int en_passant = -1;
+        int halfmove = 0;
+        int fullmove = 1;
+        uint64_t key = 0;
+    };
+
     std::array<char, 64> squares{};
+    std::array<uint64_t, 12> piece_boards{};
+    std::array<uint64_t, 2> color_boards{};
+    uint64_t occupied = 0;
     bool white_to_move = true;
     int castling = WHITE_KING_SIDE | WHITE_QUEEN_SIDE
         | BLACK_KING_SIDE | BLACK_QUEEN_SIDE;
     int en_passant = -1;
     int halfmove = 0;
     int fullmove = 1;
+    uint64_t key = 0;
 
     Board() {
         squares.fill('.');
+    }
+
+    static int color_index(bool white) {
+        return white ? 0 : 1;
+    }
+
+    void place_piece(char piece, int square) {
+        uint64_t bit = square_bit(square);
+        squares[square] = piece;
+        piece_boards[Zobrist::piece_index(piece)] |= bit;
+        color_boards[color_index(is_white(piece))] |= bit;
+        occupied |= bit;
+    }
+
+    char remove_piece(int square) {
+        char piece = squares[square];
+        if (piece == '.') {
+            return piece;
+        }
+        uint64_t bit = square_bit(square);
+        squares[square] = '.';
+        piece_boards[Zobrist::piece_index(piece)] &= ~bit;
+        color_boards[color_index(is_white(piece))] &= ~bit;
+        occupied &= ~bit;
+        return piece;
+    }
+
+    void rebuild_bitboards() {
+        piece_boards.fill(0);
+        color_boards.fill(0);
+        occupied = 0;
+        for (int square = 0; square < 64; ++square) {
+            char piece = squares[square];
+            if (piece != '.') {
+                uint64_t bit = square_bit(square);
+                piece_boards[Zobrist::piece_index(piece)] |= bit;
+                color_boards[color_index(is_white(piece))] |= bit;
+                occupied |= bit;
+            }
+        }
+    }
+
+    bool bitboards_valid() const {
+        Board rebuilt = *this;
+        rebuilt.rebuild_bitboards();
+        return rebuilt.piece_boards == piece_boards
+            && rebuilt.color_boards == color_boards
+            && rebuilt.occupied == occupied;
     }
 
     static Board from_fen(const std::string& fen) {
@@ -148,6 +307,8 @@ struct Board {
             board.castling |= BLACK_QUEEN_SIDE;
         }
         board.en_passant = ep == "-" ? -1 : square_from_name(ep);
+        board.rebuild_bitboards();
+        board.key = ZOBRIST.hash(board);
         return board;
     }
 
@@ -194,76 +355,85 @@ struct Board {
         return output.str();
     }
 
-    bool attacked(int target, bool by_white) const {
-        int row = target / 8;
-        int column = target % 8;
-        int pawn_source_row = row + (by_white ? 1 : -1);
-        char pawn = by_white ? 'P' : 'p';
-        for (int delta : {-1, 1}) {
-            int source_column = column + delta;
-            if (pawn_source_row >= 0 && pawn_source_row < 8
-                && source_column >= 0 && source_column < 8
-                && squares[pawn_source_row * 8 + source_column] == pawn) {
-                return true;
-            }
-        }
-
-        constexpr int knight_offsets[8][2] = {
-            {-2, -1}, {-2, 1}, {-1, -2}, {-1, 2},
-            {1, -2}, {1, 2}, {2, -1}, {2, 1}
-        };
-        char knight = by_white ? 'N' : 'n';
-        for (const auto& offset : knight_offsets) {
-            int source_row = row + offset[0];
-            int source_column = column + offset[1];
-            if (source_row >= 0 && source_row < 8
-                && source_column >= 0 && source_column < 8
-                && squares[source_row * 8 + source_column] == knight) {
-                return true;
-            }
-        }
-
+    uint64_t sliding_attacks(int from, int start, int stop) const {
         constexpr int directions[8][2] = {
             {-1, -1}, {-1, 1}, {1, -1}, {1, 1},
             {-1, 0}, {1, 0}, {0, -1}, {0, 1}
         };
-        char king = by_white ? 'K' : 'k';
-        for (int index = 0; index < 8; ++index) {
-            int source_row = row + directions[index][0];
-            int source_column = column + directions[index][1];
-            if (source_row >= 0 && source_row < 8
-                && source_column >= 0 && source_column < 8
-                && squares[source_row * 8 + source_column] == king) {
-                return true;
-            }
-            while (source_row >= 0 && source_row < 8
-                && source_column >= 0 && source_column < 8) {
-                char piece = squares[source_row * 8 + source_column];
-                if (piece != '.') {
-                    if (is_white(piece) == by_white) {
-                        char type = static_cast<char>(std::tolower(piece));
-                        bool diagonal = index < 4;
-                        if (type == 'q'
-                            || (diagonal && type == 'b')
-                            || (!diagonal && type == 'r')) {
-                            return true;
-                        }
-                    }
+        uint64_t attacks = 0;
+        int row = from / 8;
+        int column = from % 8;
+        for (int index = start; index < stop; ++index) {
+            int target_row = row + directions[index][0];
+            int target_column = column + directions[index][1];
+            while (target_row >= 0 && target_row < 8
+                && target_column >= 0 && target_column < 8) {
+                int target = target_row * 8 + target_column;
+                uint64_t bit = square_bit(target);
+                attacks |= bit;
+                if (occupied & bit) {
                     break;
                 }
-                source_row += directions[index][0];
-                source_column += directions[index][1];
+                target_row += directions[index][0];
+                target_column += directions[index][1];
             }
         }
-        return false;
+        return attacks;
+    }
+
+    uint64_t bishop_attacks(int from) const {
+        return sliding_attacks(from, 0, 4);
+    }
+
+    uint64_t rook_attacks(int from) const {
+        return sliding_attacks(from, 4, 8);
+    }
+
+    uint64_t pawn_attacks(bool by_white) const {
+        uint64_t pawns = piece_boards[
+            Zobrist::piece_index(by_white ? 'P' : 'p')
+        ];
+        if (by_white) {
+            return ((pawns & ~FILE_A) >> 9) | ((pawns & ~FILE_H) >> 7);
+        }
+        return ((pawns & ~FILE_H) << 9) | ((pawns & ~FILE_A) << 7);
+    }
+
+    bool attacked(int target, bool by_white) const {
+        uint64_t target_bit = square_bit(target);
+        if (pawn_attacks(by_white) & target_bit) {
+            return true;
+        }
+        uint64_t knights = piece_boards[
+            Zobrist::piece_index(by_white ? 'N' : 'n')
+        ];
+        if (KNIGHT_ATTACKS[target] & knights) {
+            return true;
+        }
+        uint64_t kings = piece_boards[
+            Zobrist::piece_index(by_white ? 'K' : 'k')
+        ];
+        if (KING_ATTACKS[target] & kings) {
+            return true;
+        }
+        uint64_t bishops = piece_boards[
+            Zobrist::piece_index(by_white ? 'B' : 'b')
+        ];
+        uint64_t rooks = piece_boards[
+            Zobrist::piece_index(by_white ? 'R' : 'r')
+        ];
+        uint64_t queens = piece_boards[
+            Zobrist::piece_index(by_white ? 'Q' : 'q')
+        ];
+        return (bishop_attacks(target) & (bishops | queens))
+            || (rook_attacks(target) & (rooks | queens));
     }
 
     int king_square(bool white) const {
-        char king = white ? 'K' : 'k';
-        auto found = std::find(squares.begin(), squares.end(), king);
-        return found == squares.end()
-            ? -1
-            : static_cast<int>(std::distance(squares.begin(), found));
+        uint64_t king = piece_boards[
+            Zobrist::piece_index(white ? 'K' : 'k')
+        ];
+        return king == 0 ? -1 : static_cast<int>(std::countr_zero(king));
     }
 
     bool in_check(bool white) const {
@@ -284,20 +454,13 @@ struct Board {
     std::vector<Move> pseudo_moves(bool captures_only = false) const {
         std::vector<Move> moves;
         moves.reserve(64);
-        constexpr int knight_offsets[8][2] = {
-            {-2, -1}, {-2, 1}, {-1, -2}, {-1, 2},
-            {1, -2}, {1, 2}, {2, -1}, {2, 1}
-        };
-        constexpr int directions[8][2] = {
-            {-1, -1}, {-1, 1}, {1, -1}, {1, 1},
-            {-1, 0}, {1, 0}, {0, -1}, {0, 1}
-        };
-
-        for (int from = 0; from < 64; ++from) {
+        uint64_t own = color_boards[color_index(white_to_move)];
+        uint64_t enemy = color_boards[color_index(!white_to_move)];
+        uint64_t remaining = own;
+        while (remaining != 0) {
+            int from = static_cast<int>(std::countr_zero(remaining));
+            remaining &= remaining - 1;
             char piece = squares[from];
-            if (piece == '.' || is_white(piece) != white_to_move) {
-                continue;
-            }
             char type = static_cast<char>(std::tolower(piece));
             int row = from / 8;
             int column = from % 8;
@@ -306,12 +469,12 @@ struct Board {
                 int promotion_row = white_to_move ? 0 : 7;
                 int start_row = white_to_move ? 6 : 1;
                 int next_row = row + direction;
-                if (!captures_only && next_row >= 0 && next_row < 8) {
+                if (next_row >= 0 && next_row < 8) {
                     int one = next_row * 8 + column;
                     if (squares[one] == '.') {
                         if (next_row == promotion_row) {
                             add_promotions(moves, from, one, 0);
-                        } else {
+                        } else if (!captures_only) {
                             moves.push_back({from, one, '\0', 0});
                             int two = (row + 2 * direction) * 8 + column;
                             if (row == start_row && squares[two] == '.') {
@@ -339,24 +502,16 @@ struct Board {
                     }
                 }
             } else if (type == 'n' || type == 'k') {
-                const int (*offsets)[2] =
-                    type == 'n' ? knight_offsets : directions;
-                for (int index = 0; index < 8; ++index) {
-                    int target_row = row + offsets[index][0];
-                    int target_column = column + offsets[index][1];
-                    if (target_row < 0 || target_row >= 8
-                        || target_column < 0 || target_column >= 8) {
-                        continue;
-                    }
-                    int to = target_row * 8 + target_column;
-                    char target = squares[to];
-                    if (target == '.') {
-                        if (!captures_only) {
-                            moves.push_back({from, to, '\0', 0});
-                        }
-                    } else if (!same_color(piece, target)) {
-                        moves.push_back({from, to, '\0', 0});
-                    }
+                uint64_t targets = (type == 'n'
+                    ? KNIGHT_ATTACKS[from]
+                    : KING_ATTACKS[from]) & ~own;
+                if (captures_only) {
+                    targets &= enemy;
+                }
+                while (targets != 0) {
+                    int to = static_cast<int>(std::countr_zero(targets));
+                    targets &= targets - 1;
+                    moves.push_back({from, to, '\0', 0});
                 }
                 if (type == 'k' && !captures_only && !in_check()) {
                     if (white_to_move && from == 60) {
@@ -386,65 +541,92 @@ struct Board {
                     }
                 }
             } else {
-                int start = type == 'b' ? 0 : (type == 'r' ? 4 : 0);
-                int stop = type == 'b' ? 4 : (type == 'r' ? 8 : 8);
-                for (int index = start; index < stop; ++index) {
-                    int target_row = row + directions[index][0];
-                    int target_column = column + directions[index][1];
-                    while (target_row >= 0 && target_row < 8
-                        && target_column >= 0 && target_column < 8) {
-                        int to = target_row * 8 + target_column;
-                        char target = squares[to];
-                        if (target == '.') {
-                            if (!captures_only) {
-                                moves.push_back({from, to, '\0', 0});
-                            }
-                        } else {
-                            if (!same_color(piece, target)) {
-                                moves.push_back({from, to, '\0', 0});
-                            }
-                            break;
-                        }
-                        target_row += directions[index][0];
-                        target_column += directions[index][1];
-                    }
+                uint64_t targets = type == 'b'
+                    ? bishop_attacks(from)
+                    : (type == 'r'
+                        ? rook_attacks(from)
+                        : bishop_attacks(from) | rook_attacks(from));
+                targets &= ~own;
+                if (captures_only) {
+                    targets &= enemy;
+                }
+                while (targets != 0) {
+                    int to = static_cast<int>(std::countr_zero(targets));
+                    targets &= targets - 1;
+                    moves.push_back({from, to, '\0', 0});
                 }
             }
         }
         return moves;
     }
 
-    void make_move(const Move& move) {
+    UndoState make_move(const Move& move) {
         char piece = squares[move.from];
         bool moving_white = is_white(piece);
         char captured = squares[move.to];
         int captured_square = move.to;
+        UndoState undo{
+            piece,
+            captured,
+            captured_square,
+            castling,
+            en_passant,
+            halfmove,
+            fullmove,
+            key
+        };
         if (move.flags & EN_PASSANT) {
             captured_square = move.to + (moving_white ? 8 : -8);
             captured = squares[captured_square];
-            squares[captured_square] = '.';
+            undo.captured = captured;
+            undo.captured_square = captured_square;
         }
 
-        squares[move.from] = '.';
-        squares[move.to] = move.promotion == '\0'
+        key ^= ZOBRIST.castling[castling];
+        if (en_passant >= 0) {
+            key ^= ZOBRIST.ep_file[en_passant % 8];
+        }
+        key ^= ZOBRIST.turn;
+        key ^= ZOBRIST.pieces[Zobrist::piece_index(piece)][move.from];
+        if (captured != '.') {
+            key ^= ZOBRIST.pieces[
+                Zobrist::piece_index(captured)
+            ][captured_square];
+        }
+
+        remove_piece(move.from);
+        if (captured != '.') {
+            remove_piece(captured_square);
+        }
+        char placed = move.promotion == '\0'
             ? piece
             : static_cast<char>(
                 moving_white ? std::toupper(move.promotion) : move.promotion
             );
+        place_piece(placed, move.to);
+        key ^= ZOBRIST.pieces[Zobrist::piece_index(placed)][move.to];
 
         if (move.flags & CASTLING) {
             if (move.to == 62) {
-                squares[61] = squares[63];
-                squares[63] = '.';
+                key ^= ZOBRIST.pieces[Zobrist::piece_index('R')][63];
+                key ^= ZOBRIST.pieces[Zobrist::piece_index('R')][61];
+                remove_piece(63);
+                place_piece('R', 61);
             } else if (move.to == 58) {
-                squares[59] = squares[56];
-                squares[56] = '.';
+                key ^= ZOBRIST.pieces[Zobrist::piece_index('R')][56];
+                key ^= ZOBRIST.pieces[Zobrist::piece_index('R')][59];
+                remove_piece(56);
+                place_piece('R', 59);
             } else if (move.to == 6) {
-                squares[5] = squares[7];
-                squares[7] = '.';
+                key ^= ZOBRIST.pieces[Zobrist::piece_index('r')][7];
+                key ^= ZOBRIST.pieces[Zobrist::piece_index('r')][5];
+                remove_piece(7);
+                place_piece('r', 5);
             } else if (move.to == 2) {
-                squares[3] = squares[0];
-                squares[0] = '.';
+                key ^= ZOBRIST.pieces[Zobrist::piece_index('r')][0];
+                key ^= ZOBRIST.pieces[Zobrist::piece_index('r')][3];
+                remove_piece(0);
+                place_piece('r', 3);
             }
         }
 
@@ -466,19 +648,60 @@ struct Board {
             ++fullmove;
         }
         white_to_move = !white_to_move;
+        key ^= ZOBRIST.castling[castling];
+        if (en_passant >= 0) {
+            key ^= ZOBRIST.ep_file[en_passant % 8];
+        }
+        return undo;
     }
 
-    std::vector<Move> legal_moves(bool captures_only = false) const {
+    void unmake_move(const Move& move, const UndoState& undo) {
+        white_to_move = !white_to_move;
+        castling = undo.castling;
+        en_passant = undo.en_passant;
+        halfmove = undo.halfmove;
+        fullmove = undo.fullmove;
+        key = undo.key;
+
+        if (move.flags & CASTLING) {
+            if (move.to == 62) {
+                remove_piece(61);
+                place_piece('R', 63);
+            } else if (move.to == 58) {
+                remove_piece(59);
+                place_piece('R', 56);
+            } else if (move.to == 6) {
+                remove_piece(5);
+                place_piece('r', 7);
+            } else if (move.to == 2) {
+                remove_piece(3);
+                place_piece('r', 0);
+            }
+        }
+
+        remove_piece(move.to);
+        place_piece(undo.moved, move.from);
+        if (undo.captured != '.') {
+            place_piece(undo.captured, undo.captured_square);
+        }
+    }
+
+    std::vector<Move> legal_moves_in_place(bool captures_only = false) {
         std::vector<Move> legal;
         bool moving_white = white_to_move;
         for (const Move& move : pseudo_moves(captures_only)) {
-            Board child = *this;
-            child.make_move(move);
-            if (!child.in_check(moving_white)) {
+            UndoState undo = make_move(move);
+            if (!in_check(moving_white)) {
                 legal.push_back(move);
             }
+            unmake_move(move, undo);
         }
         return legal;
+    }
+
+    std::vector<Move> legal_moves(bool captures_only = false) const {
+        Board position = *this;
+        return position.legal_moves_in_place(captures_only);
     }
 
     Move find_move(const std::string& uci) const {
@@ -491,53 +714,45 @@ struct Board {
     }
 };
 
-uint64_t splitmix64(uint64_t& state) {
-    uint64_t value = (state += 0x9e3779b97f4a7c15ULL);
-    value = (value ^ (value >> 30)) * 0xbf58476d1ce4e5b9ULL;
-    value = (value ^ (value >> 27)) * 0x94d049bb133111ebULL;
-    return value ^ (value >> 31);
+class ScopedMove {
+public:
+    ScopedMove(Board& board, const Move& move)
+        : board_(board), move_(move), undo_(board.make_move(move)) {}
+
+    ScopedMove(const ScopedMove&) = delete;
+    ScopedMove& operator=(const ScopedMove&) = delete;
+
+    ~ScopedMove() {
+        board_.unmake_move(move_, undo_);
+    }
+
+private:
+    Board& board_;
+    Move move_;
+    Board::UndoState undo_;
+};
+
+uint64_t Zobrist::hash(const Board& board) const {
+    uint64_t key = 0;
+    for (int piece = 0; piece < 12; ++piece) {
+        uint64_t remaining = board.piece_boards[piece];
+        while (remaining != 0) {
+            int square = static_cast<int>(std::countr_zero(remaining));
+            key ^= pieces[piece][square];
+            remaining &= remaining - 1;
+        }
+    }
+    key ^= castling[board.castling];
+    if (board.en_passant >= 0) {
+        key ^= ep_file[board.en_passant % 8];
+    }
+    if (!board.white_to_move) {
+        key ^= turn;
+    }
+    return key;
 }
 
-struct Zobrist {
-    std::array<std::array<uint64_t, 64>, 12> pieces{};
-    std::array<uint64_t, 16> castling{};
-    std::array<uint64_t, 8> ep_file{};
-    uint64_t turn = 0;
-
-    Zobrist() {
-        uint64_t state = 0x4d77616861686121ULL;
-        for (auto& piece : pieces) {
-            for (uint64_t& square : piece) {
-                square = splitmix64(state);
-            }
-        }
-        for (uint64_t& value : castling) value = splitmix64(state);
-        for (uint64_t& value : ep_file) value = splitmix64(state);
-        turn = splitmix64(state);
-    }
-
-    static int piece_index(char piece) {
-        std::string symbols = "PNBRQKpnbrqk";
-        return static_cast<int>(symbols.find(piece));
-    }
-
-    uint64_t hash(const Board& board) const {
-        uint64_t key = 0;
-        for (int square = 0; square < 64; ++square) {
-            if (board.squares[square] != '.') {
-                key ^= pieces[piece_index(board.squares[square])][square];
-            }
-        }
-        key ^= castling[board.castling];
-        if (board.en_passant >= 0) {
-            key ^= ep_file[board.en_passant % 8];
-        }
-        if (!board.white_to_move) {
-            key ^= turn;
-        }
-        return key;
-    }
-};
+const Zobrist ZOBRIST{};
 
 enum class Bound : uint8_t { Exact, Lower, Upper };
 
@@ -545,9 +760,15 @@ struct TTEntry {
     uint64_t key = 0;
     int depth = -1;
     int score = 0;
+    int static_eval = INF;
     Bound bound = Bound::Exact;
     Move move{};
     uint16_t generation = 0;
+};
+
+struct TTCluster {
+    static constexpr std::size_t SIZE = 3;
+    std::array<TTEntry, SIZE> entries{};
 };
 
 class Timeout final : public std::exception {};
@@ -560,20 +781,24 @@ public:
 
     void resize_table(std::size_t megabytes) {
         std::size_t bytes = std::max<std::size_t>(1, megabytes) * 1024 * 1024;
-        std::size_t entries = std::max<std::size_t>(1024, bytes / sizeof(TTEntry));
+        std::size_t entries = std::max<std::size_t>(
+            256,
+            bytes / sizeof(TTCluster)
+        );
         std::size_t power = 1;
         while (power * 2 <= entries) {
             power *= 2;
         }
-        table_.assign(power, TTEntry{});
+        table_.assign(power, TTCluster{});
     }
 
     void clear() {
-        std::fill(table_.begin(), table_.end(), TTEntry{});
+        std::fill(table_.begin(), table_.end(), TTCluster{});
         history_ = {};
         capture_history_ = {};
         killers_ = {};
         countermoves_ = {};
+        continuation_history_ = {};
     }
 
     struct Result {
@@ -581,24 +806,101 @@ public:
         int score = 0;
         int depth = 0;
         uint64_t nodes = 0;
+        int hashfull = 0;
         long long elapsed_ms = 0;
         std::vector<Move> pv;
     };
+
+    struct RootMoveResult {
+        bool complete = false;
+        int score = -INF;
+        uint64_t nodes = 0;
+    };
+
+    void begin_parallel_search() {
+        ++generation_;
+    }
+
+    RootMoveResult search_root_move(
+        const Board& position,
+        const Move& move,
+        int depth,
+        int alpha,
+        int beta,
+        const std::vector<uint64_t>& game_history,
+        std::chrono::steady_clock::time_point deadline
+    ) {
+        nodes_ = 0;
+        node_limit_ = 0;
+        static_evals_.fill(-INF);
+        search_history_ = game_history;
+        deadline_ = deadline;
+        RootMoveResult result;
+        if (std::chrono::steady_clock::now() >= deadline_) {
+            return result;
+        }
+        Board board = position;
+        board.make_move(move);
+        try {
+            result.score = -negamax(
+                board,
+                depth - 1,
+                -beta,
+                -alpha,
+                1,
+                true,
+                move
+            );
+            result.complete = true;
+        } catch (const Timeout&) {
+            result.complete = false;
+        }
+        result.nodes = nodes_;
+        return result;
+    }
+
+    int table_hashfull() const {
+        return hashfull();
+    }
+
+    int see(const Board& position, const Move& move) const {
+        return static_exchange_evaluation(position, move);
+    }
+
+    std::vector<Move> line_after_move(
+        const Board& position,
+        const Move& move,
+        int depth
+    ) {
+        std::vector<Move> line{move};
+        if (depth <= 1) {
+            return line;
+        }
+        Board board = position;
+        board.make_move(move);
+        auto tail = principal_variation(board, depth - 1);
+        line.insert(line.end(), tail.begin(), tail.end());
+        return line;
+    }
 
     Result search(
         const Board& position,
         int max_depth,
         int move_time_ms,
-        const std::vector<uint64_t>& game_history = {}
+        const std::vector<uint64_t>& game_history = {},
+        uint64_t node_limit = 0
     ) {
         nodes_ = 0;
+        node_limit_ = node_limit;
+        static_evals_.fill(-INF);
         ++generation_;
         search_history_ = game_history;
         deadline_ = std::chrono::steady_clock::now()
             + std::chrono::milliseconds(std::max(1, move_time_ms));
         auto started = std::chrono::steady_clock::now();
         Result result;
-        auto legal = position.legal_moves();
+        Board board = position;
+        auto legal = board.legal_moves_in_place();
         if (legal.empty()) {
             return result;
         }
@@ -611,7 +913,7 @@ public:
             int beta = std::min(INF, previous + window);
             try {
                 while (true) {
-                    auto [score, move] = root(position, depth, alpha, beta);
+                    auto [score, move] = root(board, depth, alpha, beta);
                     if (score <= alpha && alpha > -INF) {
                         window *= 2;
                         alpha = std::max(-INF, score - window);
@@ -636,6 +938,7 @@ public:
             }
         }
         result.nodes = nodes_;
+        result.hashfull = hashfull();
         result.elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::steady_clock::now() - started
         ).count();
@@ -644,21 +947,39 @@ public:
     }
 
 private:
-    std::vector<TTEntry> table_;
-    Zobrist zobrist_;
+    std::vector<TTCluster> table_;
     std::array<std::array<Move, 2>, MAX_PLY> killers_{};
     std::array<std::array<int, 64>, 128> history_{};
     std::array<std::array<int, 64>, 128> capture_history_{};
     std::array<std::array<Move, 64>, 128> countermoves_{};
+    std::array<std::array<int, 64>, 64> continuation_history_{};
+    std::array<int, MAX_PLY> static_evals_{};
     std::vector<uint64_t> search_history_;
     uint64_t nodes_ = 0;
+    uint64_t node_limit_ = 0;
     uint16_t generation_ = 0;
     std::chrono::steady_clock::time_point deadline_{};
 
+    int hashfull() const {
+        std::size_t sample = std::min<std::size_t>(1000, table_.size());
+        std::size_t occupied = 0;
+        for (std::size_t index = 0; index < sample; ++index) {
+            for (const TTEntry& entry : table_[index].entries) {
+                occupied += entry.depth >= 0
+                    && entry.generation == generation_;
+            }
+        }
+        return static_cast<int>(
+            occupied * 1000 / std::max<std::size_t>(1, sample * TTCluster::SIZE)
+        );
+    }
+
     void check_time() {
-        if ((nodes_ & 2047ULL) == 0
-            && std::chrono::steady_clock::now() >= deadline_) {
-            throw Timeout{};
+        if ((nodes_ & 2047ULL) == 0) {
+            if ((node_limit_ != 0 && nodes_ >= node_limit_)
+                || std::chrono::steady_clock::now() >= deadline_) {
+                throw Timeout{};
+            }
         }
     }
 
@@ -679,9 +1000,99 @@ private:
         return value;
     }
 
+    int least_valuable_attacker(
+        const Board& board,
+        int target,
+        bool white
+    ) const {
+        uint64_t target_bit = square_bit(target);
+        uint64_t pawn_sources = white
+            ? ((target_bit & ~FILE_A) << 7)
+                | ((target_bit & ~FILE_H) << 9)
+            : ((target_bit & ~FILE_H) >> 7)
+                | ((target_bit & ~FILE_A) >> 9);
+        uint64_t pawn = pawn_sources & board.piece_boards[
+            Zobrist::piece_index(white ? 'P' : 'p')
+        ];
+        if (pawn != 0) {
+            return static_cast<int>(std::countr_zero(pawn));
+        }
+        uint64_t knight = KNIGHT_ATTACKS[target] & board.piece_boards[
+            Zobrist::piece_index(white ? 'N' : 'n')
+        ];
+        if (knight != 0) {
+            return static_cast<int>(std::countr_zero(knight));
+        }
+        uint64_t bishop_attacker = board.bishop_attacks(target)
+            & board.piece_boards[Zobrist::piece_index(white ? 'B' : 'b')];
+        if (bishop_attacker != 0) {
+            return static_cast<int>(std::countr_zero(bishop_attacker));
+        }
+        uint64_t rook_attacker = board.rook_attacks(target)
+            & board.piece_boards[Zobrist::piece_index(white ? 'R' : 'r')];
+        if (rook_attacker != 0) {
+            return static_cast<int>(std::countr_zero(rook_attacker));
+        }
+        uint64_t queen = (
+            board.bishop_attacks(target) | board.rook_attacks(target)
+        ) & board.piece_boards[Zobrist::piece_index(white ? 'Q' : 'q')];
+        if (queen != 0) {
+            return static_cast<int>(std::countr_zero(queen));
+        }
+        uint64_t king = KING_ATTACKS[target] & board.piece_boards[
+            Zobrist::piece_index(white ? 'K' : 'k')
+        ];
+        return king == 0 ? -1 : static_cast<int>(std::countr_zero(king));
+    }
+
+    int static_exchange_evaluation(const Board& board, const Move& move) const {
+        std::array<int, 32> gains{};
+        gains[0] = capture_value(board, move);
+        Board position = board;
+        position.make_move(move);
+        int target = move.to;
+        int count = 1;
+
+        while (count < static_cast<int>(gains.size())) {
+            int source = least_valuable_attacker(
+                position,
+                target,
+                position.white_to_move
+            );
+            if (source < 0 || position.squares[target] == '.') {
+                break;
+            }
+            char attacker = position.squares[source];
+            char captured = position.squares[target];
+            int promotion_gain = 0;
+            int target_row = target / 8;
+            if (std::tolower(attacker) == 'p'
+                && (target_row == 0 || target_row == 7)) {
+                promotion_gain = PIECE_VALUES[static_cast<int>('q')]
+                    - PIECE_VALUES[static_cast<int>('p')];
+                attacker = position.white_to_move ? 'Q' : 'q';
+            }
+            gains[count] = PIECE_VALUES[static_cast<int>(captured)]
+                + promotion_gain - gains[count - 1];
+            position.remove_piece(source);
+            position.remove_piece(target);
+            position.place_piece(attacker, target);
+            position.white_to_move = !position.white_to_move;
+            ++count;
+        }
+        while (--count > 0) {
+            gains[count - 1] = -std::max(-gains[count - 1], gains[count]);
+        }
+        return gains[0];
+    }
+
     bool quiet(const Board& board, const Move& move) const {
         return board.squares[move.to] == '.'
             && !(move.flags & EN_PASSANT) && move.promotion == '\0';
+    }
+
+    bool pawn_attacked(const Board& board, int target, bool by_white) const {
+        return (board.pawn_attacks(by_white) & square_bit(target)) != 0;
     }
 
     void update_history(char piece, int target, int bonus) {
@@ -698,12 +1109,20 @@ private:
         value += bonus - value * std::abs(bonus) / HISTORY_LIMIT;
     }
 
+    void update_continuation_history(int previous, int target, int bonus) {
+        constexpr int HISTORY_LIMIT = 16'384;
+        bonus = std::clamp(bonus, -HISTORY_LIMIT, HISTORY_LIMIT);
+        int& value = continuation_history_[previous][target];
+        value += bonus - value * std::abs(bonus) / HISTORY_LIMIT;
+    }
+
     void order_moves(
         const Board& board,
         std::vector<Move>& moves,
         const Move& tt_move,
         int ply,
-        const Move& counter_move = Move{}
+        const Move& counter_move = Move{},
+        const Move& previous_move = Move{}
     ) {
         auto score = [&](const Move& move) {
             if (tt_move.valid() && move == tt_move) {
@@ -713,12 +1132,16 @@ private:
             char victim = board.squares[move.to];
             int value = 0;
             if (victim != '.' || (move.flags & EN_PASSANT)) {
-                value += 1'000'000 + 16 * capture_value(board, move)
-                    - PIECE_VALUES[static_cast<int>(piece)];
+                int exchange = static_exchange_evaluation(board, move);
+                value += (exchange >= 0 ? 1'000'000 : -100'000)
+                    + 16 * capture_value(board, move)
+                    - PIECE_VALUES[static_cast<int>(piece)]
+                    + 32 * exchange;
                 value += capture_history_[static_cast<int>(piece)][move.to];
             }
             if (move.promotion != '\0') {
-                value += 900'000 + PIECE_VALUES[static_cast<int>(move.promotion)];
+                value += 1'500'000
+                    + PIECE_VALUES[static_cast<int>(move.promotion)];
             }
             if (ply < MAX_PLY) {
                 if (move == killers_[ply][0]) value += 700'000;
@@ -728,21 +1151,47 @@ private:
                 value += 680'000;
             }
             value += history_[static_cast<int>(piece)][move.to];
+            if (previous_move.valid() && quiet(board, move)) {
+                value += continuation_history_[previous_move.to][move.to];
+            }
+            if (quiet(board, move)) {
+                bool enemy_white = !is_white(piece);
+                int threat_delta = static_cast<int>(
+                    pawn_attacked(board, move.from, enemy_white)
+                ) - static_cast<int>(
+                    pawn_attacked(board, move.to, enemy_white)
+                );
+                value += threat_delta
+                    * PIECE_VALUES[static_cast<int>(piece)] * 8;
+            }
             if (move.flags & CASTLING) value += 25'000;
             return value;
         };
+        std::vector<std::pair<int, Move>> scored;
+        scored.reserve(moves.size());
+        for (const Move& move : moves) {
+            scored.emplace_back(score(move), move);
+        }
         std::stable_sort(
-            moves.begin(),
-            moves.end(),
-            [&](const Move& left, const Move& right) {
-                return score(left) > score(right);
+            scored.begin(),
+            scored.end(),
+            [](const auto& left, const auto& right) {
+                return left.first > right.first;
             }
         );
+        for (std::size_t index = 0; index < moves.size(); ++index) {
+            moves[index] = scored[index].second;
+        }
     }
 
     TTEntry* probe(uint64_t key) {
-        TTEntry& entry = table_[key & (table_.size() - 1)];
-        return entry.key == key ? &entry : nullptr;
+        TTCluster& cluster = table_[key & (table_.size() - 1)];
+        for (TTEntry& entry : cluster.entries) {
+            if (entry.depth >= 0 && entry.key == key) {
+                return &entry;
+            }
+        }
+        return nullptr;
     }
 
     static int score_to_table(int score, int ply) {
@@ -763,19 +1212,31 @@ private:
         int score,
         Bound bound,
         const Move& move,
-        int ply
+        int ply,
+        int static_eval = INF
     ) {
-        TTEntry& entry = table_[key & (table_.size() - 1)];
-        bool same_position = entry.key == key;
-        bool stale = entry.generation != generation_;
-        if (
-            (same_position && depth >= entry.depth)
-            || (!same_position && (stale || depth + 2 >= entry.depth))
-        ) {
-            entry = {
+        TTCluster& cluster = table_[key & (table_.size() - 1)];
+        TTEntry* target = &cluster.entries[0];
+        for (TTEntry& candidate : cluster.entries) {
+            if (candidate.depth >= 0 && candidate.key == key) {
+                target = &candidate;
+                break;
+            }
+            int candidate_priority = candidate.depth
+                - (candidate.generation == generation_ ? 0 : 8);
+            int target_priority = target->depth
+                - (target->generation == generation_ ? 0 : 8);
+            if (candidate_priority < target_priority) {
+                target = &candidate;
+            }
+        }
+        bool same_position = target->depth >= 0 && target->key == key;
+        if (!same_position || depth >= target->depth || bound == Bound::Exact) {
+            *target = {
                 key,
                 depth,
                 score_to_table(score, ply),
+                static_eval,
                 bound,
                 move,
                 generation_
@@ -784,32 +1245,31 @@ private:
     }
 
     std::pair<int, Move> root(
-        const Board& board,
+        Board& board,
         int depth,
         int alpha,
         int beta
     ) {
         check_time();
-        uint64_t key = zobrist_.hash(board);
+        uint64_t key = board.key;
         TTEntry* entry = probe(key);
         Move tt_move = entry == nullptr ? Move{} : entry->move;
-        auto moves = board.legal_moves();
+        auto moves = board.legal_moves_in_place();
         order_moves(board, moves, tt_move, 0);
         Move best = moves.front();
         int best_score = -INF;
         int original_alpha = alpha;
 
         for (std::size_t index = 0; index < moves.size(); ++index) {
-            Board child = board;
-            child.make_move(moves[index]);
+            ScopedMove applied(board, moves[index]);
             int score;
             if (index == 0) {
                 score = -negamax(
-                    child, depth - 1, -beta, -alpha, 1, true, moves[index]
+                    board, depth - 1, -beta, -alpha, 1, true, moves[index]
                 );
             } else {
                 score = -negamax(
-                    child,
+                    board,
                     depth - 1,
                     -alpha - 1,
                     -alpha,
@@ -819,7 +1279,7 @@ private:
                 );
                 if (score > alpha && score < beta) {
                     score = -negamax(
-                        child, depth - 1, -beta, -alpha, 1, true, moves[index]
+                        board, depth - 1, -beta, -alpha, 1, true, moves[index]
                     );
                 }
             }
@@ -840,7 +1300,7 @@ private:
     }
 
     int negamax(
-        const Board& board,
+        Board& board,
         int depth,
         int alpha,
         int beta,
@@ -863,7 +1323,7 @@ private:
             return alpha;
         }
 
-        uint64_t key = zobrist_.hash(board);
+        uint64_t key = board.key;
         int prior_visits = static_cast<int>(
             std::count(search_history_.begin(), search_history_.end(), key)
         );
@@ -892,13 +1352,22 @@ private:
                 return table_score;
             }
         }
-        int static_eval = in_check ? -INF : evaluate(board);
+        int static_eval = in_check
+            ? -INF
+            : (entry != nullptr && entry->static_eval != INF
+                ? entry->static_eval
+                : evaluate(board));
+        static_evals_[ply] = static_eval;
+        bool improving = !in_check
+            && ply >= 2
+            && static_evals_[ply - 2] != -INF
+            && static_eval > static_evals_[ply - 2];
         if (
             !in_check
             && depth <= 3
             && beta - alpha == 1
             && std::abs(beta) < MATE - MAX_PLY
-            && static_eval - 85 * depth >= beta
+            && static_eval - (improving ? 65 : 90) * depth >= beta
         ) {
             return static_eval;
         }
@@ -916,6 +1385,10 @@ private:
         }
         if (allow_null && depth >= 3 && !in_check && has_non_pawn_material(board)) {
             Board null_board = board;
+            null_board.key ^= ZOBRIST.turn;
+            if (null_board.en_passant >= 0) {
+                null_board.key ^= ZOBRIST.ep_file[null_board.en_passant % 8];
+            }
             null_board.white_to_move = !null_board.white_to_move;
             null_board.en_passant = -1;
             ++null_board.halfmove;
@@ -959,7 +1432,7 @@ private:
             --depth;
         }
 
-        auto moves = board.legal_moves();
+        auto moves = board.legal_moves_in_place();
         if (moves.empty()) {
             return in_check ? -MATE + ply : 0;
         }
@@ -973,7 +1446,7 @@ private:
                 ][previous_move.to];
             }
         }
-        order_moves(board, moves, tt_move, ply, counter_move);
+        order_moves(board, moves, tt_move, ply, counter_move, previous_move);
         int original_alpha = alpha;
         int best_score = -INF;
         Move best{};
@@ -984,85 +1457,114 @@ private:
         for (std::size_t index = 0; index < moves.size(); ++index) {
             const Move& move = moves[index];
             bool is_quiet = quiet(board, move);
-            Board child = board;
-            child.make_move(move);
-            bool gives_check = child.in_check();
-            if (
-                depth <= 2
-                && index >= static_cast<std::size_t>(8 + depth * 4)
-                && is_quiet
-                && !in_check
-                && !gives_check
-                && static_eval + 110 * depth <= alpha
-            ) {
-                continue;
-            }
-            if (depth == 1 && index > 0 && is_quiet && !gives_check
-                && static_score + 140 <= alpha) {
-                continue;
-            }
-            int next_depth = depth - 1;
-            if (gives_check && depth <= 2) {
-                ++next_depth;
-            }
-            int reduction = 0;
-            if (
-                depth >= 3
-                && index >= 3
-                && is_quiet
-                && !in_check
-                && !gives_check
-            ) {
-                reduction = static_cast<int>(
-                    0.75
-                    + std::log(static_cast<double>(depth))
-                    * std::log(static_cast<double>(index + 1))
-                    / 2.15
-                );
-                int history_score = history_[
-                    static_cast<int>(board.squares[move.from])
-                ][move.to];
+            char moving_piece = board.squares[move.from];
+            int score = -INF;
+            bool pruned = false;
+            {
+                ScopedMove applied(board, move);
+                bool gives_check = board.in_check();
                 if (
-                    history_score > 4'000
-                    || move == killers_[ply][0]
-                    || move == counter_move
+                    depth <= 2
+                    && index >= static_cast<std::size_t>(
+                        8 + depth * 4 + (improving ? 4 : 0)
+                    )
+                    && is_quiet
+                    && !in_check
+                    && !gives_check
+                    && static_eval + 110 * depth <= alpha
                 ) {
-                    --reduction;
+                    pruned = true;
                 }
-                reduction = std::clamp(reduction, 1, std::max(1, next_depth - 1));
-            }
+                if (depth == 1 && index > 0 && is_quiet && !gives_check
+                    && static_score + 140 <= alpha) {
+                    pruned = true;
+                }
+                if (!pruned) {
+                    int next_depth = depth - 1;
+                    if (gives_check && depth <= 2) {
+                        ++next_depth;
+                    }
+                    int reduction = 0;
+                    if (
+                        depth >= 3
+                        && index >= 3
+                        && is_quiet
+                        && !in_check
+                        && !gives_check
+                    ) {
+                        reduction = static_cast<int>(
+                            0.75
+                            + std::log(static_cast<double>(depth))
+                            * std::log(static_cast<double>(index + 1))
+                            / 2.15
+                        );
+                        int history_score = history_[
+                            static_cast<int>(moving_piece)
+                        ][move.to];
+                        if (
+                            history_score > 4'000
+                            || move == killers_[ply][0]
+                            || move == counter_move
+                        ) {
+                            --reduction;
+                        }
+                        if (improving) {
+                            --reduction;
+                        }
+                        reduction = std::clamp(
+                            reduction,
+                            1,
+                            std::max(1, next_depth - 1)
+                        );
+                    }
 
-            int score;
-            if (index == 0) {
-                score = -negamax(
-                    child, next_depth, -beta, -alpha, ply + 1, true, move
-                );
-            } else {
-                score = -negamax(
-                    child,
-                    std::max(0, next_depth - reduction),
-                    -alpha - 1,
-                    -alpha,
-                    ply + 1,
-                    true,
-                    move
-                );
-                if (reduction != 0 && score > alpha) {
-                    score = -negamax(
-                        child,
-                        next_depth,
-                        -alpha - 1,
-                        -alpha,
-                        ply + 1,
-                        true,
-                        move
-                    );
+                    if (index == 0) {
+                        score = -negamax(
+                            board,
+                            next_depth,
+                            -beta,
+                            -alpha,
+                            ply + 1,
+                            true,
+                            move
+                        );
+                    } else {
+                        score = -negamax(
+                            board,
+                            std::max(0, next_depth - reduction),
+                            -alpha - 1,
+                            -alpha,
+                            ply + 1,
+                            true,
+                            move
+                        );
+                        if (reduction != 0 && score > alpha) {
+                            score = -negamax(
+                                board,
+                                next_depth,
+                                -alpha - 1,
+                                -alpha,
+                                ply + 1,
+                                true,
+                                move
+                            );
+                        }
+                        if (score > alpha && score < beta) {
+                            score = -negamax(
+                                board,
+                                next_depth,
+                                -beta,
+                                -alpha,
+                                ply + 1,
+                                true,
+                                move
+                            );
+                        }
+                    }
                 }
-                if (score > alpha && score < beta) {
-                    score = -negamax(
-                        child, next_depth, -beta, -alpha, ply + 1, true, move
-                    );
-                }
+            }
+            if (pruned) {
+                continue;
             }
             if (score > best_score) {
                 best_score = score;
@@ -1074,13 +1576,27 @@ private:
             if (alpha >= beta) {
                 if (is_quiet) {
                     int bonus = std::min(16'384, depth * depth * 32);
-                    update_history(board.squares[move.from], move.to, bonus);
+                    update_history(moving_piece, move.to, bonus);
+                    if (previous_move.valid()) {
+                        update_continuation_history(
+                            previous_move.to,
+                            move.to,
+                            bonus
+                        );
+                    }
                     for (const Move& previous : quiets_tried) {
                         update_history(
                             board.squares[previous.from],
                             previous.to,
                             -bonus / 2
                         );
+                        if (previous_move.valid()) {
+                            update_continuation_history(
+                                previous_move.to,
+                                previous.to,
+                                -bonus / 2
+                            );
+                        }
                     }
                     killers_[ply][1] = killers_[ply][0];
                     killers_[ply][0] = move;
@@ -1095,7 +1611,7 @@ private:
                 } else {
                     int bonus = std::min(16'384, depth * depth * 24);
                     update_capture_history(
-                        board.squares[move.from],
+                        moving_piece,
                         move.to,
                         bonus
                     );
@@ -1118,12 +1634,12 @@ private:
         Bound bound = best_score <= original_alpha
             ? Bound::Upper
             : (best_score >= beta ? Bound::Lower : Bound::Exact);
-        store(key, depth, best_score, bound, best, ply);
+        store(key, depth, best_score, bound, best, ply, static_eval);
         return best_score;
     }
 
     int quiescence(
-        const Board& board,
+        Board& board,
         int alpha,
         int beta,
         int ply,
@@ -1132,9 +1648,35 @@ private:
         ++nodes_;
         check_time();
         bool in_check = board.in_check();
-        int stand_pat = evaluate(board);
+        uint64_t key = board.key;
+        TTEntry* entry = probe(key);
+        if (entry != nullptr && entry->depth >= 0) {
+            int table_score = score_from_table(entry->score, ply);
+            if (entry->bound == Bound::Exact) return table_score;
+            if (entry->bound == Bound::Lower && table_score >= beta) {
+                return table_score;
+            }
+            if (entry->bound == Bound::Upper && table_score <= alpha) {
+                return table_score;
+            }
+        }
+        int original_alpha = alpha;
+        int stand_pat = in_check
+            ? -INF
+            : (entry != nullptr && entry->static_eval != INF
+                ? entry->static_eval
+                : evaluate(board));
         if (!in_check) {
             if (stand_pat >= beta) {
+                store(
+                    key,
+                    0,
+                    stand_pat,
+                    Bound::Lower,
+                    Move{},
+                    ply,
+                    stand_pat
+                );
                 return stand_pat;
             }
             alpha = std::max(alpha, stand_pat);
@@ -1142,43 +1684,67 @@ private:
                 return stand_pat;
             }
         }
-        auto moves = board.legal_moves(!in_check);
+        auto moves = board.legal_moves_in_place(!in_check);
         if (moves.empty()) {
             return in_check ? -MATE + ply : alpha;
         }
-        order_moves(board, moves, Move{}, ply);
+        Move tt_move = entry == nullptr ? Move{} : entry->move;
+        order_moves(board, moves, tt_move, ply);
+        Move best{};
         for (const Move& move : moves) {
             if (!in_check && move.promotion == '\0'
                 && stand_pat + capture_value(board, move) + 140 < alpha) {
                 continue;
             }
-            Board child = board;
-            child.make_move(move);
-            int score = -quiescence(child, -beta, -alpha, ply + 1, qply + 1);
+            ScopedMove applied(board, move);
+            int score = -quiescence(board, -beta, -alpha, ply + 1, qply + 1);
             if (score >= beta) {
+                store(
+                    key,
+                    0,
+                    score,
+                    Bound::Lower,
+                    move,
+                    ply,
+                    in_check ? INF : stand_pat
+                );
                 return score;
             }
-            alpha = std::max(alpha, score);
+            if (score > alpha) {
+                alpha = score;
+                best = move;
+            }
         }
+        Bound bound = alpha > original_alpha ? Bound::Exact : Bound::Upper;
+        store(
+            key,
+            0,
+            alpha,
+            bound,
+            best,
+            ply,
+            in_check ? INF : stand_pat
+        );
         return alpha;
     }
 
     bool has_non_pawn_material(const Board& board) const {
-        for (char piece : board.squares) {
-            if (piece != '.' && is_white(piece) == board.white_to_move) {
-                char type = static_cast<char>(std::tolower(piece));
-                if (type != 'p' && type != 'k') {
-                    return true;
-                }
-            }
-        }
-        return false;
+        uint64_t side = board.color_boards[
+            Board::color_index(board.white_to_move)
+        ];
+        uint64_t pawns = board.piece_boards[
+            Zobrist::piece_index(board.white_to_move ? 'P' : 'p')
+        ];
+        uint64_t king = board.piece_boards[
+            Zobrist::piece_index(board.white_to_move ? 'K' : 'k')
+        ];
+        return (side & ~(pawns | king)) != 0;
     }
 
     std::vector<Move> principal_variation(Board board, int depth) {
         std::vector<Move> pv;
         for (int index = 0; index < depth; ++index) {
-            TTEntry* entry = probe(zobrist_.hash(board));
+            TTEntry* entry = probe(board.key);
             if (entry == nullptr || !entry->move.valid()) {
                 break;
             }
@@ -1194,17 +1760,316 @@ private:
     }
 };
 
-uint64_t perft(const Board& board, int depth) {
+class EnginePool {
+public:
+    explicit EnginePool(std::size_t hash_megabytes = 64)
+        : hash_megabytes_(hash_megabytes) {
+        rebuild();
+    }
+
+    void resize_table(std::size_t megabytes) {
+        hash_megabytes_ = std::max<std::size_t>(1, megabytes);
+        rebuild();
+    }
+
+    void set_threads(int threads) {
+        int selected = std::clamp(threads, 1, 64);
+        if (selected != thread_count_) {
+            thread_count_ = selected;
+            rebuild();
+        }
+    }
+
+    int threads() const {
+        return thread_count_;
+    }
+
+    void clear() {
+        for (const auto& worker : workers_) {
+            worker->clear();
+        }
+    }
+
+    Engine::Result search(
+        const Board& position,
+        int max_depth,
+        int move_time_ms,
+        const std::vector<uint64_t>& game_history = {},
+        uint64_t node_limit = 0
+    ) {
+        if (thread_count_ == 1 || node_limit != 0) {
+            return workers_.front()->search(
+                position,
+                max_depth,
+                move_time_ms,
+                game_history,
+                node_limit
+            );
+        }
+        return parallel_search(
+            position,
+            max_depth,
+            move_time_ms,
+            game_history
+        );
+    }
+
+private:
+    std::size_t hash_megabytes_ = 64;
+    int thread_count_ = 1;
+    std::vector<std::unique_ptr<Engine>> workers_;
+
+    void rebuild() {
+        workers_.clear();
+        std::size_t per_worker = std::max<std::size_t>(
+            1,
+            hash_megabytes_ / static_cast<std::size_t>(thread_count_)
+        );
+        workers_.reserve(static_cast<std::size_t>(thread_count_));
+        for (int index = 0; index < thread_count_; ++index) {
+            workers_.push_back(std::make_unique<Engine>(per_worker));
+        }
+    }
+
+    int average_hashfull() const {
+        int total = 0;
+        for (const auto& worker : workers_) {
+            total += worker->table_hashfull();
+        }
+        return total / std::max(1, thread_count_);
+    }
+
+    Engine::Result parallel_search(
+        const Board& position,
+        int max_depth,
+        int move_time_ms,
+        const std::vector<uint64_t>& game_history
+    ) {
+        auto started = std::chrono::steady_clock::now();
+        auto deadline = started
+            + std::chrono::milliseconds(std::max(1, move_time_ms));
+        Engine::Result result;
+        auto moves = position.legal_moves();
+        if (moves.empty()) {
+            return result;
+        }
+        result.move = moves.front();
+        result.pv = {result.move};
+        for (const auto& worker : workers_) {
+            worker->begin_parallel_search();
+        }
+        uint64_t total_nodes = 0;
+
+        for (int depth = 1; depth <= max_depth; ++depth) {
+            if (std::chrono::steady_clock::now() >= deadline) {
+                break;
+            }
+            std::vector<int> scores(moves.size(), -INF);
+            Engine::RootMoveResult first = workers_.front()->search_root_move(
+                position,
+                moves.front(),
+                depth,
+                -INF,
+                INF,
+                game_history,
+                deadline
+            );
+            total_nodes += first.nodes;
+            if (!first.complete) {
+                break;
+            }
+            scores.front() = first.score;
+            std::atomic<std::size_t> next_index{1};
+            std::atomic<int> shared_alpha{first.score};
+            std::atomic<uint64_t> parallel_nodes{0};
+            std::atomic<bool> complete{true};
+            int best_score = first.score;
+            std::size_t best_index = 0;
+            int best_worker = 0;
+            std::mutex best_mutex;
+            int active_workers = std::min<int>(
+                thread_count_,
+                static_cast<int>(moves.size() - 1)
+            );
+            std::vector<std::thread> threads;
+            threads.reserve(static_cast<std::size_t>(active_workers));
+
+            for (int worker_index = 0;
+                worker_index < active_workers;
+                ++worker_index) {
+                threads.emplace_back([&, worker_index] {
+                    Engine& worker = *workers_[worker_index];
+                    while (complete.load(std::memory_order_relaxed)) {
+                        std::size_t index = next_index.fetch_add(
+                            1,
+                            std::memory_order_relaxed
+                        );
+                        if (index >= moves.size()) {
+                            break;
+                        }
+                        int alpha = shared_alpha.load(std::memory_order_relaxed);
+                        Engine::RootMoveResult probe = worker.search_root_move(
+                            position,
+                            moves[index],
+                            depth,
+                            alpha,
+                            alpha + 1,
+                            game_history,
+                            deadline
+                        );
+                        parallel_nodes.fetch_add(
+                            probe.nodes,
+                            std::memory_order_relaxed
+                        );
+                        if (!probe.complete) {
+                            complete.store(false, std::memory_order_relaxed);
+                            break;
+                        }
+                        scores[index] = probe.score;
+                        if (probe.score <= alpha) {
+                            continue;
+                        }
+                        Engine::RootMoveResult exact = worker.search_root_move(
+                            position,
+                            moves[index],
+                            depth,
+                            alpha,
+                            INF,
+                            game_history,
+                            deadline
+                        );
+                        parallel_nodes.fetch_add(
+                            exact.nodes,
+                            std::memory_order_relaxed
+                        );
+                        if (!exact.complete) {
+                            complete.store(false, std::memory_order_relaxed);
+                            break;
+                        }
+                        scores[index] = exact.score;
+                        {
+                            std::lock_guard<std::mutex> lock(best_mutex);
+                            if (exact.score > best_score) {
+                                best_score = exact.score;
+                                best_index = index;
+                                best_worker = worker_index;
+                            }
+                        }
+                        int current = shared_alpha.load(
+                            std::memory_order_relaxed
+                        );
+                        while (exact.score > current
+                            && !shared_alpha.compare_exchange_weak(
+                                current,
+                                exact.score,
+                                std::memory_order_relaxed
+                            )) {}
+                    }
+                });
+            }
+            for (std::thread& thread : threads) {
+                thread.join();
+            }
+            total_nodes += parallel_nodes.load(std::memory_order_relaxed);
+            if (!complete.load(std::memory_order_relaxed)) {
+                break;
+            }
+
+            result.move = moves[best_index];
+            result.score = best_score;
+            result.depth = depth;
+            result.pv = workers_[best_worker]->line_after_move(
+                position,
+                result.move,
+                depth
+            );
+            std::vector<std::size_t> order(moves.size());
+            for (std::size_t index = 0; index < order.size(); ++index) {
+                order[index] = index;
+            }
+            std::stable_sort(
+                order.begin(),
+                order.end(),
+                [&](std::size_t left, std::size_t right) {
+                    return scores[left] > scores[right];
+                }
+            );
+            std::vector<Move> ordered_moves;
+            ordered_moves.reserve(moves.size());
+            for (std::size_t index : order) {
+                ordered_moves.push_back(moves[index]);
+            }
+            moves = std::move(ordered_moves);
+            if (std::abs(result.score) > MATE - MAX_PLY) {
+                break;
+            }
+        }
+        result.nodes = total_nodes;
+        result.hashfull = average_hashfull();
+        result.elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - started
+        ).count();
+        return result;
+    }
+};
+
+uint64_t perft_in_place(Board& board, int depth) {
     if (depth == 0) {
         return 1;
     }
     uint64_t nodes = 0;
-    for (const Move& move : board.legal_moves()) {
-        Board child = board;
-        child.make_move(move);
-        nodes += perft(child, depth - 1);
+    for (const Move& move : board.legal_moves_in_place()) {
+        Board::UndoState undo = board.make_move(move);
+        nodes += perft_in_place(board, depth - 1);
+        board.unmake_move(move, undo);
     }
     return nodes;
+}
+
+uint64_t perft(Board board, int depth) {
+    return perft_in_place(board, depth);
+}
+
+bool verify_keys(Board& board, int depth) {
+    if (board.key != ZOBRIST.hash(board)) {
+        return false;
+    }
+    if (depth == 0) {
+        return true;
+    }
+    uint64_t original_key = board.key;
+    for (const Move& move : board.legal_moves_in_place()) {
+        Board::UndoState undo = board.make_move(move);
+        bool valid = verify_keys(board, depth - 1);
+        board.unmake_move(move, undo);
+        if (!valid || board.key != original_key) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool verify_bitboards(Board& board, int depth) {
+    if (!board.bitboards_valid()) {
+        return false;
+    }
+    if (depth == 0) {
+        return true;
+    }
+    auto original_pieces = board.piece_boards;
+    auto original_colors = board.color_boards;
+    uint64_t original_occupied = board.occupied;
+    for (const Move& move : board.legal_moves_in_place()) {
+        Board::UndoState undo = board.make_move(move);
+        bool valid = verify_bitboards(board, depth - 1);
+        board.unmake_move(move, undo);
+        if (!valid || board.piece_boards != original_pieces
+            || board.color_boards != original_colors
+            || board.occupied != original_occupied) {
+            return false;
+        }
+    }
+    return true;
 }
 
 std::vector<std::string> split(const std::string& input) {
@@ -1220,8 +2085,7 @@ std::vector<std::string> split(const std::string& input) {
 void parse_position(
     Board& board,
     const std::string& command,
-    std::vector<uint64_t>& history,
-    const Zobrist& hasher
+    std::vector<uint64_t>& history
 ) {
     auto tokens = split(command);
     if (tokens.size() < 2) {
@@ -1254,11 +2118,11 @@ void parse_position(
         throw std::invalid_argument("position requires startpos or fen");
     }
     history.clear();
-    history.push_back(hasher.hash(board));
+    history.push_back(board.key);
     for (std::size_t index = moves_index; index < tokens.size(); ++index) {
         Move move = board.find_move(tokens[index]);
         board.make_move(move);
-        history.push_back(hasher.hash(board));
+        history.push_back(board.key);
     }
 }
 
@@ -1272,38 +2136,43 @@ int option_value(const std::vector<std::string>& tokens, const std::string& name
 
 int uci_loop() {
     Board board = Board::starting();
-    Engine engine;
-    Zobrist history_hasher;
-    std::vector<uint64_t> game_history{history_hasher.hash(board)};
+    EnginePool engine;
+    std::vector<uint64_t> game_history{board.key};
     int overhead = 10;
     std::string line;
     while (std::getline(std::cin, line)) {
         try {
             if (line == "uci") {
-                std::cout << "id name Mwahaha Native Engine 2.1\n";
+                std::cout << "id name Mwahaha Native Engine 2.3\n";
                 std::cout << "id author Mohammed Nabid\n";
                 std::cout << "option name Hash type spin default 64 min 1 max 2048\n";
+                std::cout << "option name Threads type spin default 1 min 1 max 64\n";
                 std::cout << "option name Move Overhead type spin default 10 min 0 max 5000\n";
                 std::cout << "uciok\n" << std::flush;
             } else if (line == "isready") {
                 std::cout << "readyok\n" << std::flush;
             } else if (line == "ucinewgame") {
                 board = Board::starting();
-                game_history = {history_hasher.hash(board)};
+                game_history = {board.key};
                 engine.clear();
             } else if (line.rfind("setoption name Hash value ", 0) == 0) {
                 engine.resize_table(static_cast<std::size_t>(
                     std::max(1, std::stoi(line.substr(26)))
                 ));
             } else if (
+                line.rfind("setoption name Threads value ", 0) == 0
+            ) {
+                engine.set_threads(std::stoi(line.substr(29)));
+            } else if (
                 line.rfind("setoption name Move Overhead value ", 0) == 0
             ) {
                 overhead = std::max(0, std::stoi(line.substr(39)));
             } else if (line.rfind("position ", 0) == 0) {
-                parse_position(board, line, game_history, history_hasher);
+                parse_position(board, line, game_history);
             } else if (line.rfind("go", 0) == 0) {
                 auto tokens = split(line);
                 int requested_depth = option_value(tokens, "depth");
+                int requested_nodes = option_value(tokens, "nodes");
                 int move_time = option_value(tokens, "movetime");
                 if (move_time < 0) {
                     std::string clock_name = board.white_to_move ? "wtime" : "btime";
@@ -1321,11 +2190,15 @@ int uci_loop() {
                 if (requested_depth > 0 && option_value(tokens, "movetime") < 0) {
                     move_time = 3'600'000;
                 }
+                if (requested_nodes > 0) {
+                    move_time = 3'600'000;
+                }
                 Engine::Result result = engine.search(
                     board,
                     depth,
                     move_time,
-                    game_history
+                    game_history,
+                    static_cast<uint64_t>(std::max(0, requested_nodes))
                 );
                 uint64_t nps = result.nodes * 1000
                     / static_cast<uint64_t>(std::max<long long>(1, result.elapsed_ms));
@@ -1333,6 +2206,7 @@ int uci_loop() {
                     << " score cp " << result.score
                     << " nodes " << result.nodes
                     << " nps " << nps
+                    << " hashfull " << result.hashfull
                     << " time " << result.elapsed_ms
                     << " pv";
                 for (const Move& move : result.pv) {
@@ -1353,6 +2227,54 @@ int uci_loop() {
 }  // namespace
 
 int main(int argc, char** argv) {
+    if (argc >= 4 && std::string(argv[1]) == "--see-fen") {
+        std::ostringstream fen;
+        for (int index = 3; index < argc; ++index) {
+            if (index != 3) fen << ' ';
+            fen << argv[index];
+        }
+        Board board = Board::from_fen(fen.str());
+        Move move = board.find_move(argv[2]);
+        Engine engine(1);
+        std::cout << engine.see(board, move) << '\n';
+        return 0;
+    }
+    if (argc == 3 && std::string(argv[1]) == "--verify-bitboards") {
+        Board board = Board::starting();
+        bool valid = verify_bitboards(board, std::stoi(argv[2]));
+        std::cout << (valid ? "bitboards ok\n" : "bitboard mismatch\n");
+        return valid ? 0 : 1;
+    }
+    if (argc >= 4 && std::string(argv[1]) == "--verify-bitboards-fen") {
+        int depth = std::stoi(argv[2]);
+        std::ostringstream fen;
+        for (int index = 3; index < argc; ++index) {
+            if (index != 3) fen << ' ';
+            fen << argv[index];
+        }
+        Board board = Board::from_fen(fen.str());
+        bool valid = verify_bitboards(board, depth);
+        std::cout << (valid ? "bitboards ok\n" : "bitboard mismatch\n");
+        return valid ? 0 : 1;
+    }
+    if (argc == 3 && std::string(argv[1]) == "--verify-keys") {
+        Board board = Board::starting();
+        bool valid = verify_keys(board, std::stoi(argv[2]));
+        std::cout << (valid ? "keys ok\n" : "key mismatch\n");
+        return valid ? 0 : 1;
+    }
+    if (argc >= 4 && std::string(argv[1]) == "--verify-keys-fen") {
+        int depth = std::stoi(argv[2]);
+        std::ostringstream fen;
+        for (int index = 3; index < argc; ++index) {
+            if (index != 3) fen << ' ';
+            fen << argv[index];
+        }
+        Board board = Board::from_fen(fen.str());
+        bool valid = verify_keys(board, depth);
+        std::cout << (valid ? "keys ok\n" : "key mismatch\n");
+        return valid ? 0 : 1;
+    }
     if (argc == 3 && std::string(argv[1]) == "--perft") {
         int depth = std::stoi(argv[2]);
         auto started = std::chrono::steady_clock::now();

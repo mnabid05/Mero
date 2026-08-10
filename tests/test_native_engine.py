@@ -31,11 +31,54 @@ class NativeEngineTests(unittest.TestCase):
         self.assertIsNotNone(match, result.stdout)
         return int(match.group(1))
 
+    def native_verify_keys(self, fen: str, depth: int) -> None:
+        result = subprocess.run(
+            [NATIVE_ENGINE, "--verify-keys-fen", str(depth), fen],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.stdout.strip(), "keys ok")
+
+    def native_verify_bitboards(self, fen: str, depth: int) -> None:
+        result = subprocess.run(
+            [NATIVE_ENGINE, "--verify-bitboards-fen", str(depth), fen],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.stdout.strip(), "bitboards ok")
+
+    def native_see(self, fen: str, move: str) -> int:
+        result = subprocess.run(
+            [NATIVE_ENGINE, "--see-fen", move, fen],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        return int(result.stdout.strip())
+
     def test_special_rule_positions_match_reference(self):
         for fen in POSITIONS:
             with self.subTest(fen=fen):
-                expected = perft(Board.from_fen(fen), 2)
-                self.assertEqual(self.native_perft(fen, 2), expected)
+                expected = perft(Board.from_fen(fen), 3)
+                self.assertEqual(self.native_perft(fen, 3), expected)
+
+    def test_incremental_keys_cover_special_moves(self):
+        for fen in POSITIONS:
+            with self.subTest(fen=fen):
+                self.native_verify_keys(fen, 3)
+
+    def test_bitboards_cover_special_moves(self):
+        for fen in POSITIONS:
+            with self.subTest(fen=fen):
+                self.native_verify_bitboards(fen, 3)
+
+    def test_native_static_exchange_evaluation(self):
+        free_queen = "7k/8/8/8/8/8/q7/R6K w - - 0 1"
+        poisoned_pawn = "3q3k/8/8/3p4/8/8/8/3Q3K w - - 0 1"
+        self.assertGreaterEqual(self.native_see(free_queen, "a1a2"), 900)
+        self.assertLess(self.native_see(poisoned_pawn, "d1d5"), -700)
 
     def test_native_uci_returns_legal_move(self):
         commands = "uci\nisready\nposition startpos\ngo movetime 50\nquit\n"
@@ -50,6 +93,77 @@ class NativeEngineTests(unittest.TestCase):
         self.assertIsNotNone(match, result.stdout)
         board = Board.starting()
         board.find_legal_move(match.group(1))
+
+    def test_native_uci_advertises_thread_control(self):
+        result = subprocess.run(
+            [NATIVE_ENGINE],
+            input="uci\nquit\n",
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        self.assertIn(
+            "option name Threads type spin default 1 min 1 max 64",
+            result.stdout,
+        )
+
+    def test_native_parallel_search_returns_legal_move(self):
+        commands = (
+            "uci\n"
+            "setoption name Hash value 32\n"
+            "setoption name Threads value 4\n"
+            "position startpos moves e2e4 e7e5\n"
+            "go movetime 100\n"
+            "quit\n"
+        )
+        result = subprocess.run(
+            [NATIVE_ENGINE],
+            input=commands,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        match = re.search(r"bestmove ([a-h][1-8][a-h][1-8][qrbn]?)", result.stdout)
+        self.assertIsNotNone(match, result.stdout)
+        depth = re.search(r"\bdepth (\d+)", result.stdout)
+        self.assertIsNotNone(depth, result.stdout)
+        self.assertGreater(int(depth.group(1)), 0)
+        board = Board.starting()
+        board.play_uci("e2e4")
+        board.play_uci("e7e5")
+        board.find_legal_move(match.group(1))
+
+    def test_native_quiescence_sees_quiet_promotion_threat(self):
+        commands = (
+            "uci\n"
+            "position fen 4k3/7r/8/8/8/8/p6Q/6K1 w - - 0 1\n"
+            "go depth 1\n"
+            "quit\n"
+        )
+        result = subprocess.run(
+            [NATIVE_ENGINE],
+            input=commands,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        self.assertIn("bestmove h2a2", result.stdout)
+
+    def test_native_uci_honors_node_limit_and_reports_hashfull(self):
+        commands = "uci\nposition startpos\ngo nodes 10000\nquit\n"
+        result = subprocess.run(
+            [NATIVE_ENGINE],
+            input=commands,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        nodes = re.search(r"\bnodes (\d+)", result.stdout)
+        hashfull = re.search(r"\bhashfull (\d+)", result.stdout)
+        self.assertIsNotNone(nodes, result.stdout)
+        self.assertIsNotNone(hashfull, result.stdout)
+        self.assertLessEqual(int(nodes.group(1)), 12048)
+        self.assertGreaterEqual(int(hashfull.group(1)), 0)
 
 
 if __name__ == "__main__":
