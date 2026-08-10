@@ -454,20 +454,13 @@ struct Board {
     std::vector<Move> pseudo_moves(bool captures_only = false) const {
         std::vector<Move> moves;
         moves.reserve(64);
-        constexpr int knight_offsets[8][2] = {
-            {-2, -1}, {-2, 1}, {-1, -2}, {-1, 2},
-            {1, -2}, {1, 2}, {2, -1}, {2, 1}
-        };
-        constexpr int directions[8][2] = {
-            {-1, -1}, {-1, 1}, {1, -1}, {1, 1},
-            {-1, 0}, {1, 0}, {0, -1}, {0, 1}
-        };
-
-        for (int from = 0; from < 64; ++from) {
+        uint64_t own = color_boards[color_index(white_to_move)];
+        uint64_t enemy = color_boards[color_index(!white_to_move)];
+        uint64_t remaining = own;
+        while (remaining != 0) {
+            int from = static_cast<int>(std::countr_zero(remaining));
+            remaining &= remaining - 1;
             char piece = squares[from];
-            if (piece == '.' || is_white(piece) != white_to_move) {
-                continue;
-            }
             char type = static_cast<char>(std::tolower(piece));
             int row = from / 8;
             int column = from % 8;
@@ -509,24 +502,16 @@ struct Board {
                     }
                 }
             } else if (type == 'n' || type == 'k') {
-                const int (*offsets)[2] =
-                    type == 'n' ? knight_offsets : directions;
-                for (int index = 0; index < 8; ++index) {
-                    int target_row = row + offsets[index][0];
-                    int target_column = column + offsets[index][1];
-                    if (target_row < 0 || target_row >= 8
-                        || target_column < 0 || target_column >= 8) {
-                        continue;
-                    }
-                    int to = target_row * 8 + target_column;
-                    char target = squares[to];
-                    if (target == '.') {
-                        if (!captures_only) {
-                            moves.push_back({from, to, '\0', 0});
-                        }
-                    } else if (!same_color(piece, target)) {
-                        moves.push_back({from, to, '\0', 0});
-                    }
+                uint64_t targets = (type == 'n'
+                    ? KNIGHT_ATTACKS[from]
+                    : KING_ATTACKS[from]) & ~own;
+                if (captures_only) {
+                    targets &= enemy;
+                }
+                while (targets != 0) {
+                    int to = static_cast<int>(std::countr_zero(targets));
+                    targets &= targets - 1;
+                    moves.push_back({from, to, '\0', 0});
                 }
                 if (type == 'k' && !captures_only && !in_check()) {
                     if (white_to_move && from == 60) {
@@ -556,28 +541,19 @@ struct Board {
                     }
                 }
             } else {
-                int start = type == 'b' ? 0 : (type == 'r' ? 4 : 0);
-                int stop = type == 'b' ? 4 : (type == 'r' ? 8 : 8);
-                for (int index = start; index < stop; ++index) {
-                    int target_row = row + directions[index][0];
-                    int target_column = column + directions[index][1];
-                    while (target_row >= 0 && target_row < 8
-                        && target_column >= 0 && target_column < 8) {
-                        int to = target_row * 8 + target_column;
-                        char target = squares[to];
-                        if (target == '.') {
-                            if (!captures_only) {
-                                moves.push_back({from, to, '\0', 0});
-                            }
-                        } else {
-                            if (!same_color(piece, target)) {
-                                moves.push_back({from, to, '\0', 0});
-                            }
-                            break;
-                        }
-                        target_row += directions[index][0];
-                        target_column += directions[index][1];
-                    }
+                uint64_t targets = type == 'b'
+                    ? bishop_attacks(from)
+                    : (type == 'r'
+                        ? rook_attacks(from)
+                        : bishop_attacks(from) | rook_attacks(from));
+                targets &= ~own;
+                if (captures_only) {
+                    targets &= enemy;
+                }
+                while (targets != 0) {
+                    int to = static_cast<int>(std::countr_zero(targets));
+                    targets &= targets - 1;
+                    moves.push_back({from, to, '\0', 0});
                 }
             }
         }
