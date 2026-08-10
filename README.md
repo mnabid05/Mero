@@ -7,7 +7,8 @@ A self-contained original chess engine written in Python, C, and C++.
 The project implements its own board representation, legal move generator,
 evaluation, search, time management, UCI protocol, terminal game, and strength
 regression harness. The strongest UCI engine runs board logic and search in
-C++20, shares the portable C11 evaluation kernel, and keeps Python as a readable
+C++20, combines synchronized piece/occupancy bitboards with a reversible square
+array, shares the portable C11 evaluation kernel, and keeps Python as a readable
 reference implementation and testing layer.
 
 ## Native acceleration
@@ -30,10 +31,10 @@ Python engine detects the native evaluator library automatically. Without it,
 the dependency-free Python evaluator is used; set `MWAHAHA_PURE_PYTHON=1` to
 force that reference path.
 
-Across three 500 ms starting-position probes, the architecture build averaged
-roughly 1.447 million nodes/second, up from 1.188 million for its frozen native
-baseline. The Python+C engine searched roughly 22 thousand nodes/second on the
-same machine.
+Across three 500 ms starting-position probes, version 2.3 averaged roughly 1.30
+million nodes/second with one thread and 2.19 million aggregate nodes/second
+with four threads. The original Python+C engine searched roughly 22 thousand
+nodes/second on the same machine.
 
 ## Search
 
@@ -42,6 +43,8 @@ same machine.
 - Alpha-beta pruning with aspiration windows
 - Zobrist-keyed transposition table
 - Incremental Zobrist updates with verified make/unmake state
+- Synchronized piece and occupancy bitboards
+- Parallel principal-root search with configurable UCI threads
 - Three-entry transposition clusters with cached static evaluation
 - Quiescence search for tactical stability
 - Null-move pruning
@@ -108,6 +111,9 @@ The engine exposes the Universal Chess Interface:
 build/native/mwahaha-engine
 ```
 
+Chess GUIs can configure `Threads` from 1–64 and `Hash` from 1–2048 MiB. Four
+threads are the tested strength configuration for version 2.3.
+
 The reference Python UCI remains available as `python3 -m chess_ai.uci` or
 `mwahaha-uci`.
 
@@ -119,7 +125,7 @@ mwahaha-uci
 
 ## Validation
 
-Build the native engine and run the 46-test suite:
+Build the native engine and run the 51-test suite:
 
 ```bash
 python3 scripts/build_native.py
@@ -161,6 +167,7 @@ Checked-in results:
 
 | Match | Wins | Draws | Losses | Score |
 | --- | ---: | ---: | ---: | ---: |
+| Native 2.3 vs Stockfish 18 calibration | 15 | 11 | 14 | 51.25% |
 | Architecture candidate vs promotion-search baseline | 7 | 12 | 1 | 65% |
 | Native engine vs legacy depth 3 | 4 | 0 | 0 | 100% |
 | Native engine vs legacy depth 2 | 7 | 1 | 0 | 93.75% |
@@ -171,18 +178,19 @@ Both matches alternate colors within paired openings. Every decisive game ended
 in checkmate. See [strength methodology](docs/STRENGTH.md) and the
 [machine-readable reports](backtests/).
 
-Version 2.1 scored 18 wins, 27 draws, and 15 losses against version 2.0. Its
-fresh 100-game Stockfish 18 gauntlet produced 37 wins, 31 draws, and 32 losses.
-The fitted estimate is **2033 Elo (95% interval 1939–2127)** on the tested Apple
-Silicon hardware at 30 ms per move, compared with 1921 for version 2.0 and 1247
-for the Python+C engine under the same methodology. This is not a chess.com
-rating.
+The four-thread version 2.3 calibration produced 15 wins, 11 draws, and 14
+losses in 40 games against Stockfish 18 settings from 1750–2500. The fitted
+estimate is **2139 Elo (95% interval 2003–2275)** on the tested Apple Silicon
+hardware at 30 ms per move, compared with 2033 for version 2.1 and 1247 for the
+Python+C engine under related methodology. The result does not establish 2300
+strength and is not a chess.com rating.
 
 Run the external-opponent methodology with:
 
 ```bash
 python3 -m chess_ai.gauntlet \
   --candidate build/native/mwahaha-engine \
+  --candidate-threads 4 \
   --opponent /path/to/an/external/uci-engine \
   --opponent-elo 1750 \
   --opponent-elo 2000 \
