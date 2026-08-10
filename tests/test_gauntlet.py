@@ -1,6 +1,6 @@
 import unittest
 
-from chess_ai.gauntlet import estimate_rating
+from chess_ai.gauntlet import estimate_rating, run_gauntlet
 
 
 class RatingEstimateTests(unittest.TestCase):
@@ -19,6 +19,18 @@ class RatingEstimateTests(unittest.TestCase):
     def test_empty_results_are_rejected(self):
         with self.assertRaises(ValueError):
             estimate_rating([])
+
+    def test_candidate_thread_range_is_validated(self):
+        with self.assertRaisesRegex(ValueError, "threads"):
+            run_gauntlet(
+                ("candidate",),
+                ("opponent",),
+                (2000,),
+                2,
+                30,
+                80,
+                candidate_threads=0,
+            )
 
 
 if __name__ == "__main__":

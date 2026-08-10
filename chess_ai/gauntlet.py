@@ -52,6 +52,7 @@ class RatingEstimate:
 @dataclass(frozen=True, slots=True)
 class GauntletReport:
     candidate: str
+    candidate_threads: int
     opponent: str
     move_time_ms: int
     max_plies: int
@@ -293,6 +294,7 @@ def run_gauntlet(
     games_per_level: int,
     move_time_ms: int,
     max_plies: int,
+    candidate_threads: int = 1,
     show_progress: bool = False,
 ) -> GauntletReport:
     if games_per_level < 2 or games_per_level % 2:
@@ -301,11 +303,17 @@ def run_gauntlet(
         raise ValueError("At least one opponent Elo is required")
     if move_time_ms < 10:
         raise ValueError("Move time must be at least 10 ms")
+    if candidate_threads < 1 or candidate_threads > 64:
+        raise ValueError("Candidate threads must be between 1 and 64")
 
     games: list[GauntletGame] = []
     with UCIEngine(
         candidate_command,
-        {"Hash": 64, "Move Overhead": 0},
+        {
+            "Threads": candidate_threads,
+            "Hash": 64,
+            "Move Overhead": 0,
+        },
     ) as candidate, UCIEngine(
         opponent_command,
         {
@@ -366,6 +374,7 @@ def run_gauntlet(
         score = (wins + 0.5 * draws) / len(games) * 100
         return GauntletReport(
             candidate.name,
+            candidate_threads,
             opponent.name,
             move_time_ms,
             max_plies,
@@ -399,6 +408,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--games-per-level", type=int, default=20)
     parser.add_argument("--move-time", type=int, default=50, metavar="MS")
     parser.add_argument("--max-plies", type=int, default=160)
+    parser.add_argument("--candidate-threads", type=int, default=1)
     parser.add_argument("--json-out", type=Path)
     args = parser.parse_args(argv)
 
@@ -409,6 +419,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         args.games_per_level,
         args.move_time,
         args.max_plies,
+        candidate_threads=args.candidate_threads,
         show_progress=True,
     )
     print(
