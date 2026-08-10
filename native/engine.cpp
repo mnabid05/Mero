@@ -2043,7 +2043,7 @@ int option_value(const std::vector<std::string>& tokens, const std::string& name
 
 int uci_loop() {
     Board board = Board::starting();
-    Engine engine;
+    EnginePool engine;
     std::vector<uint64_t> game_history{board.key};
     int overhead = 10;
     std::string line;
@@ -2053,6 +2053,7 @@ int uci_loop() {
                 std::cout << "id name Mwahaha Native Engine 2.2\n";
                 std::cout << "id author Mohammed Nabid\n";
                 std::cout << "option name Hash type spin default 64 min 1 max 2048\n";
+                std::cout << "option name Threads type spin default 1 min 1 max 64\n";
                 std::cout << "option name Move Overhead type spin default 10 min 0 max 5000\n";
                 std::cout << "uciok\n" << std::flush;
             } else if (line == "isready") {
@@ -2065,6 +2066,10 @@ int uci_loop() {
                 engine.resize_table(static_cast<std::size_t>(
                     std::max(1, std::stoi(line.substr(26)))
                 ));
+            } else if (
+                line.rfind("setoption name Threads value ", 0) == 0
+            ) {
+                engine.set_threads(std::stoi(line.substr(29)));
             } else if (
                 line.rfind("setoption name Move Overhead value ", 0) == 0
             ) {
