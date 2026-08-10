@@ -16,6 +16,36 @@ Every match:
 
 ## Recorded matches
 
+### Native 2.3 bitboard and parallel-search calibration
+
+Version 2.3 completed 40 paired games against Stockfish 18 at 30 ms per move.
+The candidate used four search threads and Stockfish used one, matching the
+intended desktop configuration for this release. The result was 15 wins, 11
+draws, and 14 losses:
+
+| Opponent setting | Wins | Draws | Losses | Score |
+| ---: | ---: | ---: | ---: | ---: |
+| 1750 | 5 | 2 | 3 | 60.0% |
+| 2000 | 6 | 0 | 4 | 60.0% |
+| 2250 | 4 | 3 | 3 | 55.0% |
+| 2500 | 0 | 6 | 4 | 30.0% |
+
+The logistic fit estimates **2139 Elo with a 95% interval of 2003–2275** on
+the tested Apple Silicon hardware. This is a 106-point increase over the prior
+2033 point estimate, but the candidate also used four cores rather than one, so
+it is a release-configuration comparison rather than an isolated algorithmic
+Elo measurement. The result does **not** substantiate a 2300 rating claim.
+
+All 40 games completed without a crash, illegal move, or engine forfeit. The
+candidate scored 9/20 as White and 11.5/20 as Black. See
+`backtests/native-2.3-stockfish-18-gauntlet-40.json`.
+
+The bitboard build averaged roughly 1.30 million nodes/second with one thread
+and 2.19 million aggregate nodes/second with four threads across three 500 ms
+starting-position probes. Static-exchange ordering scored 5 wins, 10 draws,
+and 5 losses in a 20-game equal-resource regression against the pre-SEE build,
+so it was neutral in that small sample.
+
 ### Architecture candidate vs promotion-search baseline
 
 The reversible-state and cache architecture build scored 7 wins, 12 draws, and
