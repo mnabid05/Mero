@@ -102,17 +102,11 @@ static int is_passed(
 static void pawn_structure(
     const char board[64],
     int color,
+    const int file_counts[8],
     int *middle,
     int *end
 ) {
     char pawn = color == WHITE ? 'P' : 'p';
-    int file_counts[8] = {0};
-
-    for (int square = 0; square < 64; ++square) {
-        if (board[square] == pawn) {
-            ++file_counts[column_of(square)];
-        }
-    }
 
     for (int file = 0; file < 8; ++file) {
         if (file_counts[file] > 1) {
@@ -361,6 +355,7 @@ MWAHAHA_EXPORT int mwahaha_evaluate(const char board[64]) {
     int end = 0;
     int phase = 0;
     int bishops[2] = {0, 0};
+    int pawn_files[2][8] = {{0}};
 
     for (int square = 0; square < 64; ++square) {
         char piece = board[square];
@@ -373,6 +368,9 @@ MWAHAHA_EXPORT int mwahaha_evaluate(const char board[64]) {
         int sign = color == WHITE ? 1 : -1;
         phase += phase_values[index];
         bishops[color] += type == 'b';
+        if (type == 'p') {
+            ++pawn_files[color][column_of(square)];
+        }
         middle += sign * (
             middle_values[index] + square_bonus(square, type, color, 0)
         );
@@ -397,7 +395,13 @@ MWAHAHA_EXPORT int mwahaha_evaluate(const char board[64]) {
         int sign = color == WHITE ? 1 : -1;
         int pawn_middle = 0;
         int pawn_end = 0;
-        pawn_structure(board, color, &pawn_middle, &pawn_end);
+        pawn_structure(
+            board,
+            color,
+            pawn_files[color],
+            &pawn_middle,
+            &pawn_end
+        );
         middle += sign * (
             pawn_middle
             + rook_file_bonus(board, color)
