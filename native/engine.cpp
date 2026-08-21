@@ -2002,8 +2002,7 @@ private:
                 thread_count_,
                 static_cast<int>(moves.size() - 1)
             );
-            std::vector<std::thread> threads;
-            threads.reserve(static_cast<std::size_t>(active_workers));
+            FixedList<std::thread, 64> threads;
 
             for (int worker_index = 0;
                 worker_index < active_workers;
