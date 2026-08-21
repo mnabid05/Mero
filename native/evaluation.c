@@ -101,14 +101,13 @@ static int is_passed(uint64_t enemy_pawns, int square, int color) {
 }
 
 static void pawn_structure(
-    const char board[64],
     int color,
     const int file_counts[8],
+    uint64_t friendly_pawns,
     uint64_t enemy_pawns,
     int *middle,
     int *end
 ) {
-    char pawn = color == WHITE ? 'P' : 'p';
 
     for (int file = 0; file < 8; ++file) {
         if (file_counts[file] > 1) {
@@ -125,8 +124,10 @@ static void pawn_structure(
         }
     }
 
-    for (int square = 0; square < 64; ++square) {
-        if (board[square] != pawn || !is_passed(enemy_pawns, square, color)) {
+    while (friendly_pawns != 0) {
+        int square = __builtin_ctzll(friendly_pawns);
+        friendly_pawns &= friendly_pawns - 1;
+        if (!is_passed(enemy_pawns, square, color)) {
             continue;
         }
         int rank = color == WHITE ? 7 - row_of(square) : row_of(square);
@@ -404,9 +405,9 @@ MWAHAHA_EXPORT int mwahaha_evaluate(const char board[64]) {
         int pawn_middle = 0;
         int pawn_end = 0;
         pawn_structure(
-            board,
             color,
             pawn_files[color],
+            pawn_bits[color],
             pawn_bits[color == WHITE ? BLACK : WHITE],
             &pawn_middle,
             &pawn_end
