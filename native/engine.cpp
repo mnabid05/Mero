@@ -503,9 +503,8 @@ struct Board {
         }
     }
 
-    std::vector<Move> pseudo_moves(bool captures_only = false) const {
-        std::vector<Move> moves;
-        moves.reserve(64);
+    MoveList pseudo_moves(bool captures_only = false) const {
+        MoveList moves;
         uint64_t own = color_boards[color_index(white_to_move)];
         uint64_t enemy = color_boards[color_index(!white_to_move)];
         uint64_t remaining = own;
