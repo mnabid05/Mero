@@ -57,7 +57,13 @@ static int in_bounds(int row, int column) {
     return row >= 0 && row < 8 && column >= 0 && column < 8;
 }
 
-static int square_bonus(int square, char type, int color, int endgame) {
+static void square_bonuses(
+    int square,
+    char type,
+    int color,
+    int *middle,
+    int *end
+) {
     int row = row_of(square);
     int column = column_of(square);
     int relative_rank = color == WHITE ? 7 - row : row;
@@ -66,23 +72,32 @@ static int square_bonus(int square, char type, int color, int endgame) {
 
     switch (type) {
         case 'p':
-            return relative_rank * (endgame ? 13 : 7) + center * 2;
+            *middle = relative_rank * 7 + center * 2;
+            *end = relative_rank * 13 + center * 2;
+            return;
         case 'n':
-            return center * (endgame ? 9 : 11) - edge * 18;
+            *middle = center * 11 - edge * 18;
+            *end = center * 9 - edge * 18;
+            return;
         case 'b':
-            return center * 6 + relative_rank * 2;
+            *middle = *end = center * 6 + relative_rank * 2;
+            return;
         case 'r':
-            return relative_rank * (endgame ? 4 : 2);
+            *middle = relative_rank * 2;
+            *end = relative_rank * 4;
+            return;
         case 'q':
-            return center * (endgame ? 3 : 1);
+            *middle = center;
+            *end = center * 3;
+            return;
         case 'k':
-            if (endgame) {
-                return center * 10;
-            }
-            return (column == 1 || column == 2 || column == 6 ? 24 : 0)
+            *middle = (column == 1 || column == 2 || column == 6 ? 24 : 0)
                 - center * 12;
+            *end = center * 10;
+            return;
         default:
-            return 0;
+            *middle = *end = 0;
+            return;
     }
 }
 
@@ -387,11 +402,20 @@ MWAHAHA_EXPORT int mwahaha_evaluate(const char board[64]) {
         } else if (type == 'k') {
             king_squares[color] = square;
         }
+        int square_middle = 0;
+        int square_end = 0;
+        square_bonuses(
+            square,
+            type,
+            color,
+            &square_middle,
+            &square_end
+        );
         middle += sign * (
-            middle_values[index] + square_bonus(square, type, color, 0)
+            middle_values[index] + square_middle
         );
         end += sign * (
-            end_values[index] + square_bonus(square, type, color, 1)
+            end_values[index] + square_end
         );
         int feature_middle = 0;
         int feature_end = 0;
