@@ -1220,10 +1220,10 @@ private:
             if (move.flags & CASTLING) value += 25'000;
             return value;
         };
-        std::vector<std::pair<int, Move>> scored;
-        scored.reserve(moves.size());
+        using ScoredMove = std::pair<int, Move>;
+        FixedList<ScoredMove, 256> scored;
         for (const Move& move : moves) {
-            scored.emplace_back(score(move), move);
+            scored.push_back({score(move), move});
         }
         std::stable_sort(
             scored.begin(),
