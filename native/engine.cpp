@@ -1049,6 +1049,18 @@ private:
         }
     }
 
+    int prior_repetitions(uint64_t key, int halfmove_clock) const {
+        std::size_t reversible = std::min<std::size_t>(
+            static_cast<std::size_t>(std::max(0, halfmove_clock)),
+            search_history_.size()
+        );
+        int matches = 0;
+        for (std::size_t offset = 2; offset <= reversible; offset += 2) {
+            matches += search_history_[search_history_.size() - offset] == key;
+        }
+        return matches;
+    }
+
     int evaluate(const Board& board) const {
         int score = mwahaha_evaluate(board.squares.data());
         return board.white_to_move ? score : -score;
@@ -1413,9 +1425,7 @@ private:
         }
 
         uint64_t key = board.key;
-        int prior_visits = static_cast<int>(
-            std::count(search_history_.begin(), search_history_.end(), key)
-        );
+        int prior_visits = prior_repetitions(key, board.halfmove);
         if (prior_visits >= 2 || board.halfmove >= 100) {
             return 0;
         }
