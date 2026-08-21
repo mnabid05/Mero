@@ -4,6 +4,7 @@
 #include <bit>
 #include <chrono>
 #include <cctype>
+#include <cstddef>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
@@ -196,6 +197,46 @@ struct Move {
 };
 
 static_assert(sizeof(Move) == 4);
+
+template <typename T, std::size_t Capacity>
+class FixedList {
+public:
+    using iterator = typename std::array<T, Capacity>::iterator;
+    using const_iterator = typename std::array<T, Capacity>::const_iterator;
+
+    constexpr bool empty() const { return size_ == 0; }
+    constexpr std::size_t size() const { return size_; }
+    constexpr std::size_t capacity() const { return Capacity; }
+    constexpr T& front() { return values_[0]; }
+    constexpr const T& front() const { return values_[0]; }
+    constexpr T& operator[](std::size_t index) { return values_[index]; }
+    constexpr const T& operator[](std::size_t index) const {
+        return values_[index];
+    }
+    constexpr iterator begin() { return values_.begin(); }
+    constexpr const_iterator begin() const { return values_.begin(); }
+    constexpr iterator end() {
+        return values_.begin() + static_cast<std::ptrdiff_t>(size_);
+    }
+    constexpr const_iterator end() const {
+        return values_.begin() + static_cast<std::ptrdiff_t>(size_);
+    }
+
+    constexpr void clear() { size_ = 0; }
+
+    constexpr void push_back(const T& value) {
+        if (size_ >= Capacity) [[unlikely]] {
+            throw std::overflow_error("fixed list capacity exceeded");
+        }
+        values_[size_++] = value;
+    }
+
+private:
+    std::array<T, Capacity> values_{};
+    std::size_t size_ = 0;
+};
+
+using MoveList = FixedList<Move, 256>;
 
 struct Board {
     struct UndoState {
