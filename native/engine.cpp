@@ -1167,9 +1167,10 @@ private:
         value += bonus - value * std::abs(bonus) / HISTORY_LIMIT;
     }
 
+    template <typename Moves>
     void order_moves(
         const Board& board,
-        std::vector<Move>& moves,
+        Moves& moves,
         const Move& tt_move,
         int ply,
         const Move& counter_move = Move{},
