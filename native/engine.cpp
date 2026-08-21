@@ -1786,6 +1786,7 @@ private:
                 continue;
             }
             ScopedMove applied(board, move);
+            prefetch_table(board.key);
             int score = -quiescence(board, -beta, -alpha, ply + 1, qply + 1);
             if (score >= beta) {
                 store(
