@@ -23,7 +23,7 @@ Commands:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Play against the Mwahaha engine.")
+    parser = argparse.ArgumentParser(description="Play against the Mero engine.")
     parser.add_argument(
         "--depth",
         type=int,
@@ -86,7 +86,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     human_color = WHITE if args.color == "white" else BLACK
     use_unicode = not args.ascii
 
-    print("Mwahaha Chess Engine")
+    print("Mero Chess Engine")
     print(f"Engine: {ai.name}, {ai.movetime_ms} ms/move")
     print("Type 'help' for commands.\n")
 
