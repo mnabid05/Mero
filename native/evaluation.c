@@ -17,6 +17,18 @@ static char lower_piece(char piece) {
     return piece >= 'A' && piece <= 'Z' ? (char)(piece + ('a' - 'A')) : piece;
 }
 
+static int piece_index(char type) {
+    switch (type) {
+        case 'p': return 0;
+        case 'n': return 1;
+        case 'b': return 2;
+        case 'r': return 3;
+        case 'q': return 4;
+        case 'k': return 5;
+        default: return -1;
+    }
+}
+
 static int occupied(char piece) {
     return piece != '.';
 }
@@ -345,7 +357,6 @@ MWAHAHA_EXPORT int mwahaha_evaluate(const char board[64]) {
     static const int middle_values[6] = {100, 325, 335, 500, 975, 0};
     static const int end_values[6] = {125, 310, 330, 525, 950, 0};
     static const int phase_values[6] = {0, 1, 1, 2, 4, 0};
-    static const char types[7] = "pnbrqk";
     int middle = 0;
     int end = 0;
     int phase = 0;
@@ -357,10 +368,7 @@ MWAHAHA_EXPORT int mwahaha_evaluate(const char board[64]) {
             continue;
         }
         char type = lower_piece(piece);
-        int index = 0;
-        while (types[index] != type) {
-            ++index;
-        }
+        int index = piece_index(type);
         int color = color_of(piece);
         int sign = color == WHITE ? 1 : -1;
         phase += phase_values[index];
