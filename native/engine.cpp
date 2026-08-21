@@ -164,6 +164,11 @@ struct Move {
     char promotion = '\0';
     int flags = 0;
 
+    constexpr Move() = default;
+
+    constexpr Move(int source, int target, char promoted = '\0', int attributes = 0)
+        : from(source), to(target), promotion(promoted), flags(attributes) {}
+
     std::string uci() const {
         if (from < 0 || to < 0) {
             return "0000";
