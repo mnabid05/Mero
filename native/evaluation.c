@@ -264,7 +264,12 @@ static int ray_mobility(
     return score;
 }
 
-static int mobility(const char board[64], int color) {
+static int piece_mobility(
+    const char board[64],
+    int square,
+    int color,
+    char type
+) {
     static const int knight_offsets[8][2] = {
         {-2, -1}, {-2, 1}, {-1, -2}, {-1, 2},
         {1, -2}, {1, 2}, {2, -1}, {2, 1}
@@ -280,56 +285,62 @@ static int mobility(const char board[64], int color) {
         {-1, 0}, {1, 0}, {0, -1}, {0, 1}
     };
     int score = 0;
+    int row = row_of(square);
+    int column = column_of(square);
+    if (type == 'p') {
+        int direction = color == WHITE ? -1 : 1;
+        int start_row = color == WHITE ? 6 : 1;
+        int forward_row = row + direction;
+        if (in_bounds(forward_row, column)
+            && !occupied(board[forward_row * 8 + column])) {
+            ++score;
+            int second_row = row + 2 * direction;
+            if (row == start_row
+                && !occupied(board[second_row * 8 + column])) {
+                ++score;
+            }
+        }
+        for (int delta = -1; delta <= 1; delta += 2) {
+            int target_column = column + delta;
+            if (!in_bounds(forward_row, target_column)) {
+                continue;
+            }
+            char target = board[forward_row * 8 + target_column];
+            score += occupied(target) && color_of(target) != color;
+        }
+    } else if (type == 'n' || type == 'k') {
+        const int (*offsets)[2] =
+            type == 'n' ? knight_offsets : queen_directions;
+        for (size_t index = 0; index < 8; ++index) {
+            int target_row = row + offsets[index][0];
+            int target_column = column + offsets[index][1];
+            if (!in_bounds(target_row, target_column)) {
+                continue;
+            }
+            char target = board[target_row * 8 + target_column];
+            score += !occupied(target) || color_of(target) != color;
+        }
+    } else if (type == 'b') {
+        score += ray_mobility(board, square, color, bishop_directions, 4);
+    } else if (type == 'r') {
+        score += ray_mobility(board, square, color, rook_directions, 4);
+    } else if (type == 'q') {
+        score += ray_mobility(board, square, color, queen_directions, 8);
+    }
+    return score;
+}
 
+static int mobility_difference(const char board[64]) {
+    int score = 0;
     for (int square = 0; square < 64; ++square) {
         char piece = board[square];
-        if (!occupied(piece) || color_of(piece) != color) {
+        if (!occupied(piece)) {
             continue;
         }
+        int color = color_of(piece);
         char type = lower_piece(piece);
-        int row = row_of(square);
-        int column = column_of(square);
-        if (type == 'p') {
-            int direction = color == WHITE ? -1 : 1;
-            int start_row = color == WHITE ? 6 : 1;
-            int forward_row = row + direction;
-            if (in_bounds(forward_row, column)
-                && !occupied(board[forward_row * 8 + column])) {
-                ++score;
-                int second_row = row + 2 * direction;
-                if (row == start_row
-                    && !occupied(board[second_row * 8 + column])) {
-                    ++score;
-                }
-            }
-            for (int delta = -1; delta <= 1; delta += 2) {
-                int target_column = column + delta;
-                if (!in_bounds(forward_row, target_column)) {
-                    continue;
-                }
-                char target = board[forward_row * 8 + target_column];
-                score += occupied(target) && color_of(target) != color;
-            }
-        } else if (type == 'n' || type == 'k') {
-            const int (*offsets)[2] =
-                type == 'n' ? knight_offsets : queen_directions;
-            size_t count = type == 'n' ? 8 : 8;
-            for (size_t index = 0; index < count; ++index) {
-                int target_row = row + offsets[index][0];
-                int target_column = column + offsets[index][1];
-                if (!in_bounds(target_row, target_column)) {
-                    continue;
-                }
-                char target = board[target_row * 8 + target_column];
-                score += !occupied(target) || color_of(target) != color;
-            }
-        } else if (type == 'b') {
-            score += ray_mobility(board, square, color, bishop_directions, 4);
-        } else if (type == 'r') {
-            score += ray_mobility(board, square, color, rook_directions, 4);
-        } else if (type == 'q') {
-            score += ray_mobility(board, square, color, queen_directions, 8);
-        }
+        int sign = color == WHITE ? 1 : -1;
+        score += sign * piece_mobility(board, square, color, type);
     }
     return score;
 }
@@ -407,9 +418,9 @@ MWAHAHA_EXPORT int mwahaha_evaluate(const char board[64]) {
         );
     }
 
-    int mobility_difference = mobility(board, WHITE) - mobility(board, BLACK);
-    middle += mobility_difference * 3;
-    end += mobility_difference * 2;
+    int mobility_score = mobility_difference(board);
+    middle += mobility_score * 3;
+    end += mobility_score * 2;
     if (phase > MAX_PHASE) {
         phase = MAX_PHASE;
     }
