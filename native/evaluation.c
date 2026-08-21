@@ -152,30 +152,25 @@ static int rook_file_bonus(
     return score;
 }
 
-static int king_shelter(const char board[64], int color) {
-    char king = color == WHITE ? 'K' : 'k';
+static int king_shelter(const char board[64], int color, int square) {
     char pawn = color == WHITE ? 'P' : 'p';
     int direction = color == WHITE ? -1 : 1;
-
-    for (int square = 0; square < 64; ++square) {
-        if (board[square] != king) {
-            continue;
-        }
-        int row = row_of(square) + direction;
-        int column = column_of(square);
-        int score = 0;
-        for (int delta = -1; delta <= 1; ++delta) {
-            int target_column = column + delta;
-            if (
-                in_bounds(row, target_column)
-                && board[row * 8 + target_column] == pawn
-            ) {
-                score += 14;
-            }
-        }
-        return score;
+    if (square < 0) {
+        return 0;
     }
-    return 0;
+    int row = row_of(square) + direction;
+    int column = column_of(square);
+    int score = 0;
+    for (int delta = -1; delta <= 1; ++delta) {
+        int target_column = column + delta;
+        if (
+            in_bounds(row, target_column)
+            && board[row * 8 + target_column] == pawn
+        ) {
+            score += 14;
+        }
+    }
+    return score;
 }
 
 static int pawn_protects(const char board[64], int square, int color) {
@@ -349,6 +344,7 @@ MWAHAHA_EXPORT int mwahaha_evaluate(const char board[64]) {
     int bishops[2] = {0, 0};
     int pawn_files[2][8] = {{0}};
     int rook_files[2][8] = {{0}};
+    int king_squares[2] = {-1, -1};
 
     for (int square = 0; square < 64; ++square) {
         char piece = board[square];
@@ -365,6 +361,8 @@ MWAHAHA_EXPORT int mwahaha_evaluate(const char board[64]) {
             ++pawn_files[color][column_of(square)];
         } else if (type == 'r') {
             ++rook_files[color][column_of(square)];
+        } else if (type == 'k') {
+            king_squares[color] = square;
         }
         middle += sign * (
             middle_values[index] + square_bonus(square, type, color, 0)
@@ -400,7 +398,7 @@ MWAHAHA_EXPORT int mwahaha_evaluate(const char board[64]) {
         middle += sign * (
             pawn_middle
             + rook_file_bonus(color, pawn_files, rook_files)
-            + king_shelter(board, color)
+            + king_shelter(board, color, king_squares[color])
             + (bishops[color] >= 2 ? 35 : 0)
         );
         end += sign * (
