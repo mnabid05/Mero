@@ -1965,7 +1965,8 @@ private:
             if (std::chrono::steady_clock::now() >= deadline) {
                 break;
             }
-            std::vector<int> scores(moves.size(), -INF);
+            std::array<int, 256> scores{};
+            std::fill_n(scores.begin(), moves.size(), -INF);
             Engine::RootMoveResult first = workers_.front()->search_root_move(
                 position,
                 moves.front(),
