@@ -2085,23 +2085,20 @@ private:
                 result.move,
                 depth
             );
-            std::vector<std::size_t> order(moves.size());
-            for (std::size_t index = 0; index < order.size(); ++index) {
-                order[index] = index;
+            FixedList<std::pair<int, Move>, 256> ranked_moves;
+            for (std::size_t index = 0; index < moves.size(); ++index) {
+                ranked_moves.push_back({scores[index], moves[index]});
             }
-            std::stable_sort(
-                order.begin(),
-                order.end(),
-                [&](std::size_t left, std::size_t right) {
-                    return scores[left] > scores[right];
+            std::sort(
+                ranked_moves.begin(),
+                ranked_moves.end(),
+                [](const auto& left, const auto& right) {
+                    return left.first > right.first;
                 }
             );
-            std::vector<Move> ordered_moves;
-            ordered_moves.reserve(moves.size());
-            for (std::size_t index : order) {
-                ordered_moves.push_back(moves[index]);
+            for (std::size_t index = 0; index < moves.size(); ++index) {
+                moves[index] = ranked_moves[index].second;
             }
-            moves = std::move(ordered_moves);
             if (std::abs(result.score) > MATE - MAX_PLY) {
                 break;
             }
