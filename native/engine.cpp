@@ -1225,11 +1225,20 @@ private:
         for (const Move& move : moves) {
             scored.push_back({score(move), move});
         }
-        std::stable_sort(
+        std::sort(
             scored.begin(),
             scored.end(),
             [](const auto& left, const auto& right) {
-                return left.first > right.first;
+                if (left.first != right.first) {
+                    return left.first > right.first;
+                }
+                if (left.second.from != right.second.from) {
+                    return left.second.from < right.second.from;
+                }
+                if (left.second.to != right.second.to) {
+                    return left.second.to < right.second.to;
+                }
+                return left.second.promotion < right.second.promotion;
             }
         );
         for (std::size_t index = 0; index < moves.size(); ++index) {
