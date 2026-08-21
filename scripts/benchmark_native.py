@@ -26,15 +26,26 @@ def parse_final_info(output: str) -> dict[str, int]:
     return {key: int(value) for key, value in complete[-1].groupdict().items()}
 
 
-def run_probe(engine: Path, nodes: int, threads: int, fen: str | None) -> dict[str, int]:
+def run_probe(
+    engine: Path,
+    nodes: int,
+    threads: int,
+    fen: str | None,
+    move_time_ms: int | None = None,
+) -> dict[str, int]:
     position = f"position fen {fen}" if fen else "position startpos"
+    search = (
+        f"go movetime {move_time_ms}"
+        if move_time_ms is not None
+        else f"go nodes {nodes}"
+    )
     commands = "\n".join(
         (
             "uci",
             "isready",
             f"setoption name Threads value {threads}",
             position,
-            f"go nodes {nodes}",
+            search,
             "quit",
             "",
         )
@@ -60,21 +71,34 @@ def main() -> int:
         / "mwahaha-engine",
     )
     parser.add_argument("--nodes", type=int, default=1_000_000)
+    parser.add_argument("--move-time-ms", type=int)
     parser.add_argument("--threads", type=int, default=1)
     parser.add_argument("--runs", type=int, default=5)
     parser.add_argument("--fen")
     parser.add_argument("--json-out", type=Path)
     args = parser.parse_args()
-    if args.nodes <= 0 or args.runs <= 0 or not 1 <= args.threads <= 64:
-        parser.error("nodes and runs must be positive; threads must be in 1..64")
+    if (
+        args.nodes <= 0
+        or args.runs <= 0
+        or not 1 <= args.threads <= 64
+        or (args.move_time_ms is not None and args.move_time_ms <= 0)
+    ):
+        parser.error("nodes, runs, and move time must be positive; threads must be in 1..64")
 
     probes = [
-        run_probe(args.engine, args.nodes, args.threads, args.fen)
+        run_probe(
+            args.engine,
+            args.nodes,
+            args.threads,
+            args.fen,
+            args.move_time_ms,
+        )
         for _ in range(args.runs)
     ]
     report = {
         "engine": str(args.engine),
         "nodes_requested": args.nodes,
+        "move_time_ms": args.move_time_ms,
         "threads": args.threads,
         "runs": probes,
         "median_nps": int(statistics.median(probe["nps"] for probe in probes)),
