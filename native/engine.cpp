@@ -496,7 +496,8 @@ struct Board {
         return in_check(white_to_move);
     }
 
-    void add_promotions(std::vector<Move>& moves, int from, int to, int flags) const {
+    template <typename Moves>
+    void add_promotions(Moves& moves, int from, int to, int flags) const {
         for (char promotion : {'q', 'r', 'b', 'n'}) {
             moves.push_back({from, to, promotion, flags});
         }
