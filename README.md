@@ -31,9 +31,10 @@ Python engine detects the native evaluator library automatically. Without it,
 the dependency-free Python evaluator is used; set `MWAHAHA_PURE_PYTHON=1` to
 force that reference path.
 
-Across three 500 ms starting-position probes, version 2.3 averaged roughly 1.30
-million nodes/second with one thread and 2.19 million aggregate nodes/second
-with four threads. The original Python+C engine searched roughly 22 thousand
+Across seven same-machine probes, Mero 3.0 reached median throughput of 1.94
+million nodes/second with one thread and 2.87 million aggregate nodes/second
+with four threads. That is 54% and 37% faster, respectively, than the merged
+2.3 release. The original Python+C engine searched roughly 22 thousand
 nodes/second on the same machine.
 
 ## Search
@@ -44,6 +45,8 @@ nodes/second on the same machine.
 - Zobrist-keyed transposition table
 - Incremental Zobrist updates with verified make/unmake state
 - Synchronized piece and occupancy bitboards
+- Four-byte moves and stack-backed move lists in recursive search
+- Precomputed sliding rays with nearest-blocker bit scans
 - Parallel principal-root search with configurable UCI threads
 - Three-entry transposition clusters with cached static evaluation
 - Quiescence search for tactical stability
@@ -125,7 +128,7 @@ mwahaha-uci
 
 ## Validation
 
-Build the native engine and run the 52-test suite:
+Build the native engine and run the 54-test suite:
 
 ```bash
 python3 scripts/build_native.py
