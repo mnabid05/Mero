@@ -737,8 +737,8 @@ struct Board {
         }
     }
 
-    std::vector<Move> legal_moves_in_place(bool captures_only = false) {
-        std::vector<Move> legal;
+    MoveList legal_moves_in_place(bool captures_only = false) {
+        MoveList legal;
         bool moving_white = white_to_move;
         for (const Move& move : pseudo_moves(captures_only)) {
             UndoState undo = make_move(move);
@@ -752,7 +752,8 @@ struct Board {
 
     std::vector<Move> legal_moves(bool captures_only = false) const {
         Board position = *this;
-        return position.legal_moves_in_place(captures_only);
+        MoveList legal = position.legal_moves_in_place(captures_only);
+        return {legal.begin(), legal.end()};
     }
 
     Move find_move(const std::string& uci) const {
