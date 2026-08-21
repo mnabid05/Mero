@@ -841,6 +841,7 @@ class Timeout final : public std::exception {};
 class Engine {
 public:
     explicit Engine(std::size_t hash_megabytes = 64) {
+        search_history_.reserve(MAX_PLY * 2);
         resize_table(hash_megabytes);
     }
 
