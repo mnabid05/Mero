@@ -1550,6 +1550,7 @@ private:
             bool pruned = false;
             {
                 ScopedMove applied(board, move);
+                prefetch_table(board.key);
                 bool gives_check = board.in_check();
                 if (
                     depth <= 2
