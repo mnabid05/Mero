@@ -1513,8 +1513,8 @@ private:
         int best_score = -INF;
         Move best{};
         int static_score = depth <= 2 && !in_check ? static_eval : -INF;
-        std::vector<Move> quiets_tried;
-        std::vector<Move> captures_tried;
+        MoveList quiets_tried;
+        MoveList captures_tried;
 
         for (std::size_t index = 0; index < moves.size(); ++index) {
             const Move& move = moves[index];
