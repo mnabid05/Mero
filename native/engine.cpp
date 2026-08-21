@@ -1269,6 +1269,18 @@ private:
         return nullptr;
     }
 
+    void prefetch_table(uint64_t key) const {
+#if defined(__GNUC__) || defined(__clang__)
+        __builtin_prefetch(
+            &table_[key & (table_.size() - 1)],
+            0,
+            1
+        );
+#else
+        (void)key;
+#endif
+    }
+
     static int score_to_table(int score, int ply) {
         if (score > MATE - MAX_PLY) return score + ply;
         if (score < -MATE + MAX_PLY) return score - ply;
@@ -1337,6 +1349,7 @@ private:
 
         for (std::size_t index = 0; index < moves.size(); ++index) {
             ScopedMove applied(board, moves[index]);
+            prefetch_table(board.key);
             int score;
             if (index == 0) {
                 score = -negamax(
