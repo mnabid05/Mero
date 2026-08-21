@@ -159,15 +159,18 @@ struct Zobrist {
 extern const Zobrist ZOBRIST;
 
 struct Move {
-    int from = -1;
-    int to = -1;
+    int8_t from = -1;
+    int8_t to = -1;
     char promotion = '\0';
-    int flags = 0;
+    uint8_t flags = 0;
 
     constexpr Move() = default;
 
     constexpr Move(int source, int target, char promoted = '\0', int attributes = 0)
-        : from(source), to(target), promotion(promoted), flags(attributes) {}
+        : from(static_cast<int8_t>(source)),
+          to(static_cast<int8_t>(target)),
+          promotion(promoted),
+          flags(static_cast<uint8_t>(attributes)) {}
 
     std::string uci() const {
         if (from < 0 || to < 0) {
@@ -191,6 +194,8 @@ struct Move {
         return from >= 0;
     }
 };
+
+static_assert(sizeof(Move) == 4);
 
 struct Board {
     struct UndoState {
