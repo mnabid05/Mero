@@ -32,6 +32,13 @@ en passant, promotions, and null moves. A recursive verifier rebuilds every
 bitboard from the square array after make/unmake sequences and covers castling,
 en passant, captures, and all promotion types.
 
+Mero 3.0 stores each move in four bytes and uses fixed-capacity stack lists for
+pseudo-legal generation, legality filtering, move scoring, searched-move
+history, and root ordering. The maximum capacity is above the largest possible
+legal chess move count, removing allocator traffic from the recursive search
+path without truncating move lists. Sliding attacks use precomputed directional
+rays and bit scans to find the nearest blocker instead of walking squares.
+
 The implementation covers normal moves, castling path safety, en passant capture,
 promotion, attack detection, FEN, and terminal states.
 
@@ -39,6 +46,12 @@ promotion, attack detection, FEN, and terminal states.
 
 `Evaluator` produces separate middlegame and endgame scores and blends them using
 the material phase remaining on the board.
+
+The C11 evaluation pass builds pawn, rook-file, and king-location summaries
+while it scans the board. Passed pawns then use bit masks, mobility is computed
+for both colors in one pass, and middlegame/endgame square bonuses are calculated
+together. This preserves the evaluation score while reducing repeated scans and
+floating-point work at search leaves.
 
 The score combines:
 
@@ -93,10 +106,11 @@ replacement within each cluster. Killer, counter, capture, quiet, and
 continuation histories persist within a game and reset on `ucinewgame`.
 
 The C++20 implementation stores its transposition table in fixed-size,
-power-of-two clusters. In the recorded three-run, 500 ms starting-position
-probe, the four-thread bitboard build averaged roughly 2.19 million aggregate
-nodes/second, versus roughly 1.30 million with one thread. The Python version
-remains the slower, easier-to-inspect reference.
+power-of-two clusters and prefetches likely child clusters before recursive
+search. In seven same-machine comparisons against version 2.3, Mero 3.0 reached
+a median 1.94 million nodes/second with one thread, up 54%, and 2.87 million
+aggregate nodes/second with four threads, up 37%. The Python version remains the
+slower, easier-to-inspect reference.
 
 ## Design influences
 
