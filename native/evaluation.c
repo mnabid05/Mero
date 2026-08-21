@@ -37,27 +37,28 @@ static int square_bonus(int square, char type, int color, int endgame) {
     int row = row_of(square);
     int column = column_of(square);
     int relative_rank = color == WHITE ? 7 - row : row;
-    double center =
-        7.0 - (abs(7 - 2 * row) / 2.0 + abs(7 - 2 * column) / 2.0);
+    int center = 7 - (
+        abs(7 - 2 * row) + abs(7 - 2 * column)
+    ) / 2;
     int edge = (column == 0 || column == 7) + (row == 0 || row == 7);
 
     switch (type) {
         case 'p':
-            return relative_rank * (endgame ? 13 : 7) + (int)(center * 2);
+            return relative_rank * (endgame ? 13 : 7) + center * 2;
         case 'n':
-            return (int)(center * (endgame ? 9 : 11)) - edge * 18;
+            return center * (endgame ? 9 : 11) - edge * 18;
         case 'b':
-            return (int)(center * 6) + relative_rank * 2;
+            return center * 6 + relative_rank * 2;
         case 'r':
             return relative_rank * (endgame ? 4 : 2);
         case 'q':
-            return (int)(center * (endgame ? 3 : 1));
+            return center * (endgame ? 3 : 1);
         case 'k':
             if (endgame) {
-                return (int)(center * 10);
+                return center * 10;
             }
             return (column == 1 || column == 2 || column == 6 ? 24 : 0)
-                - (int)(center * 12);
+                - center * 12;
         default:
             return 0;
     }
