@@ -133,28 +133,20 @@ static void pawn_structure(
     }
 }
 
-static int rook_file_bonus(const char board[64], int color) {
-    char rook = color == WHITE ? 'R' : 'r';
-    char friendly_pawn = color == WHITE ? 'P' : 'p';
-    char enemy_pawn = color == WHITE ? 'p' : 'P';
+static int rook_file_bonus(
+    int color,
+    const int pawn_files[2][8],
+    const int rook_files[2][8]
+) {
     int score = 0;
 
-    for (int square = 0; square < 64; ++square) {
-        if (board[square] != rook) {
-            continue;
-        }
-        int file = column_of(square);
-        int friendly = 0;
-        int enemy = 0;
-        for (int row = 0; row < 8; ++row) {
-            friendly |= board[row * 8 + file] == friendly_pawn;
-            enemy |= board[row * 8 + file] == enemy_pawn;
-        }
-        if (!friendly) {
-            score += 14;
-            if (!enemy) {
-                score += 12;
+    for (int file = 0; file < 8; ++file) {
+        if (pawn_files[color][file] == 0) {
+            int bonus = 14;
+            if (pawn_files[color == WHITE ? BLACK : WHITE][file] == 0) {
+                bonus += 12;
             }
+            score += rook_files[color][file] * bonus;
         }
     }
     return score;
@@ -356,6 +348,7 @@ MWAHAHA_EXPORT int mwahaha_evaluate(const char board[64]) {
     int phase = 0;
     int bishops[2] = {0, 0};
     int pawn_files[2][8] = {{0}};
+    int rook_files[2][8] = {{0}};
 
     for (int square = 0; square < 64; ++square) {
         char piece = board[square];
@@ -370,6 +363,8 @@ MWAHAHA_EXPORT int mwahaha_evaluate(const char board[64]) {
         bishops[color] += type == 'b';
         if (type == 'p') {
             ++pawn_files[color][column_of(square)];
+        } else if (type == 'r') {
+            ++rook_files[color][column_of(square)];
         }
         middle += sign * (
             middle_values[index] + square_bonus(square, type, color, 0)
@@ -404,7 +399,7 @@ MWAHAHA_EXPORT int mwahaha_evaluate(const char board[64]) {
         );
         middle += sign * (
             pawn_middle
-            + rook_file_bonus(board, color)
+            + rook_file_bonus(color, pawn_files, rook_files)
             + king_shelter(board, color)
             + (bishops[color] >= 2 ? 35 : 0)
         );
