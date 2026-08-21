@@ -1,0 +1,25 @@
+{
+  "candidate": {
+    "name": "Mero 3.0",
+    "source_ref": "performance/mero-3"
+  },
+  "date": "2026-08-21",
+  "method": {
+    "baseline_ref": "origin/main@5b001d6",
+    "compiler_flags": "-std=c++20 -O3 -DNDEBUG -pthread",
+    "hardware": "Apple Silicon",
+    "runs_per_configuration": 7
+  },
+  "parallel_500ms": {
+    "baseline_median_nps": 2092189,
+    "candidate_median_nps": 2874783,
+    "improvement_percent": 37.41,
+    "threads": 4
+  },
+  "single_thread_1000000_nodes": {
+    "baseline_median_nps": 1258130,
+    "candidate_median_nps": 1937083,
+    "improvement_percent": 53.97,
+    "threads": 1
+  }
+}
