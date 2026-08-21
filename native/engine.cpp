@@ -85,8 +85,29 @@ constexpr std::array<uint64_t, 64> build_king_attacks() {
     return attacks;
 }
 
+constexpr std::array<std::array<uint64_t, 64>, 8> build_rays() {
+    std::array<std::array<uint64_t, 64>, 8> rays{};
+    constexpr int directions[8][2] = {
+        {-1, -1}, {-1, 1}, {1, -1}, {1, 1},
+        {-1, 0}, {1, 0}, {0, -1}, {0, 1}
+    };
+    for (int direction = 0; direction < 8; ++direction) {
+        for (int square = 0; square < 64; ++square) {
+            int row = square / 8 + directions[direction][0];
+            int column = square % 8 + directions[direction][1];
+            while (row >= 0 && row < 8 && column >= 0 && column < 8) {
+                rays[direction][square] |= square_bit(row * 8 + column);
+                row += directions[direction][0];
+                column += directions[direction][1];
+            }
+        }
+    }
+    return rays;
+}
+
 constexpr auto KNIGHT_ATTACKS = build_knight_attacks();
 constexpr auto KING_ATTACKS = build_king_attacks();
+constexpr auto RAYS = build_rays();
 
 constexpr std::array<int, 128> PIECE_VALUES = [] {
     std::array<int, 128> values{};
@@ -407,27 +428,19 @@ struct Board {
     }
 
     uint64_t sliding_attacks(int from, int start, int stop) const {
-        constexpr int directions[8][2] = {
-            {-1, -1}, {-1, 1}, {1, -1}, {1, 1},
-            {-1, 0}, {1, 0}, {0, -1}, {0, 1}
-        };
         uint64_t attacks = 0;
-        int row = from / 8;
-        int column = from % 8;
-        for (int index = start; index < stop; ++index) {
-            int target_row = row + directions[index][0];
-            int target_column = column + directions[index][1];
-            while (target_row >= 0 && target_row < 8
-                && target_column >= 0 && target_column < 8) {
-                int target = target_row * 8 + target_column;
-                uint64_t bit = square_bit(target);
-                attacks |= bit;
-                if (occupied & bit) {
-                    break;
-                }
-                target_row += directions[index][0];
-                target_column += directions[index][1];
+        for (int direction = start; direction < stop; ++direction) {
+            uint64_t ray = RAYS[direction][from];
+            uint64_t blockers = ray & occupied;
+            if (blockers != 0) {
+                bool decreasing = direction == 0 || direction == 1
+                    || direction == 4 || direction == 6;
+                int blocker = decreasing
+                    ? 63 - static_cast<int>(std::countl_zero(blockers))
+                    : static_cast<int>(std::countr_zero(blockers));
+                ray ^= RAYS[direction][blocker];
             }
+            attacks |= ray;
         }
         return attacks;
     }
