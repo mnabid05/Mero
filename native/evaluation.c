@@ -1,4 +1,5 @@
 #include <stddef.h>
+#include <stdint.h>
 #include <stdlib.h>
 
 #if defined(_WIN32)
@@ -8,6 +9,8 @@
 #endif
 
 enum { WHITE = 0, BLACK = 1, MAX_PHASE = 24 };
+
+static const uint64_t FILE_A = UINT64_C(0x0101010101010101);
 
 static int color_of(char piece) {
     return piece >= 'A' && piece <= 'Z' ? WHITE : BLACK;
@@ -76,33 +79,32 @@ static int square_bonus(int square, char type, int color, int endgame) {
     }
 }
 
-static int is_passed(
-    const char board[64],
-    int square,
-    int color
-) {
+static int is_passed(uint64_t enemy_pawns, int square, int color) {
     int row = row_of(square);
     int column = column_of(square);
-    char enemy = color == WHITE ? 'p' : 'P';
-    int start = color == WHITE ? 0 : row + 1;
-    int stop = color == WHITE ? row : 8;
-
-    for (int enemy_row = start; enemy_row < stop; ++enemy_row) {
-        for (int delta = -1; delta <= 1; ++delta) {
-            int enemy_column = column + delta;
-            if (in_bounds(enemy_row, enemy_column)
-                && board[enemy_row * 8 + enemy_column] == enemy) {
-                return 0;
-            }
-        }
+    uint64_t files = FILE_A << column;
+    if (column > 0) {
+        files |= FILE_A << (column - 1);
     }
-    return 1;
+    if (column < 7) {
+        files |= FILE_A << (column + 1);
+    }
+    uint64_t ranks;
+    if (color == WHITE) {
+        ranks = row == 0 ? 0 : (UINT64_C(1) << (row * 8)) - 1;
+    } else {
+        ranks = row == 7
+            ? 0
+            : ~((UINT64_C(1) << ((row + 1) * 8)) - 1);
+    }
+    return (enemy_pawns & files & ranks) == 0;
 }
 
 static void pawn_structure(
     const char board[64],
     int color,
     const int file_counts[8],
+    uint64_t enemy_pawns,
     int *middle,
     int *end
 ) {
@@ -124,7 +126,7 @@ static void pawn_structure(
     }
 
     for (int square = 0; square < 64; ++square) {
-        if (board[square] != pawn || !is_passed(board, square, color)) {
+        if (board[square] != pawn || !is_passed(enemy_pawns, square, color)) {
             continue;
         }
         int rank = color == WHITE ? 7 - row_of(square) : row_of(square);
@@ -354,6 +356,7 @@ MWAHAHA_EXPORT int mwahaha_evaluate(const char board[64]) {
     int phase = 0;
     int bishops[2] = {0, 0};
     int pawn_files[2][8] = {{0}};
+    uint64_t pawn_bits[2] = {0, 0};
     int rook_files[2][8] = {{0}};
     int king_squares[2] = {-1, -1};
 
@@ -370,6 +373,7 @@ MWAHAHA_EXPORT int mwahaha_evaluate(const char board[64]) {
         bishops[color] += type == 'b';
         if (type == 'p') {
             ++pawn_files[color][column_of(square)];
+            pawn_bits[color] |= UINT64_C(1) << square;
         } else if (type == 'r') {
             ++rook_files[color][column_of(square)];
         } else if (type == 'k') {
@@ -403,6 +407,7 @@ MWAHAHA_EXPORT int mwahaha_evaluate(const char board[64]) {
             board,
             color,
             pawn_files[color],
+            pawn_bits[color == WHITE ? BLACK : WHITE],
             &pawn_middle,
             &pawn_end
         );
