@@ -252,6 +252,15 @@ public:
         values_[size_++] = value;
     }
 
+    template <typename... Args>
+    constexpr T& emplace_back(Args&&... args) {
+        if (size_ >= Capacity) [[unlikely]] {
+            throw std::overflow_error("fixed list capacity exceeded");
+        }
+        values_[size_] = T(std::forward<Args>(args)...);
+        return values_[size_++];
+    }
+
 private:
     std::array<T, Capacity> values_{};
     std::size_t size_ = 0;
