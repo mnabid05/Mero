@@ -2,7 +2,7 @@
 
 ## Hybrid execution
 
-Mwahaha uses three implementation languages:
+Mero uses three implementation languages:
 
 - C++20 owns the strongest engine's board state, legal move generation,
   alpha-beta search, transposition table, time control, perft, and UCI.
@@ -100,7 +100,7 @@ remains the slower, easier-to-inspect reference.
 
 ## Design influences
 
-Mwahaha remains an original implementation and does not copy or embed another
+Mero remains an original implementation and does not copy or embed another
 engine. Its reversible position state, clustered transposition table, search
 stack, and staged history ideas are informed by the public architecture of
 [Stockfish](https://github.com/official-stockfish/Stockfish). Its cache-first

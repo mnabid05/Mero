@@ -142,7 +142,7 @@ measurement differences from human online pools.
 
 | Setting | Value |
 | --- | --- |
-| Candidate | Mwahaha native engine, depth 6 |
+| Candidate | Mero native engine, depth 6 |
 | Candidate time | 100 ms per move |
 | Baseline | Legacy minimax, depth 3 |
 | Games | 4 |
@@ -156,7 +156,7 @@ White and Black.
 
 | Setting | Value |
 | --- | --- |
-| Candidate | Mwahaha native engine, depth 6 |
+| Candidate | Mero native engine, depth 6 |
 | Candidate time | 100 ms per move |
 | Baseline | Legacy minimax, depth 2 |
 | Games | 8 |

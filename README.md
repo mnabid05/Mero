@@ -1,4 +1,4 @@
-# Mwahaha Chess Engine
+# Mero Chess Engine
 
 A self-contained original chess engine written in Python, C, and C++.
 
@@ -200,7 +200,7 @@ python3 -m chess_ai.gauntlet \
 ```
 
 External engines are test opponents only and are not included in or required by
-Mwahaha.
+Mero.
 
 ## Project layout
 
