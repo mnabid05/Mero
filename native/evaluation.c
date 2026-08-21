@@ -1,6 +1,5 @@
 #include <stddef.h>
 #include <stdint.h>
-#include <stdlib.h>
 
 #if defined(_WIN32)
 #define MWAHAHA_EXPORT __declspec(dllexport)
@@ -11,6 +10,16 @@
 enum { WHITE = 0, BLACK = 1, MAX_PHASE = 24 };
 
 static const uint64_t FILE_A = UINT64_C(0x0101010101010101);
+static const uint8_t CENTER[64] = {
+    0, 1, 2, 3, 3, 2, 1, 0,
+    1, 2, 3, 4, 4, 3, 2, 1,
+    2, 3, 4, 5, 5, 4, 3, 2,
+    3, 4, 5, 6, 6, 5, 4, 3,
+    3, 4, 5, 6, 6, 5, 4, 3,
+    2, 3, 4, 5, 5, 4, 3, 2,
+    1, 2, 3, 4, 4, 3, 2, 1,
+    0, 1, 2, 3, 3, 2, 1, 0
+};
 
 static int color_of(char piece) {
     return piece >= 'A' && piece <= 'Z' ? WHITE : BLACK;
@@ -52,9 +61,7 @@ static int square_bonus(int square, char type, int color, int endgame) {
     int row = row_of(square);
     int column = column_of(square);
     int relative_rank = color == WHITE ? 7 - row : row;
-    int center = 7 - (
-        abs(7 - 2 * row) + abs(7 - 2 * column)
-    ) / 2;
+    int center = CENTER[square];
     int edge = (column == 0 || column == 7) + (row == 0 || row == 7);
 
     switch (type) {
