@@ -4,6 +4,7 @@
 #include <bit>
 #include <chrono>
 #include <cctype>
+#include <cstddef>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
@@ -84,8 +85,29 @@ constexpr std::array<uint64_t, 64> build_king_attacks() {
     return attacks;
 }
 
+constexpr std::array<std::array<uint64_t, 64>, 8> build_rays() {
+    std::array<std::array<uint64_t, 64>, 8> rays{};
+    constexpr int directions[8][2] = {
+        {-1, -1}, {-1, 1}, {1, -1}, {1, 1},
+        {-1, 0}, {1, 0}, {0, -1}, {0, 1}
+    };
+    for (int direction = 0; direction < 8; ++direction) {
+        for (int square = 0; square < 64; ++square) {
+            int row = square / 8 + directions[direction][0];
+            int column = square % 8 + directions[direction][1];
+            while (row >= 0 && row < 8 && column >= 0 && column < 8) {
+                rays[direction][square] |= square_bit(row * 8 + column);
+                row += directions[direction][0];
+                column += directions[direction][1];
+            }
+        }
+    }
+    return rays;
+}
+
 constexpr auto KNIGHT_ATTACKS = build_knight_attacks();
 constexpr auto KING_ATTACKS = build_king_attacks();
+constexpr auto RAYS = build_rays();
 
 constexpr std::array<int, 128> PIECE_VALUES = [] {
     std::array<int, 128> values{};
@@ -159,10 +181,18 @@ struct Zobrist {
 extern const Zobrist ZOBRIST;
 
 struct Move {
-    int from = -1;
-    int to = -1;
+    int8_t from = -1;
+    int8_t to = -1;
     char promotion = '\0';
-    int flags = 0;
+    uint8_t flags = 0;
+
+    constexpr Move() = default;
+
+    constexpr Move(int source, int target, char promoted = '\0', int attributes = 0)
+        : from(static_cast<int8_t>(source)),
+          to(static_cast<int8_t>(target)),
+          promotion(promoted),
+          flags(static_cast<uint8_t>(attributes)) {}
 
     std::string uci() const {
         if (from < 0 || to < 0) {
@@ -186,6 +216,57 @@ struct Move {
         return from >= 0;
     }
 };
+
+static_assert(sizeof(Move) == 4);
+
+template <typename T, std::size_t Capacity>
+class FixedList {
+public:
+    using iterator = typename std::array<T, Capacity>::iterator;
+    using const_iterator = typename std::array<T, Capacity>::const_iterator;
+
+    constexpr bool empty() const { return size_ == 0; }
+    constexpr std::size_t size() const { return size_; }
+    constexpr std::size_t capacity() const { return Capacity; }
+    constexpr T& front() { return values_[0]; }
+    constexpr const T& front() const { return values_[0]; }
+    constexpr T& operator[](std::size_t index) { return values_[index]; }
+    constexpr const T& operator[](std::size_t index) const {
+        return values_[index];
+    }
+    constexpr iterator begin() { return values_.begin(); }
+    constexpr const_iterator begin() const { return values_.begin(); }
+    constexpr iterator end() {
+        return values_.begin() + static_cast<std::ptrdiff_t>(size_);
+    }
+    constexpr const_iterator end() const {
+        return values_.begin() + static_cast<std::ptrdiff_t>(size_);
+    }
+
+    constexpr void clear() { size_ = 0; }
+
+    constexpr void push_back(const T& value) {
+        if (size_ >= Capacity) [[unlikely]] {
+            throw std::overflow_error("fixed list capacity exceeded");
+        }
+        values_[size_++] = value;
+    }
+
+    template <typename... Args>
+    constexpr T& emplace_back(Args&&... args) {
+        if (size_ >= Capacity) [[unlikely]] {
+            throw std::overflow_error("fixed list capacity exceeded");
+        }
+        values_[size_] = T(std::forward<Args>(args)...);
+        return values_[size_++];
+    }
+
+private:
+    std::array<T, Capacity> values_{};
+    std::size_t size_ = 0;
+};
+
+using MoveList = FixedList<Move, 256>;
 
 struct Board {
     struct UndoState {
@@ -356,27 +437,19 @@ struct Board {
     }
 
     uint64_t sliding_attacks(int from, int start, int stop) const {
-        constexpr int directions[8][2] = {
-            {-1, -1}, {-1, 1}, {1, -1}, {1, 1},
-            {-1, 0}, {1, 0}, {0, -1}, {0, 1}
-        };
         uint64_t attacks = 0;
-        int row = from / 8;
-        int column = from % 8;
-        for (int index = start; index < stop; ++index) {
-            int target_row = row + directions[index][0];
-            int target_column = column + directions[index][1];
-            while (target_row >= 0 && target_row < 8
-                && target_column >= 0 && target_column < 8) {
-                int target = target_row * 8 + target_column;
-                uint64_t bit = square_bit(target);
-                attacks |= bit;
-                if (occupied & bit) {
-                    break;
-                }
-                target_row += directions[index][0];
-                target_column += directions[index][1];
+        for (int direction = start; direction < stop; ++direction) {
+            uint64_t ray = RAYS[direction][from];
+            uint64_t blockers = ray & occupied;
+            if (blockers != 0) {
+                bool decreasing = direction == 0 || direction == 1
+                    || direction == 4 || direction == 6;
+                int blocker = decreasing
+                    ? 63 - static_cast<int>(std::countl_zero(blockers))
+                    : static_cast<int>(std::countr_zero(blockers));
+                ray ^= RAYS[direction][blocker];
             }
+            attacks |= ray;
         }
         return attacks;
     }
@@ -445,15 +518,15 @@ struct Board {
         return in_check(white_to_move);
     }
 
-    void add_promotions(std::vector<Move>& moves, int from, int to, int flags) const {
+    template <typename Moves>
+    void add_promotions(Moves& moves, int from, int to, int flags) const {
         for (char promotion : {'q', 'r', 'b', 'n'}) {
             moves.push_back({from, to, promotion, flags});
         }
     }
 
-    std::vector<Move> pseudo_moves(bool captures_only = false) const {
-        std::vector<Move> moves;
-        moves.reserve(64);
+    MoveList pseudo_moves(bool captures_only = false) const {
+        MoveList moves;
         uint64_t own = color_boards[color_index(white_to_move)];
         uint64_t enemy = color_boards[color_index(!white_to_move)];
         uint64_t remaining = own;
@@ -686,8 +759,8 @@ struct Board {
         }
     }
 
-    std::vector<Move> legal_moves_in_place(bool captures_only = false) {
-        std::vector<Move> legal;
+    MoveList legal_moves_in_place(bool captures_only = false) {
+        MoveList legal;
         bool moving_white = white_to_move;
         for (const Move& move : pseudo_moves(captures_only)) {
             UndoState undo = make_move(move);
@@ -701,7 +774,8 @@ struct Board {
 
     std::vector<Move> legal_moves(bool captures_only = false) const {
         Board position = *this;
-        return position.legal_moves_in_place(captures_only);
+        MoveList legal = position.legal_moves_in_place(captures_only);
+        return {legal.begin(), legal.end()};
     }
 
     Move find_move(const std::string& uci) const {
@@ -776,6 +850,7 @@ class Timeout final : public std::exception {};
 class Engine {
 public:
     explicit Engine(std::size_t hash_megabytes = 64) {
+        search_history_.reserve(MAX_PLY * 2);
         resize_table(hash_megabytes);
     }
 
@@ -983,6 +1058,18 @@ private:
         }
     }
 
+    int prior_repetitions(uint64_t key, int halfmove_clock) const {
+        std::size_t reversible = std::min<std::size_t>(
+            static_cast<std::size_t>(std::max(0, halfmove_clock)),
+            search_history_.size()
+        );
+        int matches = 0;
+        for (std::size_t offset = 2; offset <= reversible; offset += 2) {
+            matches += search_history_[search_history_.size() - offset] == key;
+        }
+        return matches;
+    }
+
     int evaluate(const Board& board) const {
         int score = mwahaha_evaluate(board.squares.data());
         return board.white_to_move ? score : -score;
@@ -1116,9 +1203,10 @@ private:
         value += bonus - value * std::abs(bonus) / HISTORY_LIMIT;
     }
 
+    template <typename Moves>
     void order_moves(
         const Board& board,
-        std::vector<Move>& moves,
+        Moves& moves,
         const Move& tt_move,
         int ply,
         const Move& counter_move = Move{},
@@ -1167,16 +1255,25 @@ private:
             if (move.flags & CASTLING) value += 25'000;
             return value;
         };
-        std::vector<std::pair<int, Move>> scored;
-        scored.reserve(moves.size());
+        using ScoredMove = std::pair<int, Move>;
+        FixedList<ScoredMove, 256> scored;
         for (const Move& move : moves) {
-            scored.emplace_back(score(move), move);
+            scored.push_back({score(move), move});
         }
-        std::stable_sort(
+        std::sort(
             scored.begin(),
             scored.end(),
             [](const auto& left, const auto& right) {
-                return left.first > right.first;
+                if (left.first != right.first) {
+                    return left.first > right.first;
+                }
+                if (left.second.from != right.second.from) {
+                    return left.second.from < right.second.from;
+                }
+                if (left.second.to != right.second.to) {
+                    return left.second.to < right.second.to;
+                }
+                return left.second.promotion < right.second.promotion;
             }
         );
         for (std::size_t index = 0; index < moves.size(); ++index) {
@@ -1192,6 +1289,18 @@ private:
             }
         }
         return nullptr;
+    }
+
+    void prefetch_table(uint64_t key) const {
+#if defined(__GNUC__) || defined(__clang__)
+        __builtin_prefetch(
+            &table_[key & (table_.size() - 1)],
+            0,
+            1
+        );
+#else
+        (void)key;
+#endif
     }
 
     static int score_to_table(int score, int ply) {
@@ -1262,6 +1371,7 @@ private:
 
         for (std::size_t index = 0; index < moves.size(); ++index) {
             ScopedMove applied(board, moves[index]);
+            prefetch_table(board.key);
             int score;
             if (index == 0) {
                 score = -negamax(
@@ -1324,9 +1434,7 @@ private:
         }
 
         uint64_t key = board.key;
-        int prior_visits = static_cast<int>(
-            std::count(search_history_.begin(), search_history_.end(), key)
-        );
+        int prior_visits = prior_repetitions(key, board.halfmove);
         if (prior_visits >= 2 || board.halfmove >= 100) {
             return 0;
         }
@@ -1451,8 +1559,8 @@ private:
         int best_score = -INF;
         Move best{};
         int static_score = depth <= 2 && !in_check ? static_eval : -INF;
-        std::vector<Move> quiets_tried;
-        std::vector<Move> captures_tried;
+        MoveList quiets_tried;
+        MoveList captures_tried;
 
         for (std::size_t index = 0; index < moves.size(); ++index) {
             const Move& move = moves[index];
@@ -1462,6 +1570,7 @@ private:
             bool pruned = false;
             {
                 ScopedMove applied(board, move);
+                prefetch_table(board.key);
                 bool gives_check = board.in_check();
                 if (
                     depth <= 2
@@ -1697,6 +1806,7 @@ private:
                 continue;
             }
             ScopedMove applied(board, move);
+            prefetch_table(board.key);
             int score = -quiescence(board, -beta, -alpha, ply + 1, qply + 1);
             if (score >= beta) {
                 store(
@@ -1864,7 +1974,8 @@ private:
             if (std::chrono::steady_clock::now() >= deadline) {
                 break;
             }
-            std::vector<int> scores(moves.size(), -INF);
+            std::array<int, 256> scores{};
+            std::fill_n(scores.begin(), moves.size(), -INF);
             Engine::RootMoveResult first = workers_.front()->search_root_move(
                 position,
                 moves.front(),
@@ -1891,8 +2002,7 @@ private:
                 thread_count_,
                 static_cast<int>(moves.size() - 1)
             );
-            std::vector<std::thread> threads;
-            threads.reserve(static_cast<std::size_t>(active_workers));
+            FixedList<std::thread, 64> threads;
 
             for (int worker_index = 0;
                 worker_index < active_workers;
@@ -1983,23 +2093,20 @@ private:
                 result.move,
                 depth
             );
-            std::vector<std::size_t> order(moves.size());
-            for (std::size_t index = 0; index < order.size(); ++index) {
-                order[index] = index;
+            FixedList<std::pair<int, Move>, 256> ranked_moves;
+            for (std::size_t index = 0; index < moves.size(); ++index) {
+                ranked_moves.push_back({scores[index], moves[index]});
             }
-            std::stable_sort(
-                order.begin(),
-                order.end(),
-                [&](std::size_t left, std::size_t right) {
-                    return scores[left] > scores[right];
+            std::sort(
+                ranked_moves.begin(),
+                ranked_moves.end(),
+                [](const auto& left, const auto& right) {
+                    return left.first > right.first;
                 }
             );
-            std::vector<Move> ordered_moves;
-            ordered_moves.reserve(moves.size());
-            for (std::size_t index : order) {
-                ordered_moves.push_back(moves[index]);
+            for (std::size_t index = 0; index < moves.size(); ++index) {
+                moves[index] = ranked_moves[index].second;
             }
-            moves = std::move(ordered_moves);
             if (std::abs(result.score) > MATE - MAX_PLY) {
                 break;
             }
@@ -2143,7 +2250,7 @@ int uci_loop() {
     while (std::getline(std::cin, line)) {
         try {
             if (line == "uci") {
-                std::cout << "id name Mwahaha Native Engine 2.3\n";
+                std::cout << "id name Mero Native Engine 3.0\n";
                 std::cout << "id author Mohammed Nabid\n";
                 std::cout << "option name Hash type spin default 64 min 1 max 2048\n";
                 std::cout << "option name Threads type spin default 1 min 1 max 64\n";

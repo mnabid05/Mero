@@ -16,6 +16,27 @@ Every match:
 
 ## Recorded matches
 
+### Mero 3.0 performance regression
+
+Version 3.0 was compared with the exact merged 2.3 release on the same Apple
+Silicon machine and compiler settings. Each result is the median of seven fresh
+engine processes:
+
+| Configuration | Version 2.3 | Mero 3.0 | Change |
+| --- | ---: | ---: | ---: |
+| 1 thread, 1,000,000-node search | 1.26M NPS | 1.94M NPS | +53.97% |
+| 4 threads, 500 ms search | 2.09M NPS | 2.87M NPS | +37.41% |
+
+The single-thread comparison uses the same one-million-node limit and reaches
+depth 11 in both versions, making elapsed search throughput directly comparable.
+Timed parallel search naturally varies with scheduling, so the recorded value
+uses the median rather than the fastest run. See
+`backtests/native-3.0-vs-2.3-performance.json`.
+
+This is a speed result, not a new Elo calibration. Until a new external gauntlet
+is completed, the latest defensible rating estimate remains the version 2.3
+result below.
+
 ### Native 2.3 bitboard and parallel-search calibration
 
 Version 2.3 completed 40 paired games against Stockfish 18 at 30 ms per move.
@@ -142,7 +163,7 @@ measurement differences from human online pools.
 
 | Setting | Value |
 | --- | --- |
-| Candidate | Mwahaha native engine, depth 6 |
+| Candidate | Mero native engine, depth 6 |
 | Candidate time | 100 ms per move |
 | Baseline | Legacy minimax, depth 3 |
 | Games | 4 |
@@ -156,7 +177,7 @@ White and Black.
 
 | Setting | Value |
 | --- | --- |
-| Candidate | Mwahaha native engine, depth 6 |
+| Candidate | Mero native engine, depth 6 |
 | Candidate time | 100 ms per move |
 | Baseline | Legacy minimax, depth 2 |
 | Games | 8 |

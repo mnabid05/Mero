@@ -103,7 +103,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     for raw_line in sys.stdin:
         command = raw_line.strip()
         if command == "uci":
-            print("id name Mwahaha Chess Engine 1.1 Hybrid")
+            print("id name Mero Chess Engine 3.0 Reference")
             print("id author Mohammed Nabid")
             print("option name Hash type spin default 64 min 1 max 1024")
             print("option name Move Overhead type spin default 20 min 0 max 5000")

@@ -89,7 +89,7 @@ class ChessAI:
     @property
     def name(self) -> str:
         language = "Python+C" if isinstance(self.evaluator, NativeEvaluator) else "Python"
-        return f"Mwahaha {language} engine (depth {self.depth})"
+        return f"Mero {language} engine (depth {self.depth})"
 
     @property
     def last_result(self) -> SearchResult:
