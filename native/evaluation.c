@@ -158,71 +158,6 @@ static void pawn_structure(
     }
 }
 
-static int passed_pawn_king_support(
-    uint64_t friendly_pawns,
-    uint64_t enemy_pawns,
-    int color,
-    int king_square
-) {
-    if (king_square < 0) {
-        return 0;
-    }
-    int score = 0;
-    int king_row = row_of(king_square);
-    int king_column = column_of(king_square);
-    while (friendly_pawns != 0) {
-        int square = __builtin_ctzll(friendly_pawns);
-        friendly_pawns &= friendly_pawns - 1;
-        if (!is_passed(enemy_pawns, square, color)) {
-            continue;
-        }
-        int distance = king_row - row_of(square);
-        if (distance < 0) {
-            distance = -distance;
-        }
-        int file_distance = king_column - column_of(square);
-        if (file_distance < 0) {
-            file_distance = -file_distance;
-        }
-        if (distance <= 2 && file_distance <= 2) {
-            score += 12;
-        }
-    }
-    return score;
-}
-
-static int rook_passed_pawn_support(
-    uint64_t rooks,
-    uint64_t friendly_pawns,
-    int color,
-    uint64_t enemy_pawns
-) {
-    int score = 0;
-    while (rooks != 0) {
-        int rook_square = __builtin_ctzll(rooks);
-        rooks &= rooks - 1;
-        int rook_row = row_of(rook_square);
-        int rook_column = column_of(rook_square);
-        uint64_t pawns = friendly_pawns;
-        while (pawns != 0) {
-            int pawn_square = __builtin_ctzll(pawns);
-            pawns &= pawns - 1;
-            if (column_of(pawn_square) != rook_column
-                || !is_passed(enemy_pawns, pawn_square, color)) {
-                continue;
-            }
-            int pawn_row = row_of(pawn_square);
-            int behind = color == WHITE
-                ? rook_row > pawn_row
-                : rook_row < pawn_row;
-            if (behind) {
-                score += 18;
-            }
-        }
-    }
-    return score;
-}
-
 static int rook_file_bonus(
     int color,
     const int pawn_files[2][8],
@@ -242,34 +177,8 @@ static int rook_file_bonus(
     return score;
 }
 
-static int pawn_control_bonus(const char board[64], int color) {
-    char pawn = color == WHITE ? 'P' : 'p';
-    int direction = color == WHITE ? -1 : 1;
-    int score = 0;
-    for (int square = 0; square < 64; ++square) {
-        if (board[square] != pawn) {
-            continue;
-        }
-        int target_row = row_of(square) + direction;
-        if (!in_bounds(target_row, column_of(square))) {
-            continue;
-        }
-        for (int delta = -1; delta <= 1; delta += 2) {
-            int target_column = column_of(square) + delta;
-            if (!in_bounds(target_row, target_column)) {
-                continue;
-            }
-            if (CENTER[target_row * 8 + target_column] >= 4) {
-                score += 4;
-            }
-        }
-    }
-    return score;
-}
-
 static int king_shelter(const char board[64], int color, int square) {
     char pawn = color == WHITE ? 'P' : 'p';
-    char enemy_pawn = color == WHITE ? 'p' : 'P';
     int direction = color == WHITE ? -1 : 1;
     if (square < 0) {
         return 0;
@@ -286,33 +195,6 @@ static int king_shelter(const char board[64], int color, int square) {
             score += 14;
         }
     }
-    int own_file = 0;
-    int enemy_pressure = 0;
-    for (int scan_row = 0; scan_row < 8; ++scan_row) {
-        char own_target = board[scan_row * 8 + column];
-        if (own_target == pawn) {
-            own_file = 1;
-        }
-        for (int delta = -1; delta <= 1; ++delta) {
-            int target_column = column + delta;
-            if (!in_bounds(scan_row, target_column)) {
-                continue;
-            }
-            if (board[scan_row * 8 + target_column] != enemy_pawn) {
-                continue;
-            }
-            int relative_rank = color == WHITE
-                ? 7 - scan_row
-                : scan_row;
-            if (relative_rank >= 4) {
-                ++enemy_pressure;
-            }
-        }
-    }
-    if (!own_file) {
-        score -= 12;
-    }
-    score -= enemy_pressure * 4;
     return score;
 }
 
@@ -498,7 +380,6 @@ MWAHAHA_EXPORT int mwahaha_evaluate(const char board[64]) {
     int bishops[2] = {0, 0};
     int pawn_files[2][8] = {{0}};
     uint64_t pawn_bits[2] = {0, 0};
-    uint64_t rook_bits[2] = {0, 0};
     int rook_files[2][8] = {{0}};
     int king_squares[2] = {-1, -1};
 
@@ -518,7 +399,6 @@ MWAHAHA_EXPORT int mwahaha_evaluate(const char board[64]) {
             pawn_bits[color] |= UINT64_C(1) << square;
         } else if (type == 'r') {
             ++rook_files[color][column_of(square)];
-            rook_bits[color] |= UINT64_C(1) << square;
         } else if (type == 'k') {
             king_squares[color] = square;
         }
@@ -565,37 +445,12 @@ MWAHAHA_EXPORT int mwahaha_evaluate(const char board[64]) {
         );
         middle += sign * (
             pawn_middle
-            + pawn_control_bonus(board, color)
-            + passed_pawn_king_support(
-                pawn_bits[color],
-                pawn_bits[color == WHITE ? BLACK : WHITE],
-                color,
-                king_squares[color]
-            )
-            + rook_passed_pawn_support(
-                rook_bits[color],
-                pawn_bits[color],
-                color,
-                pawn_bits[color == WHITE ? BLACK : WHITE]
-            )
             + rook_file_bonus(color, pawn_files, rook_files)
             + king_shelter(board, color, king_squares[color])
             + (bishops[color] >= 2 ? 35 : 0)
         );
         end += sign * (
             pawn_end
-            + passed_pawn_king_support(
-                pawn_bits[color],
-                pawn_bits[color == WHITE ? BLACK : WHITE],
-                color,
-                king_squares[color]
-            ) * 2
-            + rook_passed_pawn_support(
-                rook_bits[color],
-                pawn_bits[color],
-                color,
-                pawn_bits[color == WHITE ? BLACK : WHITE]
-            ) * 2
             + (bishops[color] >= 2 ? 50 : 0)
         );
     }
