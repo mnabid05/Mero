@@ -1179,6 +1179,51 @@ private:
     }
 
     bool gives_check_after_move(Board& board, const Move& move) const {
+        bool moving_white = board.white_to_move;
+        int king = board.king_square(!moving_white);
+        char piece = board.squares[move.from];
+        char type = static_cast<char>(std::tolower(
+            static_cast<unsigned char>(piece)
+        ));
+        if (king < 0) {
+            return false;
+        }
+        uint64_t target = square_bit(king);
+        bool direct = false;
+        if (king >= 0 && move.flags == 0 && move.promotion == '\0') {
+            if (type == 'p') {
+                uint64_t pawn = square_bit(move.to);
+                uint64_t attacks = moving_white
+                    ? ((pawn & ~FILE_A) >> 9) | ((pawn & ~FILE_H) >> 7)
+                    : ((pawn & ~FILE_H) << 9) | ((pawn & ~FILE_A) << 7);
+                direct = (attacks & target) != 0;
+            } else if (type == 'n') {
+                direct = (KNIGHT_ATTACKS[move.to] & target) != 0;
+            } else if (type == 'k') {
+                direct = (KING_ATTACKS[move.to] & target) != 0;
+            } else if (type == 'b') {
+                direct = (board.bishop_attacks(move.to) & target) != 0;
+            } else if (type == 'r') {
+                direct = (board.rook_attacks(move.to) & target) != 0;
+            } else if (type == 'q') {
+                direct = ((board.bishop_attacks(move.to)
+                    | board.rook_attacks(move.to)) & target) != 0;
+            }
+            if (direct) {
+                return true;
+            }
+        }
+        uint64_t source = square_bit(move.from);
+        bool aligned = false;
+        for (int direction = 0; direction < 8; ++direction) {
+            if (RAYS[direction][king] & source) {
+                aligned = true;
+                break;
+            }
+        }
+        if (!aligned) {
+            return false;
+        }
         ScopedMove applied(board, move);
         return board.in_check();
     }
@@ -1831,7 +1876,10 @@ private:
                 return stand_pat;
             }
         }
-        auto moves = board.legal_moves_in_place(false);
+        bool allow_quiet_checks = !in_check && qply < 4;
+        auto moves = board.legal_moves_in_place(
+            !in_check && !allow_quiet_checks
+        );
         if (moves.empty()) {
             return in_check ? -MATE + ply : alpha;
         }
@@ -1840,11 +1888,13 @@ private:
         Move best{};
         for (const Move& move : moves) {
             bool quiet_check = false;
-            if (!in_check && quiet(board, move)) {
+            if (!in_check && allow_quiet_checks && quiet(board, move)) {
                 quiet_check = gives_check_after_move(board, move);
                 if (!quiet_check) {
                     continue;
                 }
+            } else if (!in_check && quiet(board, move)) {
+                continue;
             }
             if (!in_check && move.promotion == '\0'
                 && !quiet_check
