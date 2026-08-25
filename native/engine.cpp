@@ -1183,6 +1183,16 @@ private:
         return board.in_check();
     }
 
+    bool is_recapture(
+        const Board& board,
+        const Move& move,
+        const Move& previous_move
+    ) const {
+        return previous_move.valid()
+            && move.to == previous_move.to
+            && !quiet(board, move);
+    }
+
     bool pawn_attacked(const Board& board, int target, bool by_white) const {
         return (board.pawn_attacks(by_white) & square_bit(target)) != 0;
     }
@@ -1596,6 +1606,10 @@ private:
                 if (!pruned) {
                     int next_depth = depth - 1;
                     if (gives_check && depth <= 3) {
+                        ++next_depth;
+                    }
+                    if (is_recapture(board, move, previous_move)
+                        && depth <= 3) {
                         ++next_depth;
                     }
                     int reduction = 0;
