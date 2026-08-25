@@ -1643,8 +1643,12 @@ private:
                         int history_score = history_[
                             static_cast<int>(moving_piece)
                         ][move.to];
+                        int continuation_score = previous_move.valid()
+                            ? continuation_history_[previous_move.to][move.to]
+                            : 0;
                         if (
-                            history_score > 4'000
+                            history_score > 3'000
+                            || continuation_score > 2'500
                             || move == killers_[ply][0]
                             || move == counter_move
                         ) {
