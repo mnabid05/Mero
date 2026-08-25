@@ -1515,7 +1515,8 @@ private:
                 return razor_score;
             }
         }
-        if (allow_null && depth >= 3 && !in_check && has_non_pawn_material(board)) {
+        if (allow_null && depth >= 3 && !in_check
+            && null_move_safe(board)) {
             Board null_board = board;
             null_board.key ^= ZOBRIST.turn;
             if (null_board.en_passant >= 0) {
@@ -1890,6 +1891,11 @@ private:
             Zobrist::piece_index(board.white_to_move ? 'K' : 'k')
         ];
         return (side & ~(pawns | king)) != 0;
+    }
+
+    bool null_move_safe(const Board& board) const {
+        return has_non_pawn_material(board)
+            && std::popcount(board.occupied) > 6;
     }
 
     std::vector<Move> principal_variation(Board board, int depth) {
