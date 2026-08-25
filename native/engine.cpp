@@ -1899,7 +1899,7 @@ private:
                 return stand_pat;
             }
         }
-        bool allow_quiet_checks = !in_check && qply < 4;
+        bool allow_quiet_checks = !in_check && qply < 1;
         auto moves = quiescence_moves(board, in_check, allow_quiet_checks);
         if (moves.empty()) {
             return in_check ? -MATE + ply : alpha;
