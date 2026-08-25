@@ -983,7 +983,7 @@ public:
         int previous = 0;
 
         for (int depth = 1; depth <= max_depth; ++depth) {
-            int window = depth >= 4 ? 40 : INF;
+            int window = depth >= 4 ? 55 : INF;
             int alpha = std::max(-INF, previous - window);
             int beta = std::min(INF, previous + window);
             try {
