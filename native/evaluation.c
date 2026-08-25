@@ -242,6 +242,31 @@ static int rook_file_bonus(
     return score;
 }
 
+static int pawn_control_bonus(const char board[64], int color) {
+    char pawn = color == WHITE ? 'P' : 'p';
+    int direction = color == WHITE ? -1 : 1;
+    int score = 0;
+    for (int square = 0; square < 64; ++square) {
+        if (board[square] != pawn) {
+            continue;
+        }
+        int target_row = row_of(square) + direction;
+        if (!in_bounds(target_row, column_of(square))) {
+            continue;
+        }
+        for (int delta = -1; delta <= 1; delta += 2) {
+            int target_column = column_of(square) + delta;
+            if (!in_bounds(target_row, target_column)) {
+                continue;
+            }
+            if (CENTER[target_row * 8 + target_column] >= 4) {
+                score += 4;
+            }
+        }
+    }
+    return score;
+}
+
 static int king_shelter(const char board[64], int color, int square) {
     char pawn = color == WHITE ? 'P' : 'p';
     char enemy_pawn = color == WHITE ? 'p' : 'P';
@@ -540,6 +565,7 @@ MWAHAHA_EXPORT int mwahaha_evaluate(const char board[64]) {
         );
         middle += sign * (
             pawn_middle
+            + pawn_control_bonus(board, color)
             + passed_pawn_king_support(
                 pawn_bits[color],
                 pawn_bits[color == WHITE ? BLACK : WHITE],
