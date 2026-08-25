@@ -1178,6 +1178,11 @@ private:
             && !(move.flags & EN_PASSANT) && move.promotion == '\0';
     }
 
+    bool gives_check_after_move(Board& board, const Move& move) const {
+        ScopedMove applied(board, move);
+        return board.in_check();
+    }
+
     bool pawn_attacked(const Board& board, int target, bool by_white) const {
         return (board.pawn_attacks(by_white) & square_bit(target)) != 0;
     }
@@ -1793,7 +1798,7 @@ private:
                 return stand_pat;
             }
         }
-        auto moves = board.legal_moves_in_place(!in_check);
+        auto moves = board.legal_moves_in_place(false);
         if (moves.empty()) {
             return in_check ? -MATE + ply : alpha;
         }
@@ -1801,6 +1806,10 @@ private:
         order_moves(board, moves, tt_move, ply);
         Move best{};
         for (const Move& move : moves) {
+            if (!in_check && quiet(board, move)
+                && !gives_check_after_move(board, move)) {
+                continue;
+            }
             if (!in_check && move.promotion == '\0'
                 && stand_pat + capture_value(board, move) + 140 < alpha) {
                 continue;
