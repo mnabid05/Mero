@@ -1580,6 +1580,7 @@ private:
         for (std::size_t index = 0; index < moves.size(); ++index) {
             const Move& move = moves[index];
             bool is_quiet = quiet(board, move);
+            bool recapture = is_recapture(board, move, previous_move);
             char moving_piece = board.squares[move.from];
             int score = -INF;
             bool pruned = false;
@@ -1608,8 +1609,7 @@ private:
                     if (gives_check && depth <= 3) {
                         ++next_depth;
                     }
-                    if (is_recapture(board, move, previous_move)
-                        && depth <= 3) {
+                    if (recapture && depth <= 3) {
                         ++next_depth;
                     }
                     int reduction = 0;
