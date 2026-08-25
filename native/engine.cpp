@@ -1830,6 +1830,29 @@ private:
         return best_score;
     }
 
+    MoveList quiescence_moves(
+        Board& board,
+        bool in_check,
+        bool allow_quiet_checks
+    ) {
+        MoveList legal;
+        bool moving_white = board.white_to_move;
+        auto pseudo = board.pseudo_moves(!in_check && !allow_quiet_checks);
+        for (const Move& move : pseudo) {
+            if (!in_check && allow_quiet_checks && quiet(board, move)
+                && !gives_check_after_move(board, move)) {
+                continue;
+            }
+            Board::UndoState undo = board.make_move(move);
+            bool legal_move = !board.in_check(moving_white);
+            board.unmake_move(move, undo);
+            if (legal_move) {
+                legal.push_back(move);
+            }
+        }
+        return legal;
+    }
+
     int quiescence(
         Board& board,
         int alpha,
@@ -1877,9 +1900,7 @@ private:
             }
         }
         bool allow_quiet_checks = !in_check && qply < 4;
-        auto moves = board.legal_moves_in_place(
-            !in_check && !allow_quiet_checks
-        );
+        auto moves = quiescence_moves(board, in_check, allow_quiet_checks);
         if (moves.empty()) {
             return in_check ? -MATE + ply : alpha;
         }
