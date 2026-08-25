@@ -1595,7 +1595,7 @@ private:
                 }
                 if (!pruned) {
                     int next_depth = depth - 1;
-                    if (gives_check && depth <= 2) {
+                    if (gives_check && depth <= 3) {
                         ++next_depth;
                     }
                     int reduction = 0;
