@@ -158,6 +158,39 @@ static void pawn_structure(
     }
 }
 
+static int passed_pawn_king_support(
+    uint64_t friendly_pawns,
+    uint64_t enemy_pawns,
+    int color,
+    int king_square
+) {
+    if (king_square < 0) {
+        return 0;
+    }
+    int score = 0;
+    int king_row = row_of(king_square);
+    int king_column = column_of(king_square);
+    while (friendly_pawns != 0) {
+        int square = __builtin_ctzll(friendly_pawns);
+        friendly_pawns &= friendly_pawns - 1;
+        if (!is_passed(enemy_pawns, square, color)) {
+            continue;
+        }
+        int distance = king_row - row_of(square);
+        if (distance < 0) {
+            distance = -distance;
+        }
+        int file_distance = king_column - column_of(square);
+        if (file_distance < 0) {
+            file_distance = -file_distance;
+        }
+        if (distance <= 2 && file_distance <= 2) {
+            score += 12;
+        }
+    }
+    return score;
+}
+
 static int rook_file_bonus(
     int color,
     const int pawn_files[2][8],
@@ -473,12 +506,24 @@ MWAHAHA_EXPORT int mwahaha_evaluate(const char board[64]) {
         );
         middle += sign * (
             pawn_middle
+            + passed_pawn_king_support(
+                pawn_bits[color],
+                pawn_bits[color == WHITE ? BLACK : WHITE],
+                color,
+                king_squares[color]
+            )
             + rook_file_bonus(color, pawn_files, rook_files)
             + king_shelter(board, color, king_squares[color])
             + (bishops[color] >= 2 ? 35 : 0)
         );
         end += sign * (
             pawn_end
+            + passed_pawn_king_support(
+                pawn_bits[color],
+                pawn_bits[color == WHITE ? BLACK : WHITE],
+                color,
+                king_squares[color]
+            ) * 2
             + (bishops[color] >= 2 ? 50 : 0)
         );
     }
