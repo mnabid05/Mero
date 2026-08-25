@@ -191,6 +191,38 @@ static int passed_pawn_king_support(
     return score;
 }
 
+static int rook_passed_pawn_support(
+    uint64_t rooks,
+    uint64_t friendly_pawns,
+    int color,
+    uint64_t enemy_pawns
+) {
+    int score = 0;
+    while (rooks != 0) {
+        int rook_square = __builtin_ctzll(rooks);
+        rooks &= rooks - 1;
+        int rook_row = row_of(rook_square);
+        int rook_column = column_of(rook_square);
+        uint64_t pawns = friendly_pawns;
+        while (pawns != 0) {
+            int pawn_square = __builtin_ctzll(pawns);
+            pawns &= pawns - 1;
+            if (column_of(pawn_square) != rook_column
+                || !is_passed(enemy_pawns, pawn_square, color)) {
+                continue;
+            }
+            int pawn_row = row_of(pawn_square);
+            int behind = color == WHITE
+                ? rook_row > pawn_row
+                : rook_row < pawn_row;
+            if (behind) {
+                score += 18;
+            }
+        }
+    }
+    return score;
+}
+
 static int rook_file_bonus(
     int color,
     const int pawn_files[2][8],
@@ -441,6 +473,7 @@ MWAHAHA_EXPORT int mwahaha_evaluate(const char board[64]) {
     int bishops[2] = {0, 0};
     int pawn_files[2][8] = {{0}};
     uint64_t pawn_bits[2] = {0, 0};
+    uint64_t rook_bits[2] = {0, 0};
     int rook_files[2][8] = {{0}};
     int king_squares[2] = {-1, -1};
 
@@ -460,6 +493,7 @@ MWAHAHA_EXPORT int mwahaha_evaluate(const char board[64]) {
             pawn_bits[color] |= UINT64_C(1) << square;
         } else if (type == 'r') {
             ++rook_files[color][column_of(square)];
+            rook_bits[color] |= UINT64_C(1) << square;
         } else if (type == 'k') {
             king_squares[color] = square;
         }
@@ -512,6 +546,12 @@ MWAHAHA_EXPORT int mwahaha_evaluate(const char board[64]) {
                 color,
                 king_squares[color]
             )
+            + rook_passed_pawn_support(
+                rook_bits[color],
+                pawn_bits[color],
+                color,
+                pawn_bits[color == WHITE ? BLACK : WHITE]
+            )
             + rook_file_bonus(color, pawn_files, rook_files)
             + king_shelter(board, color, king_squares[color])
             + (bishops[color] >= 2 ? 35 : 0)
@@ -523,6 +563,12 @@ MWAHAHA_EXPORT int mwahaha_evaluate(const char board[64]) {
                 pawn_bits[color == WHITE ? BLACK : WHITE],
                 color,
                 king_squares[color]
+            ) * 2
+            + rook_passed_pawn_support(
+                rook_bits[color],
+                pawn_bits[color],
+                color,
+                pawn_bits[color == WHITE ? BLACK : WHITE]
             ) * 2
             + (bishops[color] >= 2 ? 50 : 0)
         );
