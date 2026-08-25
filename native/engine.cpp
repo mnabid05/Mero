@@ -1630,6 +1630,7 @@ private:
                         depth >= 3
                         && index >= 3
                         && is_quiet
+                        && !advanced_pawn
                         && !in_check
                         && !gives_check
                     ) {
