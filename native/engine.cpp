@@ -1193,6 +1193,15 @@ private:
             && !quiet(board, move);
     }
 
+    bool is_advanced_pawn(const Board& board, const Move& move) const {
+        char piece = board.squares[move.from];
+        if (std::tolower(static_cast<unsigned char>(piece)) != 'p') {
+            return false;
+        }
+        int destination_row = move.to / 8;
+        return is_white(piece) ? destination_row <= 1 : destination_row >= 6;
+    }
+
     bool pawn_attacked(const Board& board, int target, bool by_white) const {
         return (board.pawn_attacks(by_white) & square_bit(target)) != 0;
     }
@@ -1581,6 +1590,7 @@ private:
             const Move& move = moves[index];
             bool is_quiet = quiet(board, move);
             bool recapture = is_recapture(board, move, previous_move);
+            bool advanced_pawn = is_advanced_pawn(board, move);
             char moving_piece = board.squares[move.from];
             int score = -INF;
             bool pruned = false;
@@ -1610,6 +1620,9 @@ private:
                         ++next_depth;
                     }
                     if (recapture && depth <= 3) {
+                        ++next_depth;
+                    }
+                    if (advanced_pawn && depth <= 3) {
                         ++next_depth;
                     }
                     int reduction = 0;
