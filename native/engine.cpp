@@ -1839,11 +1839,15 @@ private:
         order_moves(board, moves, tt_move, ply);
         Move best{};
         for (const Move& move : moves) {
-            if (!in_check && quiet(board, move)
-                && !gives_check_after_move(board, move)) {
-                continue;
+            bool quiet_check = false;
+            if (!in_check && quiet(board, move)) {
+                quiet_check = gives_check_after_move(board, move);
+                if (!quiet_check) {
+                    continue;
+                }
             }
             if (!in_check && move.promotion == '\0'
+                && !quiet_check
                 && stand_pat + capture_value(board, move) + 140 < alpha) {
                 continue;
             }
