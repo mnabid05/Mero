@@ -149,6 +149,22 @@ class NativeEngineTests(unittest.TestCase):
         )
         self.assertIn("bestmove h2a2", result.stdout)
 
+    def test_native_quiescence_searches_quiet_checks(self):
+        commands = (
+            "uci\n"
+            "position fen 7k/8/8/8/8/8/4R3/4K3 w - - 0 1\n"
+            "go depth 1\n"
+            "quit\n"
+        )
+        result = subprocess.run(
+            [NATIVE_ENGINE],
+            input=commands,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        self.assertIn("bestmove e2e7", result.stdout)
+
     def test_native_uci_honors_node_limit_and_reports_hashfull(self):
         commands = "uci\nposition startpos\ngo nodes 10000\nquit\n"
         result = subprocess.run(
