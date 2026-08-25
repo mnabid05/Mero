@@ -179,6 +179,7 @@ static int rook_file_bonus(
 
 static int king_shelter(const char board[64], int color, int square) {
     char pawn = color == WHITE ? 'P' : 'p';
+    char enemy_pawn = color == WHITE ? 'p' : 'P';
     int direction = color == WHITE ? -1 : 1;
     if (square < 0) {
         return 0;
@@ -195,6 +196,33 @@ static int king_shelter(const char board[64], int color, int square) {
             score += 14;
         }
     }
+    int own_file = 0;
+    int enemy_pressure = 0;
+    for (int scan_row = 0; scan_row < 8; ++scan_row) {
+        char own_target = board[scan_row * 8 + column];
+        if (own_target == pawn) {
+            own_file = 1;
+        }
+        for (int delta = -1; delta <= 1; ++delta) {
+            int target_column = column + delta;
+            if (!in_bounds(scan_row, target_column)) {
+                continue;
+            }
+            if (board[scan_row * 8 + target_column] != enemy_pawn) {
+                continue;
+            }
+            int relative_rank = color == WHITE
+                ? 7 - scan_row
+                : scan_row;
+            if (relative_rank >= 4) {
+                ++enemy_pressure;
+            }
+        }
+    }
+    if (!own_file) {
+        score -= 12;
+    }
+    score -= enemy_pressure * 4;
     return score;
 }
 
