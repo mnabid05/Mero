@@ -31,11 +31,13 @@ Python engine detects the native evaluator library automatically. Without it,
 the dependency-free Python evaluator is used; set `MWAHAHA_PURE_PYTHON=1` to
 force that reference path.
 
-Across seven same-machine probes, Mero 3.0 reached median throughput of 1.94
-million nodes/second with one thread and 2.87 million aggregate nodes/second
-with four threads. That is 54% and 37% faster, respectively, than the merged
-2.3 release. The original Python+C engine searched roughly 22 thousand
-nodes/second on the same machine.
+The merged Mero 3.0 release reached median throughput of 1.94 million
+nodes/second with one thread and 2.87 million aggregate nodes/second with four
+threads. Mero 4.0 prioritizes tactical stability with frontier quiet-check
+quiescence and selective extensions; the current five-run one-million-node
+probe measures 1.69 million nodes/second on the same machine. See
+[`docs/STRENGTH.md`](docs/STRENGTH.md) for the reproducible comparison and the
+limits of the current strength evidence.
 
 ## Search
 
@@ -50,9 +52,10 @@ nodes/second on the same machine.
 - Parallel principal-root search with configurable UCI threads
 - Three-entry transposition clusters with cached static evaluation
 - Quiescence search for tactical stability
+- Frontier quiet-check search with pseudo-move filtering
 - Null-move pruning
 - Late-move reductions
-- Check extensions
+- Check, recapture, and advanced-pawn extensions
 - Killer-move and history heuristics
 - Continuation history and threat-aware quiet ordering
 - MVV-LVA capture ordering

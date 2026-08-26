@@ -149,6 +149,22 @@ class NativeEngineTests(unittest.TestCase):
         )
         self.assertIn("bestmove h2a2", result.stdout)
 
+    def test_native_quiescence_searches_quiet_checks(self):
+        commands = (
+            "uci\n"
+            "position fen 7k/8/8/8/8/8/4R3/4K3 w - - 0 1\n"
+            "go depth 1\n"
+            "quit\n"
+        )
+        result = subprocess.run(
+            [NATIVE_ENGINE],
+            input=commands,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        self.assertIn("bestmove e2e7", result.stdout)
+
     def test_native_uci_honors_node_limit_and_reports_hashfull(self):
         commands = "uci\nposition startpos\ngo nodes 10000\nquit\n"
         result = subprocess.run(
@@ -164,6 +180,32 @@ class NativeEngineTests(unittest.TestCase):
         self.assertIsNotNone(hashfull, result.stdout)
         self.assertLessEqual(int(nodes.group(1)), 12048)
         self.assertGreaterEqual(int(hashfull.group(1)), 0)
+
+    def test_native_endgame_fixtures_return_legal_moves(self):
+        positions = (
+            "8/5pk1/3p2p1/2pP4/2P2P2/5K2/6P1/8 w - - 0 1",
+            "8/8/4k3/8/3P4/8/4K3/8 w - - 0 1",
+        )
+        for fen in positions:
+            with self.subTest(fen=fen):
+                result = subprocess.run(
+                    [NATIVE_ENGINE],
+                    input=(
+                        "uci\n"
+                        f"position fen {fen}\n"
+                        "go depth 3\n"
+                        "quit\n"
+                    ),
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+                match = re.search(
+                    r"bestmove ([a-h][1-8][a-h][1-8][qrbn]?)",
+                    result.stdout,
+                )
+                self.assertIsNotNone(match, result.stdout)
+                Board.from_fen(fen).find_legal_move(match.group(1))
 
 
 if __name__ == "__main__":

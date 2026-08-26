@@ -14,6 +14,31 @@ Every match:
 - limits runaway games by maximum plies;
 - records final FEN positions in JSON.
 
+### Mero 4.0 tactical-search update
+
+The Mero 4.0 branch adds quiet-check quiescence at the search frontier,
+selective extensions for checks, recaptures, and advanced pawns, safer null
+move pruning in sparse endings, and continuation-history-aware reductions.
+The implementation also adds a pseudo-move prefilter so quiet-check search does
+not run a full legality probe for every quiet move. The existing calibrated
+evaluation was retained after profiling rather than accepting unmeasured terms
+on the hot path.
+
+On the same machine, with one thread and a one-million-node limit, the current
+branch reached a median **1.69M nodes/second** (depth 10) across five fresh
+processes. The frozen Mero 3.0 executable reached **1.91M nodes/second** (depth
+11) under the same probe, so this branch currently trades about 11.8% of raw
+throughput for deeper tactical continuation. The full regression suite passes
+56 tests, including perft, incremental-key, bitboard, SEE, UCI, and endgame
+fixtures.
+
+An eight-game equal-node smoke match (50,000 nodes per move, colors balanced)
+ended with all games reaching the move cap and a 50% score for each version.
+That is a regression check, not a statistically meaningful rating result. The
+latest external calibration remains the Mero 2.3 estimate of **2139 Elo with a
+95% interval of 2003–2275** below; this update does not substantiate a 2300
+rating claim until a new Stockfish gauntlet is run.
+
 ## Recorded matches
 
 ### Mero 3.0 performance regression

@@ -983,7 +983,7 @@ public:
         int previous = 0;
 
         for (int depth = 1; depth <= max_depth; ++depth) {
-            int window = depth >= 4 ? 40 : INF;
+            int window = depth >= 4 ? 55 : INF;
             int alpha = std::max(-INF, previous - window);
             int beta = std::min(INF, previous + window);
             try {
@@ -1176,6 +1176,75 @@ private:
     bool quiet(const Board& board, const Move& move) const {
         return board.squares[move.to] == '.'
             && !(move.flags & EN_PASSANT) && move.promotion == '\0';
+    }
+
+    bool gives_check_after_move(Board& board, const Move& move) const {
+        bool moving_white = board.white_to_move;
+        int king = board.king_square(!moving_white);
+        char piece = board.squares[move.from];
+        char type = static_cast<char>(std::tolower(
+            static_cast<unsigned char>(piece)
+        ));
+        if (king < 0) {
+            return false;
+        }
+        uint64_t target = square_bit(king);
+        bool direct = false;
+        if (king >= 0 && move.flags == 0 && move.promotion == '\0') {
+            if (type == 'p') {
+                uint64_t pawn = square_bit(move.to);
+                uint64_t attacks = moving_white
+                    ? ((pawn & ~FILE_A) >> 9) | ((pawn & ~FILE_H) >> 7)
+                    : ((pawn & ~FILE_H) << 9) | ((pawn & ~FILE_A) << 7);
+                direct = (attacks & target) != 0;
+            } else if (type == 'n') {
+                direct = (KNIGHT_ATTACKS[move.to] & target) != 0;
+            } else if (type == 'k') {
+                direct = (KING_ATTACKS[move.to] & target) != 0;
+            } else if (type == 'b') {
+                direct = (board.bishop_attacks(move.to) & target) != 0;
+            } else if (type == 'r') {
+                direct = (board.rook_attacks(move.to) & target) != 0;
+            } else if (type == 'q') {
+                direct = ((board.bishop_attacks(move.to)
+                    | board.rook_attacks(move.to)) & target) != 0;
+            }
+            if (direct) {
+                return true;
+            }
+        }
+        uint64_t source = square_bit(move.from);
+        bool aligned = false;
+        for (int direction = 0; direction < 8; ++direction) {
+            if (RAYS[direction][king] & source) {
+                aligned = true;
+                break;
+            }
+        }
+        if (!aligned) {
+            return false;
+        }
+        ScopedMove applied(board, move);
+        return board.in_check();
+    }
+
+    bool is_recapture(
+        const Board& board,
+        const Move& move,
+        const Move& previous_move
+    ) const {
+        return previous_move.valid()
+            && move.to == previous_move.to
+            && !quiet(board, move);
+    }
+
+    bool is_advanced_pawn(const Board& board, const Move& move) const {
+        char piece = board.squares[move.from];
+        if (std::tolower(static_cast<unsigned char>(piece)) != 'p') {
+            return false;
+        }
+        int destination_row = move.to / 8;
+        return is_white(piece) ? destination_row <= 1 : destination_row >= 6;
     }
 
     bool pawn_attacked(const Board& board, int target, bool by_white) const {
@@ -1491,7 +1560,8 @@ private:
                 return razor_score;
             }
         }
-        if (allow_null && depth >= 3 && !in_check && has_non_pawn_material(board)) {
+        if (allow_null && depth >= 3 && !in_check
+            && null_move_safe(board)) {
             Board null_board = board;
             null_board.key ^= ZOBRIST.turn;
             if (null_board.en_passant >= 0) {
@@ -1565,6 +1635,8 @@ private:
         for (std::size_t index = 0; index < moves.size(); ++index) {
             const Move& move = moves[index];
             bool is_quiet = quiet(board, move);
+            bool recapture = is_recapture(board, move, previous_move);
+            bool advanced_pawn = is_advanced_pawn(board, move);
             char moving_piece = board.squares[move.from];
             int score = -INF;
             bool pruned = false;
@@ -1590,7 +1662,13 @@ private:
                 }
                 if (!pruned) {
                     int next_depth = depth - 1;
-                    if (gives_check && depth <= 2) {
+                    if (gives_check && depth <= 3) {
+                        ++next_depth;
+                    }
+                    if (recapture && depth <= 3) {
+                        ++next_depth;
+                    }
+                    if (advanced_pawn && depth <= 3) {
                         ++next_depth;
                     }
                     int reduction = 0;
@@ -1598,6 +1676,7 @@ private:
                         depth >= 3
                         && index >= 3
                         && is_quiet
+                        && !advanced_pawn
                         && !in_check
                         && !gives_check
                     ) {
@@ -1610,8 +1689,12 @@ private:
                         int history_score = history_[
                             static_cast<int>(moving_piece)
                         ][move.to];
+                        int continuation_score = previous_move.valid()
+                            ? continuation_history_[previous_move.to][move.to]
+                            : 0;
                         if (
-                            history_score > 4'000
+                            history_score > 3'000
+                            || continuation_score > 2'500
                             || move == killers_[ply][0]
                             || move == counter_move
                         ) {
@@ -1747,6 +1830,29 @@ private:
         return best_score;
     }
 
+    MoveList quiescence_moves(
+        Board& board,
+        bool in_check,
+        bool allow_quiet_checks
+    ) {
+        MoveList legal;
+        bool moving_white = board.white_to_move;
+        auto pseudo = board.pseudo_moves(!in_check && !allow_quiet_checks);
+        for (const Move& move : pseudo) {
+            if (!in_check && allow_quiet_checks && quiet(board, move)
+                && !gives_check_after_move(board, move)) {
+                continue;
+            }
+            Board::UndoState undo = board.make_move(move);
+            bool legal_move = !board.in_check(moving_white);
+            board.unmake_move(move, undo);
+            if (legal_move) {
+                legal.push_back(move);
+            }
+        }
+        return legal;
+    }
+
     int quiescence(
         Board& board,
         int alpha,
@@ -1793,7 +1899,8 @@ private:
                 return stand_pat;
             }
         }
-        auto moves = board.legal_moves_in_place(!in_check);
+        bool allow_quiet_checks = !in_check && qply < 1;
+        auto moves = quiescence_moves(board, in_check, allow_quiet_checks);
         if (moves.empty()) {
             return in_check ? -MATE + ply : alpha;
         }
@@ -1801,7 +1908,17 @@ private:
         order_moves(board, moves, tt_move, ply);
         Move best{};
         for (const Move& move : moves) {
+            bool quiet_check = false;
+            if (!in_check && allow_quiet_checks && quiet(board, move)) {
+                quiet_check = gives_check_after_move(board, move);
+                if (!quiet_check) {
+                    continue;
+                }
+            } else if (!in_check && quiet(board, move)) {
+                continue;
+            }
             if (!in_check && move.promotion == '\0'
+                && !quiet_check
                 && stand_pat + capture_value(board, move) + 140 < alpha) {
                 continue;
             }
@@ -1849,6 +1966,11 @@ private:
             Zobrist::piece_index(board.white_to_move ? 'K' : 'k')
         ];
         return (side & ~(pawns | king)) != 0;
+    }
+
+    bool null_move_safe(const Board& board) const {
+        return has_non_pawn_material(board)
+            && std::popcount(board.occupied) > 6;
     }
 
     std::vector<Move> principal_variation(Board board, int depth) {
