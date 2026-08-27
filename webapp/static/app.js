@@ -167,6 +167,20 @@ function render() {
   renderBoard();
   renderStatus();
   renderMoves();
+  renderPlayers();
+}
+
+function renderPlayers() {
+  if (!state.game) {
+    elements.humanCaptured.textContent = "";
+    elements.botCaptured.textContent = "";
+    return;
+  }
+  const humanIsWhite = state.game.humanColor === "w";
+  elements.humanColorLabel.textContent = `Playing ${humanIsWhite ? "White" : "Black"}`;
+  elements.botLevel.textContent = `${state.game.difficulty[0].toUpperCase() + state.game.difficulty.slice(1)} strength`;
+  elements.humanCaptured.textContent = state.game.captured[humanIsWhite ? "white" : "black"].join("");
+  elements.botCaptured.textContent = state.game.captured[humanIsWhite ? "black" : "white"].join("");
 }
 
 function renderMoves() {
