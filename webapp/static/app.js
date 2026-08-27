@@ -415,6 +415,20 @@ elements.board.addEventListener("drop", (event) => {
 elements.board.addEventListener("dragend", () => {
   state.draggedFrom = null;
 });
+elements.board.addEventListener("keydown", (event) => {
+  const square = event.target.closest(".square");
+  if (!square) return;
+  const squares = [...elements.board.querySelectorAll(".square")];
+  const current = squares.indexOf(square);
+  const offsets = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -8, ArrowDown: 8 };
+  const offset = offsets[event.key];
+  if (offset === undefined) return;
+  const destination = current + offset;
+  const crossesRow = Math.abs(offset) === 1 && Math.floor(current / 8) !== Math.floor(destination / 8);
+  if (destination < 0 || destination >= 64 || crossesRow) return;
+  event.preventDefault();
+  squares[destination].focus();
+});
 document.addEventListener("keydown", (event) => {
   if (event.metaKey || event.ctrlKey || event.altKey || event.target.matches("input, button")) return;
   if (event.key.toLowerCase() === "n") {
