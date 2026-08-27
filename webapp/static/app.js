@@ -342,6 +342,12 @@ elements.flipButton.addEventListener("click", () => {
   state.selected = null;
   renderBoard();
 });
+elements.themeButton.addEventListener("click", () => {
+  state.themeIndex = (state.themeIndex + 1) % THEMES.length;
+  localStorage.setItem("mero-theme", String(state.themeIndex));
+  document.body.dataset.theme = THEMES[state.themeIndex];
+  showToast(`${THEMES[state.themeIndex][0].toUpperCase() + THEMES[state.themeIndex].slice(1)} board selected`);
+});
 
 elements.board.addEventListener("click", handleSquareClick);
 
