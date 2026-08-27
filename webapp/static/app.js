@@ -415,6 +415,17 @@ elements.board.addEventListener("drop", (event) => {
 elements.board.addEventListener("dragend", () => {
   state.draggedFrom = null;
 });
+document.addEventListener("keydown", (event) => {
+  if (event.metaKey || event.ctrlKey || event.altKey || event.target.matches("input, button")) return;
+  if (event.key.toLowerCase() === "n") {
+    event.preventDefault();
+    elements.newGameDialog.showModal();
+  }
+  if (event.key.toLowerCase() === "f") {
+    event.preventDefault();
+    elements.flipButton.click();
+  }
+});
 
 render();
 checkEngineHealth();
