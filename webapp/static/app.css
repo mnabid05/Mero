@@ -909,3 +909,117 @@ legend {
   border-color: rgba(215, 106, 93, 0.35);
   color: #ffd4ce;
 }
+
+@media (max-width: 1040px) {
+  .app-shell {
+    padding-inline: 22px;
+  }
+
+  .game-layout {
+    grid-template-columns: minmax(450px, 690px) minmax(275px, 330px);
+    gap: 26px;
+  }
+
+  .game-panel {
+    min-height: 590px;
+  }
+
+  .move-list {
+    min-height: 210px;
+  }
+}
+
+@media (max-width: 820px) {
+  .app-shell {
+    padding: 0 16px 28px;
+  }
+
+  .topbar {
+    height: 68px;
+  }
+
+  .game-layout {
+    grid-template-columns: minmax(0, 680px);
+    gap: 18px;
+    padding-top: 18px;
+  }
+
+  .game-panel {
+    min-height: 480px;
+    margin-top: 0;
+  }
+
+  .panel-head {
+    padding: 20px;
+  }
+
+  .move-list {
+    min-height: 170px;
+    max-height: 240px;
+  }
+
+  .shortcut-hint {
+    display: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .app-shell {
+    padding-inline: 0;
+  }
+
+  .topbar {
+    padding: 0 14px;
+  }
+
+  .engine-pill span {
+    display: none;
+  }
+
+  .engine-pill {
+    width: 36px;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .board-column {
+    display: contents;
+  }
+
+  .player-row {
+    padding-inline: 12px;
+  }
+
+  .board-wrap {
+    border-radius: 0;
+  }
+
+  .piece {
+    font-size: 12.5vw;
+  }
+
+  .game-panel {
+    margin: 2px 10px 0;
+    border-radius: 14px;
+  }
+
+  .clock {
+    min-width: 70px;
+    font-size: 15px;
+  }
+
+  .game-dialog form {
+    padding: 22px 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
