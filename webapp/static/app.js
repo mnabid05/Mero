@@ -166,6 +166,36 @@ function render() {
   elements.resignButton.disabled = !state.game || state.game.status !== "active" || state.thinking;
   renderBoard();
   renderStatus();
+  renderMoves();
+}
+
+function renderMoves() {
+  elements.moveList.replaceChildren();
+  if (!state.game?.moves.length) {
+    elements.moveList.className = "move-list empty";
+    const empty = document.createElement("div");
+    empty.className = "empty-moves";
+    empty.innerHTML = '<span aria-hidden="true">♟</span><p>Your game notation will appear here.</p>';
+    elements.moveList.append(empty);
+    return;
+  }
+  elements.moveList.className = "move-list";
+  for (let i = 0; i < state.game.moves.length; i += 2) {
+    const row = document.createElement("div");
+    row.className = "move-row";
+    const number = document.createElement("span");
+    number.className = "move-number";
+    number.textContent = `${Math.floor(i / 2) + 1}.`;
+    row.append(number);
+    for (const move of state.game.moves.slice(i, i + 2)) {
+      const notation = document.createElement("span");
+      notation.className = "move-notation";
+      notation.textContent = move.san;
+      row.append(notation);
+    }
+    elements.moveList.append(row);
+  }
+  elements.moveList.scrollTop = elements.moveList.scrollHeight;
 }
 
 function renderStatus() {
