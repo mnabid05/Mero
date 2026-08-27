@@ -45,6 +45,20 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+body[data-theme="green"] {
+  --light-square: #e2e7cf;
+  --dark-square: #769656;
+  --light-coordinate: #769656;
+  --dark-coordinate: #e2e7cf;
+}
+
+body[data-theme="slate"] {
+  --light-square: #d5d9df;
+  --dark-square: #66758a;
+  --light-coordinate: #66758a;
+  --dark-coordinate: #eef1f4;
+}
+
 button,
 input {
   font: inherit;
