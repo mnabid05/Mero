@@ -350,6 +350,31 @@ elements.themeButton.addEventListener("click", () => {
 });
 
 elements.board.addEventListener("click", handleSquareClick);
+elements.board.addEventListener("dragstart", (event) => {
+  const square = event.target.closest(".square");
+  if (!square || !event.target.matches(".piece")) return;
+  state.draggedFrom = Number(square.dataset.index);
+  state.selected = state.draggedFrom;
+  event.dataTransfer.effectAllowed = "move";
+  event.dataTransfer.setData("text/plain", squareName(state.draggedFrom));
+  window.requestAnimationFrame(renderBoard);
+});
+elements.board.addEventListener("dragover", (event) => {
+  const square = event.target.closest(".square");
+  if (square && legalTargets(state.draggedFrom).includes(Number(square.dataset.index))) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+  }
+});
+elements.board.addEventListener("drop", (event) => {
+  event.preventDefault();
+  const square = event.target.closest(".square");
+  if (square && state.draggedFrom !== null) attemptMove(state.draggedFrom, Number(square.dataset.index));
+  state.draggedFrom = null;
+});
+elements.board.addEventListener("dragend", () => {
+  state.draggedFrom = null;
+});
 
 render();
 elements.newGameDialog.showModal();
