@@ -17,6 +17,10 @@ mwahaha-uci = "chess_ai.uci:main"
 mwahaha-backtest = "chess_ai.backtest:main"
 mwahaha-gauntlet = "chess_ai.gauntlet:main"
 mwahaha-perft = "chess_ai.perft:main"
+mero-web = "webapp.server:main"
 
 [tool.setuptools.packages.find]
-include = ["chess_ai*"]
+include = ["chess_ai*", "webapp*"]
+
+[tool.setuptools.package-data]
+webapp = ["static/*"]
