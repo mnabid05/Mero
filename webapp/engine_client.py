@@ -9,6 +9,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Protocol
 
+from chess_ai.board import Board
+from chess_ai.engine import ChessAI
+
 BEST_MOVE = re.compile(r"^bestmove\s+(\S+)")
 
 
@@ -96,3 +99,33 @@ class NativeEngineClient:
 
 def default_native_executable() -> Path:
     return Path(__file__).resolve().parents[1] / "build" / "native" / "mwahaha-engine"
+
+
+@dataclass(slots=True)
+class ReferenceEngineClient:
+    """Dependency-free fallback used before the native executable is built."""
+
+    name: str = "Mero Reference"
+    _engine: ChessAI = field(default_factory=lambda: ChessAI(depth=7, movetime_ms=250))
+    _lock: threading.Lock = field(default_factory=threading.Lock)
+
+    def choose_move(self, fen: str, move_time_ms: int) -> str | None:
+        with self._lock:
+            board = Board.from_fen(fen)
+            original = self._engine.movetime_ms
+            self._engine.movetime_ms = max(10, move_time_ms)
+            try:
+                move = self._engine.choose_move(board)
+                return None if move is None else move.uci
+            finally:
+                self._engine.movetime_ms = original
+
+    def close(self) -> None:
+        return None
+
+
+def best_available_engine() -> EngineClient:
+    executable = default_native_executable()
+    if executable.is_file():
+        return NativeEngineClient(executable)
+    return ReferenceEngineClient()
