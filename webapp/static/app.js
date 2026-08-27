@@ -165,6 +165,31 @@ function render() {
   elements.thinkingOverlay.setAttribute("aria-hidden", String(!state.thinking));
   elements.resignButton.disabled = !state.game || state.game.status !== "active" || state.thinking;
   renderBoard();
+  renderStatus();
+}
+
+function renderStatus() {
+  if (!state.game) {
+    elements.gameStatus.textContent = "Choose your side to begin";
+    elements.gameSubstatus.textContent = "Mero is ready when you are.";
+    elements.gameResult.textContent = "*";
+    elements.statusDot.className = "status-dot";
+    return;
+  }
+  elements.gameResult.textContent = state.game.result;
+  elements.statusDot.className = "status-dot active";
+  if (state.game.status !== "active") {
+    const won = (state.game.result === "1-0") === (state.game.humanColor === "w");
+    elements.gameStatus.textContent = state.game.result === "1/2-1/2" ? "Game drawn" : won ? "You won" : "Mero won";
+    elements.gameSubstatus.textContent = state.game.status[0].toUpperCase() + state.game.status.slice(1);
+    elements.statusDot.className = "status-dot ended";
+  } else if (state.thinking || !state.game.humanTurn) {
+    elements.gameStatus.textContent = "Mero is thinking";
+    elements.gameSubstatus.textContent = "Searching for the best reply…";
+  } else {
+    elements.gameStatus.textContent = state.game.inCheck ? "Your king is in check" : "Your move";
+    elements.gameSubstatus.textContent = state.game.inCheck ? "Find a legal response." : "Select a piece to continue.";
+  }
 }
 
 function handleSquareClick(event) {
