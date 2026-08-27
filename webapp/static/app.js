@@ -168,6 +168,7 @@ function render() {
   renderStatus();
   renderMoves();
   renderPlayers();
+  renderClocks();
 }
 
 function renderPlayers() {
@@ -181,6 +182,21 @@ function renderPlayers() {
   elements.botLevel.textContent = `${state.game.difficulty[0].toUpperCase() + state.game.difficulty.slice(1)} strength`;
   elements.humanCaptured.textContent = state.game.captured[humanIsWhite ? "white" : "black"].join("");
   elements.botCaptured.textContent = state.game.captured[humanIsWhite ? "black" : "white"].join("");
+}
+
+function formatElapsed(milliseconds) {
+  const seconds = Math.max(0, Math.floor(milliseconds / 1000));
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
+function renderClocks() {
+  const elapsed = formatElapsed(Date.now() - state.turnStartedAt);
+  const humanActive = Boolean(state.game?.humanTurn && state.game.status === "active" && !state.thinking);
+  const botActive = Boolean(state.game && !state.game.humanTurn && state.game.status === "active") || state.thinking;
+  elements.humanClock.textContent = humanActive ? elapsed : "—";
+  elements.botClock.textContent = botActive ? elapsed : "—";
+  elements.humanClock.classList.toggle("active", humanActive);
+  elements.botClock.classList.toggle("active", botActive);
 }
 
 function renderMoves() {
@@ -326,3 +342,4 @@ elements.board.addEventListener("click", handleSquareClick);
 
 render();
 elements.newGameDialog.showModal();
+window.setInterval(renderClocks, 1000);
