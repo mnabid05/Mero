@@ -798,3 +798,114 @@ legend {
   width: 100%;
   margin-top: 2px;
 }
+
+.thinking-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 9px;
+  padding-bottom: 17px;
+  color: rgba(255, 255, 255, 0.92);
+  background: rgba(12, 14, 12, 0.08);
+  font-size: 12px;
+  font-weight: 700;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+
+.thinking-overlay.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.thinking-overlay > span:not(.thinking-spinner) {
+  padding: 8px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(23, 26, 23, 0.88);
+  backdrop-filter: blur(8px);
+}
+
+.thinking-spinner {
+  width: 12px;
+  height: 12px;
+  margin-left: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.22);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 650ms linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.promotion-dialog {
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: #292e29;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.48);
+}
+
+.promotion-dialog h2 {
+  margin-bottom: 15px;
+  font-size: 17px;
+  text-align: center;
+}
+
+.promotion-options {
+  display: grid;
+  grid-template-columns: repeat(4, 64px);
+  gap: 8px;
+}
+
+.promotion-options button {
+  width: 64px;
+  height: 64px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: #f6f2e8;
+  background: rgba(255, 255, 255, 0.04);
+  font: 45px Georgia, serif;
+  cursor: pointer;
+}
+
+.promotion-options button:hover {
+  border-color: rgba(130, 182, 75, 0.48);
+  background: rgba(130, 182, 75, 0.1);
+}
+
+.toast {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 20;
+  max-width: min(360px, calc(100vw - 40px));
+  padding: 12px 15px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  color: #eef0eb;
+  background: rgba(42, 47, 42, 0.96);
+  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.35);
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0;
+  transform: translateY(10px);
+  pointer-events: none;
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.toast.visible {
+  opacity: 1;
+  transform: none;
+}
+
+.toast.error {
+  border-color: rgba(215, 106, 93, 0.35);
+  color: #ffd4ce;
+}
