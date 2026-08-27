@@ -1,0 +1,168 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Libre+Franklin:wght@600;700&display=swap");
+
+:root {
+  color-scheme: dark;
+  --bg: #151816;
+  --surface: #202420;
+  --surface-raised: #292e29;
+  --surface-soft: #252a25;
+  --line: rgba(255, 255, 255, 0.08);
+  --text: #f4f5f2;
+  --muted: #a7afa5;
+  --accent: #82b64b;
+  --accent-hover: #91c65a;
+  --accent-deep: #5c8f2b;
+  --danger: #d76a5d;
+  --light-square: #e6d6bd;
+  --dark-square: #8e684f;
+  --light-coordinate: #8e684f;
+  --dark-coordinate: #e6d6bd;
+  --highlight: rgba(238, 204, 90, 0.58);
+  --move-dot: rgba(24, 33, 22, 0.28);
+  --board-radius: 6px;
+  --shadow: 0 24px 70px rgba(0, 0, 0, 0.3);
+  --font-sans: "DM Sans", system-ui, -apple-system, sans-serif;
+  --font-display: "Libre Franklin", var(--font-sans);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  background: var(--bg);
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 22% 14%, rgba(108, 143, 78, 0.08), transparent 28rem),
+    linear-gradient(145deg, #181c19 0%, var(--bg) 55%, #111311 100%);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  color: inherit;
+}
+
+button:focus-visible,
+input:focus-visible,
+.square:focus-visible {
+  outline: 3px solid rgba(144, 198, 90, 0.86);
+  outline-offset: 3px;
+}
+
+.app-shell {
+  width: min(1380px, 100%);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 0 32px 36px;
+}
+
+.topbar {
+  height: 82px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.brand-mark {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: linear-gradient(145deg, var(--accent-hover), var(--accent-deep));
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.25), 0 8px 20px rgba(82, 129, 38, 0.22);
+  color: #18210f;
+  font: 700 22px var(--font-display);
+}
+
+.brand strong,
+.brand small {
+  display: block;
+}
+
+.brand strong {
+  font: 700 18px/1.1 var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+.brand small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.engine-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 13px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.025);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.engine-pill i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 4px rgba(130, 182, 75, 0.12);
+}
+
+.icon-button {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  transition: background 150ms ease, transform 150ms ease;
+}
+
+.icon-button:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.icon-button:active {
+  transform: scale(0.96);
+}
+
+.icon-button svg {
+  width: 19px;
+  fill: currentColor;
+}
