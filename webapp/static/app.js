@@ -348,6 +348,20 @@ elements.themeButton.addEventListener("click", () => {
   document.body.dataset.theme = THEMES[state.themeIndex];
   showToast(`${THEMES[state.themeIndex][0].toUpperCase() + THEMES[state.themeIndex].slice(1)} board selected`);
 });
+elements.resignButton.addEventListener("click", async () => {
+  if (!state.game || state.game.status !== "active") return;
+  if (!window.confirm("Resign this game against Mero?")) return;
+  try {
+    state.game = await api(`/api/games/${state.game.id}/resign`, {
+      method: "POST",
+      body: "{}",
+    });
+    localStorage.removeItem("mero-game-id");
+    render();
+  } catch (error) {
+    showToast(error.message, "error");
+  }
+});
 
 elements.board.addEventListener("click", handleSquareClick);
 elements.board.addEventListener("dragstart", (event) => {
