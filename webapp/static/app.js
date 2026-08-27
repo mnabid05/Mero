@@ -337,6 +337,11 @@ elements.newGameForm.addEventListener("submit", (event) => {
   const form = new FormData(elements.newGameForm);
   startGame(form.get("color"), form.get("difficulty"));
 });
+elements.flipButton.addEventListener("click", () => {
+  state.orientation = state.orientation === "w" ? "b" : "w";
+  state.selected = null;
+  renderBoard();
+});
 
 elements.board.addEventListener("click", handleSquareClick);
 
