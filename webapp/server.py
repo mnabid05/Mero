@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import signal
 from collections.abc import Sequence
 from http.server import ThreadingHTTPServer
 
@@ -30,15 +29,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
     server, manager = build_server(args.host, args.port)
 
-    def stop(*_: object) -> None:
-        server.shutdown()
-
-    signal.signal(signal.SIGINT, stop)
-    signal.signal(signal.SIGTERM, stop)
     host, port = server.server_address
     print(f"Mero web is ready at http://{host}:{port}", flush=True)
     try:
         server.serve_forever()
+    except KeyboardInterrupt:
+        print("\nStopping Mero web…", flush=True)
     finally:
         manager.close()
         server.server_close()
