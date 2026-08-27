@@ -158,3 +158,43 @@ function renderBoard() {
     elements.board.append(square);
   }
 }
+
+function handleSquareClick(event) {
+  const square = event.target.closest(".square");
+  if (!square || !state.game?.humanTurn || state.thinking) return;
+  const index = Number(square.dataset.index);
+  const targetIsLegal = legalTargets(state.selected).includes(index);
+  if (state.selected !== null && targetIsLegal) {
+    attemptMove(state.selected, index);
+    return;
+  }
+  const piece = state.game.board[index];
+  state.selected = piece && pieceColor(piece) === state.game.humanColor ? index : null;
+  renderBoard();
+}
+
+function attemptMove(fromIndex, toIndex) {
+  const prefix = `${squareName(fromIndex)}${squareName(toIndex)}`;
+  const candidates = state.game.legalMoves.filter((move) => move.startsWith(prefix));
+  if (candidates.length === 1) submitMove(candidates[0]);
+}
+
+async function submitMove(move) {
+  state.thinking = true;
+  state.selected = null;
+  renderBoard();
+  try {
+    state.game = await api(`/api/games/${state.game.id}/moves`, {
+      method: "POST",
+      body: JSON.stringify({ move }),
+    });
+    state.turnStartedAt = Date.now();
+  } catch (error) {
+    showToast(error.message, "error");
+  } finally {
+    state.thinking = false;
+    renderBoard();
+  }
+}
+
+elements.board.addEventListener("click", handleSquareClick);
