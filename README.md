@@ -86,6 +86,22 @@ limits of the current strength evidence.
 
 Python 3.11 or newer is required.
 
+### Web app
+
+Build the native engine and launch the playable browser interface:
+
+```bash
+python3 scripts/build_native.py
+python3 -m webapp.server
+```
+
+Open `http://127.0.0.1:8765` to play as either color. The responsive interface
+supports click and drag moves, legal-move hints, promotions, move history,
+captured pieces, board flipping, themes, clocks, and local game restoration.
+See the [web app guide](docs/WEB_APP.md) for the API and architecture.
+
+### Terminal
+
 ```bash
 python3 -m chess_ai --move-time 1000 --depth 6
 ```
@@ -131,7 +147,7 @@ mwahaha-uci
 
 ## Validation
 
-Build the native engine and run the 54-test suite:
+Build the native engine and run the 65-test suite:
 
 ```bash
 python3 scripts/build_native.py
@@ -228,6 +244,10 @@ chess_ai/
 native/
   evaluation.c   portable C11 evaluation kernel
   engine.cpp     standalone C++20 board, search, and UCI engine
+webapp/
+  server.py      threaded HTTP server and native engine lifecycle
+  game_manager.py server-authoritative game orchestration
+  static/        responsive HTML, CSS, and JavaScript interface
 scripts/         native build tooling
 backtests/       machine-readable match reports
 docs/            architecture and strength methodology
