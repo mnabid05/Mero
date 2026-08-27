@@ -156,6 +156,11 @@ input:focus-visible,
   box-shadow: 0 0 0 4px rgba(130, 182, 75, 0.12);
 }
 
+.engine-pill.offline i {
+  background: var(--danger);
+  box-shadow: 0 0 0 4px rgba(215, 106, 93, 0.12);
+}
+
 .icon-button {
   width: 38px;
   height: 38px;
