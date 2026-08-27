@@ -331,6 +331,21 @@ async function startGame(color, difficulty) {
   }
 }
 
+async function restoreGame() {
+  const gameId = localStorage.getItem("mero-game-id");
+  if (!gameId) return false;
+  try {
+    state.game = await api(`/api/games/${gameId}`);
+    state.orientation = state.game.humanColor;
+    state.turnStartedAt = Date.now();
+    render();
+    return true;
+  } catch {
+    localStorage.removeItem("mero-game-id");
+    return false;
+  }
+}
+
 elements.newGameButton.addEventListener("click", () => elements.newGameDialog.showModal());
 elements.newGameForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -391,5 +406,7 @@ elements.board.addEventListener("dragend", () => {
 });
 
 render();
-elements.newGameDialog.showModal();
+restoreGame().then((restored) => {
+  if (!restored) elements.newGameDialog.showModal();
+});
 window.setInterval(renderClocks, 1000);
