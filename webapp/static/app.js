@@ -346,6 +346,17 @@ async function restoreGame() {
   }
 }
 
+async function checkEngineHealth() {
+  try {
+    const health = await api("/api/health");
+    elements.engineLabel.textContent = health.engine || "Engine online";
+    elements.engineLabel.closest(".engine-pill").classList.remove("offline");
+  } catch {
+    elements.engineLabel.textContent = "Engine offline";
+    elements.engineLabel.closest(".engine-pill").classList.add("offline");
+  }
+}
+
 elements.newGameButton.addEventListener("click", () => elements.newGameDialog.showModal());
 elements.newGameForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -406,6 +417,7 @@ elements.board.addEventListener("dragend", () => {
 });
 
 render();
+checkEngineHealth();
 restoreGame().then((restored) => {
   if (!restored) elements.newGameDialog.showModal();
 });
