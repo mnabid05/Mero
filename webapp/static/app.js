@@ -159,6 +159,14 @@ function renderBoard() {
   }
 }
 
+function render() {
+  document.body.dataset.theme = THEMES[state.themeIndex];
+  elements.thinkingOverlay.classList.toggle("visible", state.thinking);
+  elements.thinkingOverlay.setAttribute("aria-hidden", String(!state.thinking));
+  elements.resignButton.disabled = !state.game || state.game.status !== "active" || state.thinking;
+  renderBoard();
+}
+
 function handleSquareClick(event) {
   const square = event.target.closest(".square");
   if (!square || !state.game?.humanTurn || state.thinking) return;
@@ -202,7 +210,7 @@ function choosePromotion(candidates) {
 async function submitMove(move) {
   state.thinking = true;
   state.selected = null;
-  renderBoard();
+  render();
   try {
     state.game = await api(`/api/games/${state.game.id}/moves`, {
       method: "POST",
@@ -213,8 +221,39 @@ async function submitMove(move) {
     showToast(error.message, "error");
   } finally {
     state.thinking = false;
-    renderBoard();
+    render();
   }
 }
 
+async function startGame(color, difficulty) {
+  state.thinking = true;
+  render();
+  try {
+    const game = await api("/api/games", {
+      method: "POST",
+      body: JSON.stringify({ color, difficulty }),
+    });
+    state.game = game;
+    state.orientation = game.humanColor;
+    state.turnStartedAt = Date.now();
+    localStorage.setItem("mero-game-id", game.id);
+    elements.newGameDialog.close();
+  } catch (error) {
+    showToast(error.message, "error");
+  } finally {
+    state.thinking = false;
+    render();
+  }
+}
+
+elements.newGameButton.addEventListener("click", () => elements.newGameDialog.showModal());
+elements.newGameForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const form = new FormData(elements.newGameForm);
+  startGame(form.get("color"), form.get("difficulty"));
+});
+
 elements.board.addEventListener("click", handleSquareClick);
+
+render();
+elements.newGameDialog.showModal();
