@@ -177,6 +177,26 @@ function attemptMove(fromIndex, toIndex) {
   const prefix = `${squareName(fromIndex)}${squareName(toIndex)}`;
   const candidates = state.game.legalMoves.filter((move) => move.startsWith(prefix));
   if (candidates.length === 1) submitMove(candidates[0]);
+  if (candidates.length > 1) choosePromotion(candidates);
+}
+
+function choosePromotion(candidates) {
+  elements.promotionOptions.replaceChildren();
+  for (const move of candidates) {
+    const promoted = move.at(-1);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "promotion-piece";
+    const piece = state.game.humanColor === "w" ? promoted.toUpperCase() : promoted;
+    button.textContent = PIECES[piece];
+    button.setAttribute("aria-label", `Promote to ${PIECE_NAMES[promoted]}`);
+    button.addEventListener("click", () => {
+      elements.promotionDialog.close();
+      submitMove(move);
+    });
+    elements.promotionOptions.append(button);
+  }
+  elements.promotionDialog.showModal();
 }
 
 async function submitMove(move) {
