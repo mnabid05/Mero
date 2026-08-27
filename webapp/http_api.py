@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import json
+import mimetypes
 import re
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler
 from typing import Any
+from pathlib import Path
+from urllib.parse import unquote, urlparse
 
 from .game_manager import GameManager, GameNotFoundError
 
@@ -14,6 +17,7 @@ GAME_ROUTE = re.compile(r"^/api/games/([a-f0-9]{32})$")
 MOVE_ROUTE = re.compile(r"^/api/games/([a-f0-9]{32})/moves$")
 RESIGN_ROUTE = re.compile(r"^/api/games/([a-f0-9]{32})/resign$")
 MAX_BODY_BYTES = 16_384
+STATIC_ROOT = Path(__file__).with_name("static")
 
 
 class MeroRequestHandler(BaseHTTPRequestHandler):
@@ -37,6 +41,9 @@ class MeroRequestHandler(BaseHTTPRequestHandler):
         match = GAME_ROUTE.fullmatch(self.path)
         if match:
             self._execute(lambda: self.manager.state(match.group(1)))
+            return
+        if not self.path.startswith("/api/"):
+            self._static()
             return
         self._json(HTTPStatus.NOT_FOUND, {"error": "route not found"})
 
@@ -106,6 +113,26 @@ class MeroRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(encoded)))
         self.end_headers()
         self.wfile.write(encoded)
+
+    def _static(self) -> None:
+        requested = unquote(urlparse(self.path).path)
+        relative = "index.html" if requested == "/" else requested.lstrip("/")
+        candidate = (STATIC_ROOT / relative).resolve()
+        try:
+            candidate.relative_to(STATIC_ROOT.resolve())
+        except ValueError:
+            self._json(HTTPStatus.NOT_FOUND, {"error": "asset not found"})
+            return
+        if not candidate.is_file():
+            self._json(HTTPStatus.NOT_FOUND, {"error": "asset not found"})
+            return
+        content = candidate.read_bytes()
+        content_type, _ = mimetypes.guess_type(candidate.name)
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", content_type or "application/octet-stream")
+        self.send_header("Content-Length", str(len(content)))
+        self.end_headers()
+        self.wfile.write(content)
 
     def log_message(self, format: str, *args: object) -> None:
         return None
