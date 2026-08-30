@@ -2039,6 +2039,13 @@ private:
                 && stand_pat + capture_value(board, move) + 140 < alpha) {
                 continue;
             }
+            if (!in_check
+                && qply >= 2
+                && move.promotion == '\0'
+                && !quiet_check
+                && static_exchange_evaluation(board, move) < -80) {
+                continue;
+            }
             ScopedMove applied(board, move);
             prefetch_table(board.key);
             int score = -quiescence(board, -beta, -alpha, ply + 1, qply + 1);
