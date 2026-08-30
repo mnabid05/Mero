@@ -1566,6 +1566,15 @@ private:
         for (std::size_t index = 0; index < moves.size(); ++index) {
             const Move& move = moves[index];
             bool is_quiet = quiet(board, move);
+            bool recapture = previous_move.valid()
+                && move.to == previous_move.to
+                && !is_quiet;
+            char candidate_piece = board.squares[move.from];
+            bool advanced_pawn = std::tolower(
+                static_cast<unsigned char>(candidate_piece)
+            ) == 'p' && (is_white(candidate_piece)
+                ? move.to / 8 <= 1
+                : move.to / 8 >= 6);
             char moving_piece = board.squares[move.from];
             int score = -INF;
             bool pruned = false;
@@ -1591,7 +1600,13 @@ private:
                 }
                 if (!pruned) {
                     int next_depth = depth - 1;
-                    if (gives_check && depth <= 2) {
+                    if (gives_check && depth <= 3) {
+                        ++next_depth;
+                    }
+                    if (recapture && depth <= 3) {
+                        ++next_depth;
+                    }
+                    if (advanced_pawn && depth <= 3) {
                         ++next_depth;
                     }
                     int reduction = 0;
@@ -1599,6 +1614,7 @@ private:
                         depth >= 3
                         && index >= 3
                         && is_quiet
+                        && !advanced_pawn
                         && !in_check
                         && !gives_check
                     ) {
