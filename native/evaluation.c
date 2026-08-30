@@ -155,18 +155,6 @@ static void pawn_structure(
         int rank = color == WHITE ? 7 - row_of(square) : row_of(square);
         *middle += 10 + rank * rank * 3;
         *end += 20 + rank * rank * 7;
-        int row = row_of(square);
-        int file = column_of(square);
-        uint64_t adjacent_files = 0;
-        if (file > 0) adjacent_files |= FILE_A << (file - 1);
-        if (file < 7) adjacent_files |= FILE_A << (file + 1);
-        uint64_t nearby_ranks = UINT64_C(0xff) << (row * 8);
-        if (row > 0) nearby_ranks |= UINT64_C(0xff) << ((row - 1) * 8);
-        if (row < 7) nearby_ranks |= UINT64_C(0xff) << ((row + 1) * 8);
-        if (friendly_pawns & adjacent_files & nearby_ranks) {
-            *middle += 10;
-            *end += 18;
-        }
     }
 }
 
@@ -210,29 +198,6 @@ static int king_shelter(const char board[64], int color, int square) {
     return score;
 }
 
-static int king_pawn_pressure(uint64_t enemy_pawns, int square) {
-    if (square < 0) {
-        return 0;
-    }
-    int king_row = row_of(square);
-    int king_file = column_of(square);
-    int pressure = 0;
-    while (enemy_pawns != 0) {
-        int target = __builtin_ctzll(enemy_pawns);
-        enemy_pawns &= enemy_pawns - 1;
-        int file_distance = column_of(target) - king_file;
-        if (file_distance < -1 || file_distance > 1) {
-            continue;
-        }
-        int rank_distance = row_of(target) - king_row;
-        if (rank_distance < 0) rank_distance = -rank_distance;
-        if (rank_distance <= 3) {
-            pressure += 24 - rank_distance * 6;
-        }
-    }
-    return pressure;
-}
-
 static int pawn_protects(const char board[64], int square, int color) {
     int row = row_of(square);
     int column = column_of(square);
@@ -266,17 +231,6 @@ static void piece_features(
     int column = column_of(square);
     int relative_rank = color == WHITE ? 7 - row : row;
     char friendly_pawn = color == WHITE ? 'P' : 'p';
-
-    if (
-        type != 'p'
-        && type != 'k'
-        && enemy_pawn_attacks(board, square, color)
-        && !pawn_protects(board, square, color)
-    ) {
-        int penalty = type == 'q' ? 30 : (type == 'r' ? 20 : 12);
-        *middle -= penalty;
-        *end -= penalty / 2;
-    }
 
     if (type == 'p') {
         for (int file_delta = -1; file_delta <= 1; file_delta += 2) {
@@ -493,10 +447,6 @@ MWAHAHA_EXPORT int mwahaha_evaluate(const char board[64]) {
             pawn_middle
             + rook_file_bonus(color, pawn_files, rook_files)
             + king_shelter(board, color, king_squares[color])
-            - king_pawn_pressure(
-                pawn_bits[color == WHITE ? BLACK : WHITE],
-                king_squares[color]
-            )
             + (bishops[color] >= 2 ? 35 : 0)
         );
         end += sign * (

@@ -27,7 +27,6 @@ namespace {
 constexpr int INF = 1'000'000;
 constexpr int MATE = 100'000;
 constexpr int MAX_PLY = 96;
-constexpr std::size_t CORRECTION_HISTORY_SIZE = 16'384;
 constexpr int WHITE_KING_SIDE = 1;
 constexpr int WHITE_QUEEN_SIDE = 2;
 constexpr int BLACK_KING_SIDE = 4;
@@ -875,7 +874,6 @@ public:
         killers_ = {};
         countermoves_ = {};
         continuation_history_ = {};
-        pawn_correction_history_ = {};
     }
 
     struct Result {
@@ -985,7 +983,7 @@ public:
         int previous = 0;
 
         for (int depth = 1; depth <= max_depth; ++depth) {
-            int window = depth >= 6 ? 38 : (depth >= 4 ? 55 : INF);
+            int window = depth >= 4 ? 55 : INF;
             int alpha = std::max(-INF, previous - window);
             int beta = std::min(INF, previous + window);
             try {
@@ -1030,8 +1028,6 @@ private:
     std::array<std::array<int, 64>, 128> capture_history_{};
     std::array<std::array<Move, 64>, 128> countermoves_{};
     std::array<std::array<int, 64>, 64> continuation_history_{};
-    std::array<std::array<int, CORRECTION_HISTORY_SIZE>, 2>
-        pawn_correction_history_{};
     std::array<int, MAX_PLY> static_evals_{};
     std::vector<uint64_t> search_history_;
     uint64_t nodes_ = 0;
@@ -1077,28 +1073,6 @@ private:
     int evaluate(const Board& board) const {
         int score = mwahaha_evaluate(board.squares.data());
         return board.white_to_move ? score : -score;
-    }
-
-    std::size_t pawn_correction_index(const Board& board) const {
-        uint64_t key = 0;
-        for (char pawn : {'P', 'p'}) {
-            int piece = Zobrist::piece_index(pawn);
-            uint64_t remaining = board.piece_boards[piece];
-            while (remaining != 0) {
-                int square = static_cast<int>(std::countr_zero(remaining));
-                key ^= ZOBRIST.pieces[piece][square];
-                remaining &= remaining - 1;
-            }
-        }
-        return static_cast<std::size_t>(key) & (CORRECTION_HISTORY_SIZE - 1);
-    }
-
-    int corrected_evaluation(const Board& board, int raw_eval) const {
-        int side = board.white_to_move ? 0 : 1;
-        int correction = pawn_correction_history_[side][
-            pawn_correction_index(board)
-        ];
-        return std::clamp(raw_eval + correction / 32, -MATE + MAX_PLY, MATE - MAX_PLY);
     }
 
     int capture_value(const Board& board, const Move& move) const {
@@ -1204,14 +1178,6 @@ private:
             && !(move.flags & EN_PASSANT) && move.promotion == '\0';
     }
 
-    bool probcut_candidate(const Board& board, const Move& move) const {
-        if (move.promotion != '\0') {
-            return true;
-        }
-        return !quiet(board, move)
-            && static_exchange_evaluation(board, move) >= 0;
-    }
-
     bool gives_check_after_move(Board& board, const Move& move) const {
         bool moving_white = board.white_to_move;
         int king = board.king_square(!moving_white);
@@ -1304,35 +1270,6 @@ private:
         bonus = std::clamp(bonus, -HISTORY_LIMIT, HISTORY_LIMIT);
         int& value = continuation_history_[previous][target];
         value += bonus - value * std::abs(bonus) / HISTORY_LIMIT;
-    }
-
-    void update_pawn_correction(
-        const Board& board,
-        int raw_eval,
-        int searched_score,
-        int depth
-    ) {
-        constexpr int CORRECTION_LIMIT = 16'384;
-        int bonus = std::clamp(
-            (searched_score - raw_eval) * depth,
-            -CORRECTION_LIMIT / 2,
-            CORRECTION_LIMIT / 2
-        );
-        int side = board.white_to_move ? 0 : 1;
-        int& value = pawn_correction_history_[side][pawn_correction_index(board)];
-        value += bonus - value * std::abs(bonus) / CORRECTION_LIMIT;
-    }
-
-    int quiet_history_score(
-        char piece,
-        int target,
-        const Move& previous_move
-    ) const {
-        int score = history_[static_cast<int>(piece)][target];
-        if (previous_move.valid()) {
-            score += continuation_history_[previous_move.to][target];
-        }
-        return score;
     }
 
     template <typename Moves>
@@ -1592,32 +1529,22 @@ private:
                 return table_score;
             }
         }
-        int raw_static_eval = in_check
+        int static_eval = in_check
             ? -INF
             : (entry != nullptr && entry->static_eval != INF
                 ? entry->static_eval
                 : evaluate(board));
-        int static_eval = in_check
-            ? -INF
-            : corrected_evaluation(board, raw_static_eval);
         static_evals_[ply] = static_eval;
         bool improving = !in_check
             && ply >= 2
             && static_evals_[ply - 2] != -INF
             && static_eval > static_evals_[ply - 2];
-        bool opponent_worsening = !in_check
-            && ply >= 1
-            && static_evals_[ply - 1] != -INF
-            && static_eval > -static_evals_[ply - 1];
         if (
             !in_check
             && depth <= 3
             && beta - alpha == 1
             && std::abs(beta) < MATE - MAX_PLY
-            && static_eval
-                - ((improving ? 65 : 90) + (opponent_worsening ? 0 : 12))
-                    * depth
-                >= beta
+            && static_eval - (improving ? 65 : 90) * depth >= beta
         ) {
             return static_eval;
         }
@@ -1634,7 +1561,6 @@ private:
             }
         }
         if (allow_null && depth >= 3 && !in_check
-            && static_eval >= beta - 25 * depth
             && null_move_safe(board)) {
             Board null_board = board;
             null_board.key ^= ZOBRIST.turn;
@@ -1644,9 +1570,7 @@ private:
             null_board.white_to_move = !null_board.white_to_move;
             null_board.en_passant = -1;
             ++null_board.halfmove;
-            int eval_margin = std::max(0, static_eval - beta);
-            int reduction = 2 + depth / 5 + std::min(2, eval_margin / 180);
-            reduction = std::min(reduction, depth - 2);
+            int reduction = 2 + depth / 5;
             int score = -negamax(
                 null_board,
                 depth - 1 - reduction,
@@ -1674,59 +1598,6 @@ private:
                     if (verification >= beta) {
                         return verification;
                     }
-                }
-            }
-        }
-
-        int probcut_beta = beta + 160;
-        bool tt_rejects_probcut = entry != nullptr
-            && entry->depth >= depth - 3
-            && entry->bound != Bound::Lower
-            && score_from_table(entry->score, ply) < probcut_beta;
-        if (depth >= 5
-            && !in_check
-            && beta - alpha == 1
-            && !tt_rejects_probcut
-            && std::abs(beta) < MATE - MAX_PLY) {
-            auto tactical = board.legal_moves_in_place(true);
-            Move tt_move = entry == nullptr ? Move{} : entry->move;
-            order_moves(board, tactical, tt_move, ply, Move{}, previous_move);
-            for (const Move& move : tactical) {
-                if (!probcut_candidate(board, move)) {
-                    continue;
-                }
-                ScopedMove applied(board, move);
-                prefetch_table(board.key);
-                int score = -quiescence(
-                    board,
-                    -probcut_beta,
-                    -probcut_beta + 1,
-                    ply + 1,
-                    0
-                );
-                if (score < probcut_beta) {
-                    continue;
-                }
-                score = -negamax(
-                    board,
-                    depth - 4,
-                    -probcut_beta,
-                    -probcut_beta + 1,
-                    ply + 1,
-                    true,
-                    move
-                );
-                if (score >= probcut_beta) {
-                    store(
-                        key,
-                        depth - 3,
-                        score,
-                        Bound::Lower,
-                        move,
-                        ply,
-                        raw_static_eval
-                    );
-                    return score;
                 }
             }
         }
@@ -1767,12 +1638,6 @@ private:
             bool recapture = is_recapture(board, move, previous_move);
             bool advanced_pawn = is_advanced_pawn(board, move);
             char moving_piece = board.squares[move.from];
-            int capture_see = depth <= 2 && index >= 6 && !is_quiet
-                ? static_exchange_evaluation(board, move)
-                : 0;
-            int move_history = is_quiet
-                ? quiet_history_score(moving_piece, move.to, previous_move)
-                : 0;
             int score = -INF;
             bool pruned = false;
             {
@@ -1795,27 +1660,17 @@ private:
                     && static_score + 140 <= alpha) {
                     pruned = true;
                 }
-                if (depth <= 3
-                    && index >= 7
-                    && is_quiet
-                    && !in_check
-                    && !gives_check
-                    && move_history < -3'000) {
-                    pruned = true;
-                }
-                if (depth <= 2
-                    && index >= 6
-                    && !is_quiet
-                    && move.promotion == '\0'
-                    && !recapture
-                    && !gives_check
-                    && capture_see < -70 * depth) {
-                    pruned = true;
-                }
                 if (!pruned) {
-                    bool extend = depth <= 3
-                        && (gives_check || recapture || advanced_pawn);
-                    int next_depth = depth - 1 + static_cast<int>(extend);
+                    int next_depth = depth - 1;
+                    if (gives_check && depth <= 3) {
+                        ++next_depth;
+                    }
+                    if (recapture && depth <= 3) {
+                        ++next_depth;
+                    }
+                    if (advanced_pawn && depth <= 3) {
+                        ++next_depth;
+                    }
                     int reduction = 0;
                     if (
                         depth >= 3
@@ -1831,8 +1686,15 @@ private:
                             * std::log(static_cast<double>(index + 1))
                             / 2.15
                         );
+                        int history_score = history_[
+                            static_cast<int>(moving_piece)
+                        ][move.to];
+                        int continuation_score = previous_move.valid()
+                            ? continuation_history_[previous_move.to][move.to]
+                            : 0;
                         if (
-                            move_history > 3'000
+                            history_score > 3'000
+                            || continuation_score > 2'500
                             || move == killers_[ply][0]
                             || move == counter_move
                         ) {
@@ -1840,9 +1702,6 @@ private:
                         }
                         if (improving) {
                             --reduction;
-                        }
-                        if (move_history < -2'000) {
-                            ++reduction;
                         }
                         reduction = std::clamp(
                             reduction,
@@ -1967,18 +1826,7 @@ private:
         Bound bound = best_score <= original_alpha
             ? Bound::Upper
             : (best_score >= beta ? Bound::Lower : Bound::Exact);
-        bool reliable_correction = depth >= 2
-            && !in_check
-            && best.valid()
-            && quiet(board, best)
-            && std::abs(best_score) < MATE - MAX_PLY
-            && (bound == Bound::Exact
-                || (bound == Bound::Lower && best_score >= raw_static_eval)
-                || (bound == Bound::Upper && best_score <= raw_static_eval));
-        if (reliable_correction) {
-            update_pawn_correction(board, raw_static_eval, best_score, depth);
-        }
-        store(key, depth, best_score, bound, best, ply, raw_static_eval);
+        store(key, depth, best_score, bound, best, ply, static_eval);
         return best_score;
     }
 
@@ -2028,14 +1876,11 @@ private:
             }
         }
         int original_alpha = alpha;
-        int raw_static_eval = in_check
+        int stand_pat = in_check
             ? -INF
             : (entry != nullptr && entry->static_eval != INF
                 ? entry->static_eval
                 : evaluate(board));
-        int stand_pat = in_check
-            ? -INF
-            : corrected_evaluation(board, raw_static_eval);
         if (!in_check) {
             if (stand_pat >= beta) {
                 store(
@@ -2045,7 +1890,7 @@ private:
                     Bound::Lower,
                     Move{},
                     ply,
-                    raw_static_eval
+                    stand_pat
                 );
                 return stand_pat;
             }
@@ -2077,13 +1922,6 @@ private:
                 && stand_pat + capture_value(board, move) + 140 < alpha) {
                 continue;
             }
-            if (!in_check
-                && qply >= 2
-                && move.promotion == '\0'
-                && !quiet_check
-                && static_exchange_evaluation(board, move) < -80) {
-                continue;
-            }
             ScopedMove applied(board, move);
             prefetch_table(board.key);
             int score = -quiescence(board, -beta, -alpha, ply + 1, qply + 1);
@@ -2095,7 +1933,7 @@ private:
                     Bound::Lower,
                     move,
                     ply,
-                    in_check ? INF : raw_static_eval
+                    in_check ? INF : stand_pat
                 );
                 return score;
             }
@@ -2112,7 +1950,7 @@ private:
             bound,
             best,
             ply,
-            in_check ? INF : raw_static_eval
+            in_check ? INF : stand_pat
         );
         return alpha;
     }
