@@ -1659,11 +1659,16 @@ private:
             }
         }
 
+        int probcut_beta = beta + 160;
+        bool tt_rejects_probcut = entry != nullptr
+            && entry->depth >= depth - 3
+            && entry->bound != Bound::Lower
+            && score_from_table(entry->score, ply) < probcut_beta;
         if (depth >= 5
             && !in_check
             && beta - alpha == 1
+            && !tt_rejects_probcut
             && std::abs(beta) < MATE - MAX_PLY) {
-            int probcut_beta = beta + 160;
             auto tactical = board.legal_moves_in_place(true);
             Move tt_move = entry == nullptr ? Move{} : entry->move;
             order_moves(board, tactical, tt_move, ply, Move{}, previous_move);
