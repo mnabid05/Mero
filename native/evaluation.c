@@ -198,18 +198,16 @@ static int king_shelter(const char board[64], int color, int square) {
     return score;
 }
 
-static int king_pawn_pressure(const char board[64], int color, int square) {
+static int king_pawn_pressure(uint64_t enemy_pawns, int square) {
     if (square < 0) {
         return 0;
     }
-    char enemy_pawn = color == WHITE ? 'p' : 'P';
     int king_row = row_of(square);
     int king_file = column_of(square);
     int pressure = 0;
-    for (int target = 0; target < 64; ++target) {
-        if (board[target] != enemy_pawn) {
-            continue;
-        }
+    while (enemy_pawns != 0) {
+        int target = __builtin_ctzll(enemy_pawns);
+        enemy_pawns &= enemy_pawns - 1;
         int file_distance = column_of(target) - king_file;
         if (file_distance < -1 || file_distance > 1) {
             continue;
@@ -483,7 +481,10 @@ MWAHAHA_EXPORT int mwahaha_evaluate(const char board[64]) {
             pawn_middle
             + rook_file_bonus(color, pawn_files, rook_files)
             + king_shelter(board, color, king_squares[color])
-            - king_pawn_pressure(board, color, king_squares[color])
+            - king_pawn_pressure(
+                pawn_bits[color == WHITE ? BLACK : WHITE],
+                king_squares[color]
+            )
             + (bishops[color] >= 2 ? 35 : 0)
         );
         end += sign * (
