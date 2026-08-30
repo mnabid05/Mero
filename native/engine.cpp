@@ -1607,6 +1607,7 @@ private:
             }
         }
         if (allow_null && depth >= 3 && !in_check
+            && static_eval >= beta - 25 * depth
             && null_move_safe(board)) {
             Board null_board = board;
             null_board.key ^= ZOBRIST.turn;
