@@ -32,6 +32,14 @@ class NativeEvaluatorTests(unittest.TestCase):
             self.evaluator.evaluate(safe),
         )
 
+    def test_nearby_enemy_pawn_increases_king_danger(self):
+        distant = Board.from_fen("7k/8/8/8/p7/8/8/6K1 w - - 0 1")
+        pressure = Board.from_fen("7k/8/8/8/6p1/8/8/6K1 w - - 0 1")
+        self.assertLess(
+            self.evaluator.evaluate(pressure),
+            self.evaluator.evaluate(distant),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
