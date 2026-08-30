@@ -1872,6 +1872,17 @@ private:
         Bound bound = best_score <= original_alpha
             ? Bound::Upper
             : (best_score >= beta ? Bound::Lower : Bound::Exact);
+        bool reliable_correction = depth >= 2
+            && !in_check
+            && best.valid()
+            && quiet(board, best)
+            && std::abs(best_score) < MATE - MAX_PLY
+            && (bound == Bound::Exact
+                || (bound == Bound::Lower && best_score >= raw_static_eval)
+                || (bound == Bound::Upper && best_score <= raw_static_eval));
+        if (reliable_correction) {
+            update_pawn_correction(board, raw_static_eval, best_score, depth);
+        }
         store(key, depth, best_score, bound, best, ply, raw_static_eval);
         return best_score;
     }
