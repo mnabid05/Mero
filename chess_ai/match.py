@@ -181,3 +181,38 @@ def run_match(
         score_to_elo(score),
         tuple(records),
     )
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--candidate", required=True, help="candidate UCI command")
+    parser.add_argument("--baseline", required=True, help="baseline UCI command")
+    parser.add_argument("--games", type=int, default=40)
+    parser.add_argument("--move-time", type=int, default=30, metavar="MS")
+    parser.add_argument("--max-plies", type=int, default=160)
+    parser.add_argument("--threads", type=int, default=1)
+    parser.add_argument("--json-out", type=Path)
+    args = parser.parse_args(argv)
+    report = run_match(
+        shlex.split(args.candidate),
+        shlex.split(args.baseline),
+        args.games,
+        args.move_time,
+        args.max_plies,
+        threads=args.threads,
+        show_progress=True,
+    )
+    print(
+        f"\nResult: {report.wins} wins, {report.draws} draws, "
+        f"{report.losses} losses ({report.score_percent:.2f}% score, "
+        f"{report.elo_difference:+d} Elo)."
+    )
+    if args.json_out:
+        args.json_out.parent.mkdir(parents=True, exist_ok=True)
+        args.json_out.write_text(report.as_json() + "\n", encoding="utf-8")
+        print(f"Report written to {args.json_out}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
