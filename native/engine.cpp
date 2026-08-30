@@ -1093,6 +1093,14 @@ private:
         return static_cast<std::size_t>(key) & (CORRECTION_HISTORY_SIZE - 1);
     }
 
+    int corrected_evaluation(const Board& board, int raw_eval) const {
+        int side = board.white_to_move ? 0 : 1;
+        int correction = pawn_correction_history_[side][
+            pawn_correction_index(board)
+        ];
+        return std::clamp(raw_eval + correction / 32, -MATE + MAX_PLY, MATE - MAX_PLY);
+    }
+
     int capture_value(const Board& board, const Move& move) const {
         char victim = board.squares[move.to];
         if (move.flags & EN_PASSANT) {
