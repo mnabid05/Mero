@@ -1659,6 +1659,45 @@ private:
             }
         }
 
+        if (depth >= 5
+            && !in_check
+            && beta - alpha == 1
+            && std::abs(beta) < MATE - MAX_PLY) {
+            int probcut_beta = beta + 160;
+            auto tactical = board.legal_moves_in_place(true);
+            Move tt_move = entry == nullptr ? Move{} : entry->move;
+            order_moves(board, tactical, tt_move, ply, Move{}, previous_move);
+            for (const Move& move : tactical) {
+                if (!probcut_candidate(board, move)) {
+                    continue;
+                }
+                ScopedMove applied(board, move);
+                prefetch_table(board.key);
+                int score = -quiescence(
+                    board,
+                    -probcut_beta,
+                    -probcut_beta + 1,
+                    ply + 1,
+                    0
+                );
+                if (score < probcut_beta) {
+                    continue;
+                }
+                score = -negamax(
+                    board,
+                    depth - 4,
+                    -probcut_beta,
+                    -probcut_beta + 1,
+                    ply + 1,
+                    true,
+                    move
+                );
+                if (score >= probcut_beta) {
+                    return score;
+                }
+            }
+        }
+
         if (
             depth >= 6
             && beta - alpha == 1
