@@ -1748,9 +1748,9 @@ private:
             bool recapture = is_recapture(board, move, previous_move);
             bool advanced_pawn = is_advanced_pawn(board, move);
             char moving_piece = board.squares[move.from];
-            int capture_see = is_quiet
-                ? 0
-                : static_exchange_evaluation(board, move);
+            int capture_see = depth <= 2 && index >= 6 && !is_quiet
+                ? static_exchange_evaluation(board, move)
+                : 0;
             int score = -INF;
             bool pruned = false;
             {
