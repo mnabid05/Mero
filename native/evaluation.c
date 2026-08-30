@@ -155,6 +155,18 @@ static void pawn_structure(
         int rank = color == WHITE ? 7 - row_of(square) : row_of(square);
         *middle += 10 + rank * rank * 3;
         *end += 20 + rank * rank * 7;
+        int row = row_of(square);
+        int file = column_of(square);
+        uint64_t adjacent_files = 0;
+        if (file > 0) adjacent_files |= FILE_A << (file - 1);
+        if (file < 7) adjacent_files |= FILE_A << (file + 1);
+        uint64_t nearby_ranks = UINT64_C(0xff) << (row * 8);
+        if (row > 0) nearby_ranks |= UINT64_C(0xff) << ((row - 1) * 8);
+        if (row < 7) nearby_ranks |= UINT64_C(0xff) << ((row + 1) * 8);
+        if (friendly_pawns & adjacent_files & nearby_ranks) {
+            *middle += 10;
+            *end += 18;
+        }
     }
 }
 
