@@ -1605,12 +1605,19 @@ private:
             && ply >= 2
             && static_evals_[ply - 2] != -INF
             && static_eval > static_evals_[ply - 2];
+        bool opponent_worsening = !in_check
+            && ply >= 1
+            && static_evals_[ply - 1] != -INF
+            && static_eval > -static_evals_[ply - 1];
         if (
             !in_check
             && depth <= 3
             && beta - alpha == 1
             && std::abs(beta) < MATE - MAX_PLY
-            && static_eval - (improving ? 65 : 90) * depth >= beta
+            && static_eval
+                - ((improving ? 65 : 90) + (opponent_worsening ? 0 : 12))
+                    * depth
+                >= beta
         ) {
             return static_eval;
         }
