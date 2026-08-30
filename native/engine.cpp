@@ -1204,6 +1204,14 @@ private:
             && !(move.flags & EN_PASSANT) && move.promotion == '\0';
     }
 
+    bool probcut_candidate(const Board& board, const Move& move) const {
+        if (move.promotion != '\0') {
+            return true;
+        }
+        return !quiet(board, move)
+            && static_exchange_evaluation(board, move) >= 0;
+    }
+
     bool gives_check_after_move(Board& board, const Move& move) const {
         bool moving_white = board.white_to_move;
         int king = board.king_square(!moving_white);
