@@ -1707,16 +1707,9 @@ private:
                     pruned = true;
                 }
                 if (!pruned) {
-                    int next_depth = depth - 1;
-                    if (gives_check && depth <= 3) {
-                        ++next_depth;
-                    }
-                    if (recapture && depth <= 3) {
-                        ++next_depth;
-                    }
-                    if (advanced_pawn && depth <= 3) {
-                        ++next_depth;
-                    }
+                    bool extend = depth <= 3
+                        && (gives_check || recapture || advanced_pawn);
+                    int next_depth = depth - 1 + static_cast<int>(extend);
                     int reduction = 0;
                     if (
                         depth >= 3
