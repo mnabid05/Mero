@@ -1905,11 +1905,14 @@ private:
             }
         }
         int original_alpha = alpha;
-        int stand_pat = in_check
+        int raw_static_eval = in_check
             ? -INF
             : (entry != nullptr && entry->static_eval != INF
                 ? entry->static_eval
                 : evaluate(board));
+        int stand_pat = in_check
+            ? -INF
+            : corrected_evaluation(board, raw_static_eval);
         if (!in_check) {
             if (stand_pat >= beta) {
                 store(
@@ -1919,7 +1922,7 @@ private:
                     Bound::Lower,
                     Move{},
                     ply,
-                    stand_pat
+                    raw_static_eval
                 );
                 return stand_pat;
             }
@@ -1962,7 +1965,7 @@ private:
                     Bound::Lower,
                     move,
                     ply,
-                    in_check ? INF : stand_pat
+                    in_check ? INF : raw_static_eval
                 );
                 return score;
             }
@@ -1979,7 +1982,7 @@ private:
             bound,
             best,
             ply,
-            in_check ? INF : stand_pat
+            in_check ? INF : raw_static_eval
         );
         return alpha;
     }
