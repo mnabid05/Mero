@@ -49,3 +49,135 @@ def score_to_elo(score: float) -> int:
     bounded = min(1 - 1e-6, max(1e-6, score))
     return round(400 * math.log10(bounded / (1 - bounded)))
 
+
+def _play_game(
+    candidate: UCIEngine,
+    baseline: UCIEngine,
+    game_number: int,
+    opening_name: str,
+    opening_moves: Sequence[str],
+    candidate_color: str,
+    move_time_ms: int,
+    max_plies: int,
+) -> MatchGame:
+    candidate.new_game()
+    baseline.new_game()
+    board = opening_board(opening_moves)
+    repetitions: Counter[str] = Counter({repetition_key(board): 1})
+
+    for played in range(max_plies):
+        status = board.status()
+        if status != GameStatus.ACTIVE:
+            break
+        candidate_turn = board.turn == candidate_color
+        engine = candidate if candidate_turn else baseline
+        try:
+            notation = engine.choose_move(board, move_time_ms)
+            move = board.find_legal_move(notation)
+        except (RuntimeError, ValueError) as error:
+            return MatchGame(
+                game_number,
+                opening_name,
+                "white" if candidate_color == WHITE else "black",
+                0.0 if candidate_turn else 1.0,
+                f"engine forfeit: {error}",
+                len(opening_moves) + played,
+                board.to_fen(),
+            )
+        board.push(move)
+        key = repetition_key(board)
+        repetitions[key] += 1
+        if repetitions[key] >= 3:
+            return MatchGame(
+                game_number,
+                opening_name,
+                "white" if candidate_color == WHITE else "black",
+                0.5,
+                "threefold repetition",
+                len(opening_moves) + played + 1,
+                board.to_fen(),
+            )
+    else:
+        return MatchGame(
+            game_number,
+            opening_name,
+            "white" if candidate_color == WHITE else "black",
+            0.5,
+            "maximum plies",
+            len(opening_moves) + max_plies,
+            board.to_fen(),
+        )
+
+    status = board.status()
+    candidate_score = 0.5
+    if status == GameStatus.CHECKMATE:
+        winner = BLACK if board.turn == WHITE else WHITE
+        candidate_score = 1.0 if winner == candidate_color else 0.0
+    return MatchGame(
+        game_number,
+        opening_name,
+        "white" if candidate_color == WHITE else "black",
+        candidate_score,
+        status.value,
+        len(opening_moves) + played,
+        board.to_fen(),
+    )
+
+
+def run_match(
+    candidate_command: Sequence[str],
+    baseline_command: Sequence[str],
+    games: int,
+    move_time_ms: int,
+    max_plies: int,
+    threads: int = 1,
+    show_progress: bool = False,
+) -> MatchReport:
+    if games < 2 or games % 2:
+        raise ValueError("games must be a positive even number")
+    if move_time_ms < 10:
+        raise ValueError("move time must be at least 10 ms")
+    if not 1 <= threads <= 64:
+        raise ValueError("threads must be between 1 and 64")
+
+    records: list[MatchGame] = []
+    options = {"Threads": threads, "Hash": 64, "Move Overhead": 0}
+    with UCIEngine(candidate_command, options) as candidate, UCIEngine(
+        baseline_command, options
+    ) as baseline:
+        for index in range(games):
+            opening_name, opening_moves = OPENINGS[(index // 2) % len(OPENINGS)]
+            record = _play_game(
+                candidate,
+                baseline,
+                index + 1,
+                opening_name,
+                opening_moves,
+                WHITE if index % 2 == 0 else BLACK,
+                move_time_ms,
+                max_plies,
+            )
+            records.append(record)
+            if show_progress:
+                print(
+                    f"Game {index + 1}/{games}: candidate {record.candidate_score:g} "
+                    f"as {record.candidate_color} ({record.reason}, {record.plies} plies)",
+                    flush=True,
+                )
+
+    wins = sum(record.candidate_score == 1 for record in records)
+    draws = sum(record.candidate_score == 0.5 for record in records)
+    losses = games - wins - draws
+    score = (wins + 0.5 * draws) / games
+    return MatchReport(
+        candidate.name,
+        baseline.name,
+        move_time_ms,
+        games,
+        wins,
+        draws,
+        losses,
+        round(score * 100, 2),
+        score_to_elo(score),
+        tuple(records),
+    )
