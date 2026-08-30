@@ -1079,6 +1079,20 @@ private:
         return board.white_to_move ? score : -score;
     }
 
+    std::size_t pawn_correction_index(const Board& board) const {
+        uint64_t key = 0;
+        for (char pawn : {'P', 'p'}) {
+            int piece = Zobrist::piece_index(pawn);
+            uint64_t remaining = board.piece_boards[piece];
+            while (remaining != 0) {
+                int square = static_cast<int>(std::countr_zero(remaining));
+                key ^= ZOBRIST.pieces[piece][square];
+                remaining &= remaining - 1;
+            }
+        }
+        return static_cast<std::size_t>(key) & (CORRECTION_HISTORY_SIZE - 1);
+    }
+
     int capture_value(const Board& board, const Move& move) const {
         char victim = board.squares[move.to];
         if (move.flags & EN_PASSANT) {
