@@ -1298,6 +1298,23 @@ private:
         value += bonus - value * std::abs(bonus) / HISTORY_LIMIT;
     }
 
+    void update_pawn_correction(
+        const Board& board,
+        int raw_eval,
+        int searched_score,
+        int depth
+    ) {
+        constexpr int CORRECTION_LIMIT = 16'384;
+        int bonus = std::clamp(
+            (searched_score - raw_eval) * depth,
+            -CORRECTION_LIMIT / 2,
+            CORRECTION_LIMIT / 2
+        );
+        int side = board.white_to_move ? 0 : 1;
+        int& value = pawn_correction_history_[side][pawn_correction_index(board)];
+        value += bonus - value * std::abs(bonus) / CORRECTION_LIMIT;
+    }
+
     template <typename Moves>
     void order_moves(
         const Board& board,
