@@ -17,7 +17,23 @@ class MatchHarnessTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "at least 10"):
             run_match(("candidate",), ("baseline",), 2, 5, 80)
         with self.assertRaisesRegex(ValueError, "between 1 and 64"):
-            run_match(("candidate",), ("baseline",), 2, 20, 80, threads=0)
+            run_match(
+                ("candidate",),
+                ("baseline",),
+                2,
+                20,
+                80,
+                candidate_threads=0,
+            )
+        with self.assertRaisesRegex(ValueError, "between 1 and 64"):
+            run_match(
+                ("candidate",),
+                ("baseline",),
+                2,
+                20,
+                80,
+                baseline_threads=65,
+            )
 
 
 if __name__ == "__main__":
