@@ -1555,11 +1555,14 @@ private:
                 return table_score;
             }
         }
-        int static_eval = in_check
+        int raw_static_eval = in_check
             ? -INF
             : (entry != nullptr && entry->static_eval != INF
                 ? entry->static_eval
                 : evaluate(board));
+        int static_eval = in_check
+            ? -INF
+            : corrected_evaluation(board, raw_static_eval);
         static_evals_[ply] = static_eval;
         bool improving = !in_check
             && ply >= 2
@@ -1852,7 +1855,7 @@ private:
         Bound bound = best_score <= original_alpha
             ? Bound::Upper
             : (best_score >= beta ? Bound::Lower : Bound::Exact);
-        store(key, depth, best_score, bound, best, ply, static_eval);
+        store(key, depth, best_score, bound, best, ply, raw_static_eval);
         return best_score;
     }
 
