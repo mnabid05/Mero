@@ -1698,6 +1698,15 @@ private:
                     move
                 );
                 if (score >= probcut_beta) {
+                    store(
+                        key,
+                        depth - 3,
+                        score,
+                        Bound::Lower,
+                        move,
+                        ply,
+                        raw_static_eval
+                    );
                     return score;
                 }
             }
