@@ -1323,6 +1323,18 @@ private:
         value += bonus - value * std::abs(bonus) / CORRECTION_LIMIT;
     }
 
+    int quiet_history_score(
+        char piece,
+        int target,
+        const Move& previous_move
+    ) const {
+        int score = history_[static_cast<int>(piece)][target];
+        if (previous_move.valid()) {
+            score += continuation_history_[previous_move.to][target];
+        }
+        return score;
+    }
+
     template <typename Moves>
     void order_moves(
         const Board& board,
