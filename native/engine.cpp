@@ -1616,7 +1616,9 @@ private:
             null_board.white_to_move = !null_board.white_to_move;
             null_board.en_passant = -1;
             ++null_board.halfmove;
-            int reduction = 2 + depth / 5;
+            int eval_margin = std::max(0, static_eval - beta);
+            int reduction = 2 + depth / 5 + std::min(2, eval_margin / 180);
+            reduction = std::min(reduction, depth - 2);
             int score = -negamax(
                 null_board,
                 depth - 1 - reduction,
