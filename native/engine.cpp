@@ -1834,6 +1834,9 @@ private:
                         if (improving) {
                             --reduction;
                         }
+                        if (move_history < -2'000) {
+                            ++reduction;
+                        }
                         reduction = std::clamp(
                             reduction,
                             1,
