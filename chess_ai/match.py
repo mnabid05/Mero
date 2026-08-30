@@ -30,7 +30,9 @@ class MatchGame:
 @dataclass(frozen=True, slots=True)
 class MatchReport:
     candidate: str
+    candidate_threads: int
     baseline: str
+    baseline_threads: int
     move_time_ms: int
     games: int
     wins: int
@@ -130,20 +132,25 @@ def run_match(
     games: int,
     move_time_ms: int,
     max_plies: int,
-    threads: int = 1,
+    candidate_threads: int = 1,
+    baseline_threads: int = 1,
     show_progress: bool = False,
 ) -> MatchReport:
     if games < 2 or games % 2:
         raise ValueError("games must be a positive even number")
     if move_time_ms < 10:
         raise ValueError("move time must be at least 10 ms")
-    if not 1 <= threads <= 64:
-        raise ValueError("threads must be between 1 and 64")
+    if not 1 <= candidate_threads <= 64:
+        raise ValueError("candidate threads must be between 1 and 64")
+    if not 1 <= baseline_threads <= 64:
+        raise ValueError("baseline threads must be between 1 and 64")
 
     records: list[MatchGame] = []
-    options = {"Threads": threads, "Hash": 64, "Move Overhead": 0}
-    with UCIEngine(candidate_command, options) as candidate, UCIEngine(
-        baseline_command, options
+    common = {"Hash": 64, "Move Overhead": 0}
+    with UCIEngine(
+        candidate_command, {**common, "Threads": candidate_threads}
+    ) as candidate, UCIEngine(
+        baseline_command, {**common, "Threads": baseline_threads}
     ) as baseline:
         for index in range(games):
             opening_name, opening_moves = OPENINGS[(index // 2) % len(OPENINGS)]
@@ -171,7 +178,9 @@ def run_match(
     score = (wins + 0.5 * draws) / games
     return MatchReport(
         candidate.name,
+        candidate_threads,
         baseline.name,
+        baseline_threads,
         move_time_ms,
         games,
         wins,
@@ -190,7 +199,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--games", type=int, default=40)
     parser.add_argument("--move-time", type=int, default=30, metavar="MS")
     parser.add_argument("--max-plies", type=int, default=160)
-    parser.add_argument("--threads", type=int, default=1)
+    parser.add_argument("--candidate-threads", type=int, default=1)
+    parser.add_argument("--baseline-threads", type=int, default=1)
     parser.add_argument("--json-out", type=Path)
     args = parser.parse_args(argv)
     report = run_match(
@@ -199,7 +209,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         args.games,
         args.move_time,
         args.max_plies,
-        threads=args.threads,
+        candidate_threads=args.candidate_threads,
+        baseline_threads=args.baseline_threads,
         show_progress=True,
     )
     print(
