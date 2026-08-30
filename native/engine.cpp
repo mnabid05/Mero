@@ -1763,6 +1763,9 @@ private:
             int capture_see = depth <= 2 && index >= 6 && !is_quiet
                 ? static_exchange_evaluation(board, move)
                 : 0;
+            int move_history = is_quiet
+                ? quiet_history_score(moving_piece, move.to, previous_move)
+                : 0;
             int score = -INF;
             bool pruned = false;
             {
@@ -1783,6 +1786,14 @@ private:
                 }
                 if (depth == 1 && index > 0 && is_quiet && !gives_check
                     && static_score + 140 <= alpha) {
+                    pruned = true;
+                }
+                if (depth <= 3
+                    && index >= 7
+                    && is_quiet
+                    && !in_check
+                    && !gives_check
+                    && move_history < -3'000) {
                     pruned = true;
                 }
                 if (depth <= 2
@@ -1813,15 +1824,8 @@ private:
                             * std::log(static_cast<double>(index + 1))
                             / 2.15
                         );
-                        int history_score = history_[
-                            static_cast<int>(moving_piece)
-                        ][move.to];
-                        int continuation_score = previous_move.valid()
-                            ? continuation_history_[previous_move.to][move.to]
-                            : 0;
                         if (
-                            history_score > 3'000
-                            || continuation_score > 2'500
+                            move_history > 3'000
                             || move == killers_[ply][0]
                             || move == counter_move
                         ) {
