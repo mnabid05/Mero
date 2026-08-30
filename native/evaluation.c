@@ -232,6 +232,17 @@ static void piece_features(
     int relative_rank = color == WHITE ? 7 - row : row;
     char friendly_pawn = color == WHITE ? 'P' : 'p';
 
+    if (
+        type != 'p'
+        && type != 'k'
+        && enemy_pawn_attacks(board, square, color)
+        && !pawn_protects(board, square, color)
+    ) {
+        int penalty = type == 'q' ? 30 : (type == 'r' ? 20 : 12);
+        *middle -= penalty;
+        *end -= penalty / 2;
+    }
+
     if (type == 'p') {
         for (int file_delta = -1; file_delta <= 1; file_delta += 2) {
             int neighbor_file = column + file_delta;
