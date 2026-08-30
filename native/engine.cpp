@@ -27,6 +27,7 @@ namespace {
 constexpr int INF = 1'000'000;
 constexpr int MATE = 100'000;
 constexpr int MAX_PLY = 96;
+constexpr std::size_t CORRECTION_HISTORY_SIZE = 16'384;
 constexpr int WHITE_KING_SIDE = 1;
 constexpr int WHITE_QUEEN_SIDE = 2;
 constexpr int BLACK_KING_SIDE = 4;
@@ -874,6 +875,7 @@ public:
         killers_ = {};
         countermoves_ = {};
         continuation_history_ = {};
+        pawn_correction_history_ = {};
     }
 
     struct Result {
@@ -1028,6 +1030,8 @@ private:
     std::array<std::array<int, 64>, 128> capture_history_{};
     std::array<std::array<Move, 64>, 128> countermoves_{};
     std::array<std::array<int, 64>, 64> continuation_history_{};
+    std::array<std::array<int, CORRECTION_HISTORY_SIZE>, 2>
+        pawn_correction_history_{};
     std::array<int, MAX_PLY> static_evals_{};
     std::vector<uint64_t> search_history_;
     uint64_t nodes_ = 0;
