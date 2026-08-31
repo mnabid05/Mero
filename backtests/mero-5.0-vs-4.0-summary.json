@@ -1,0 +1,29 @@
+{
+  "candidate": "Mero Native Engine 5.0",
+  "baseline_commit": "4804737",
+  "methodology": {
+    "games": 20,
+    "paired_openings": true,
+    "colors_reversed": true,
+    "move_time_ms": 80,
+    "max_plies_after_opening": 140,
+    "candidate_threads": 1,
+    "baseline_threads": 1,
+    "hash_mb": 64
+  },
+  "result": {
+    "wins": 4,
+    "draws": 15,
+    "losses": 1,
+    "score_percent": 57.5,
+    "head_to_head_elo": 53
+  },
+  "performance_probe": {
+    "node_limit": 1000000,
+    "threads": 1,
+    "baseline_median_nps": 1633722,
+    "candidate_median_nps": 1756968,
+    "change_percent": 7.54
+  },
+  "interpretation": "Positive regression signal only; the sample is too small to certify a rating increase or establish the requested 100 Elo target."
+}
