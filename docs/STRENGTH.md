@@ -14,6 +14,26 @@ Every match:
 - limits runaway games by maximum plies;
 - records final FEN positions in JSON.
 
+### Mero 5.0 selective-quiescence update
+
+Mero 5.0 narrows quiescence search back to captures, promotions, and mandatory
+check evasions. The regular search still extends checking moves, recaptures, and
+advanced pawns and retains continuation-history-aware reductions. This removes
+the expensive quiet-check expansion that reduced practical depth throughout
+Mero 4.0 while keeping tactical checks inside the full-width search.
+
+Against the exact `4804737` Mero 4.0 binary, a 20-game paired match at 80 ms per
+move scored 4 wins, 15 draws, and 1 loss: **57.5%, or +53 head-to-head Elo**.
+Both engines used one thread and 64 MiB hash, and every opening was played with
+colors reversed. A fresh one-million-node probe measured median throughput of
+1.757M nodes/second versus 1.634M for the baseline, a **7.54% increase**.
+
+This is positive regression evidence, but 20 games are not enough to certify an
+Elo gain. The requested +100 Elo target was not established. Correction history,
+ProbCut, extra SEE/history pruning, and new hand-tuned evaluation terms were also
+tested; the combined candidate scored below baseline and was removed. See
+`backtests/mero-5.0-vs-4.0-summary.json` for the retained result.
+
 ### Mero 4.0 tactical-search update
 
 The Mero 4.0 branch adds quiet-check quiescence at the search frontier,
