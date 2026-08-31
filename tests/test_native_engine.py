@@ -20,6 +20,16 @@ POSITIONS = (
 
 @unittest.skipUnless(NATIVE_ENGINE.is_file(), "native engine has not been built")
 class NativeEngineTests(unittest.TestCase):
+    def test_native_uci_reports_current_release(self):
+        result = subprocess.run(
+            [NATIVE_ENGINE],
+            input="uci\nquit\n",
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        self.assertIn("id name Mero Native Engine 5.0", result.stdout)
+
     def native_perft(self, fen: str, depth: int) -> int:
         result = subprocess.run(
             [NATIVE_ENGINE, "--perft-fen", str(depth), fen],
