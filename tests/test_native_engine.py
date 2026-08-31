@@ -133,7 +133,7 @@ class NativeEngineTests(unittest.TestCase):
         board.play_uci("e7e5")
         board.find_legal_move(match.group(1))
 
-    def test_native_quiescence_sees_quiet_promotion_threat(self):
+    def test_native_depth_one_stops_quiet_promotion_threat(self):
         commands = (
             "uci\n"
             "position fen 4k3/7r/8/8/8/8/p6Q/6K1 w - - 0 1\n"
@@ -149,7 +149,7 @@ class NativeEngineTests(unittest.TestCase):
         )
         self.assertIn("bestmove h2a2", result.stdout)
 
-    def test_native_quiescence_searches_quiet_checks(self):
+    def test_native_depth_one_finds_quiet_check(self):
         commands = (
             "uci\n"
             "position fen 7k/8/8/8/8/8/4R3/4K3 w - - 0 1\n"
