@@ -42,8 +42,22 @@ tests. Node-limited probes measure search efficiency, not Elo. Strength claims
 require deterministic paired games against a frozen binary, with colors reversed
 for every opening. A small match is a regression signal, not a rating certificate.
 
+## Experiment outcome
+
+The first combined candidate implemented correction history, verified capture
+ProbCut, dynamic null-move reduction, late SEE/history pruning, and additional
+hand-tuned evaluation terms. It scored 6 wins, 23 draws, and 11 losses in a
+40-game 20 ms match, so those changes were removed rather than shipped.
+
+The retained change follows modern capture-focused quiescence design: quiet
+checks are handled by the regular search instead of expanding every frontier
+node. With the existing tactical extensions preserved, the isolated candidate
+scored 4 wins, 15 draws, and 1 loss in a paired 80 ms regression. The lesson is
+architectural rather than numerical: Stockfish's heuristics are interdependent
+and tuned together, so transplanting individual formulas into a different
+evaluation and search tree can reduce strength.
+
 ## Primary reference
 
 - Stockfish official `src/search.cpp`:
   <https://github.com/official-stockfish/Stockfish/blob/master/src/search.cpp>
-
