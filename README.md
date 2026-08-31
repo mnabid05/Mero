@@ -31,13 +31,13 @@ Python engine detects the native evaluator library automatically. Without it,
 the dependency-free Python evaluator is used; set `MWAHAHA_PURE_PYTHON=1` to
 force that reference path.
 
-The merged Mero 3.0 release reached median throughput of 1.94 million
-nodes/second with one thread and 2.87 million aggregate nodes/second with four
-threads. Mero 4.0 prioritizes tactical stability with frontier quiet-check
-quiescence and selective extensions; the current five-run one-million-node
-probe measures 1.69 million nodes/second on the same machine. See
-[`docs/STRENGTH.md`](docs/STRENGTH.md) for the reproducible comparison and the
-limits of the current strength evidence.
+Mero 5.0 retains selective tactical extensions while focusing quiescence on
+captures, promotions, and required check evasions. A fresh one-million-node
+probe measured 1.757 million nodes/second, 7.54% above the frozen Mero 4.0
+baseline. A 20-game paired regression scored 4 wins, 15 draws, and 1 loss
+(57.5%, approximately +53 head-to-head Elo). This is encouraging but does not
+establish a 100-point rating gain. See [`docs/STRENGTH.md`](docs/STRENGTH.md)
+for methodology and limitations.
 
 ## Search
 
@@ -147,11 +147,20 @@ mwahaha-uci
 
 ## Validation
 
-Build the native engine and run the 65-test suite:
+Build the native engine and run the 68-test suite:
 
 ```bash
 python3 scripts/build_native.py
 python3 -m unittest discover -v
+```
+
+Run a color-balanced native A/B match with:
+
+```bash
+python3 -m chess_ai.match \
+  --candidate build/native/mwahaha-engine \
+  --baseline /path/to/frozen-mwahaha-engine \
+  --games 40 --move-time 80 --json-out match.json
 ```
 
 Validate the legal move generator:
@@ -241,6 +250,7 @@ chess_ai/
   perft.py       move-generator validation
   backtest.py    color-balanced engine matches
   gauntlet.py    external UCI matches and Elo intervals
+  match.py       paired candidate-versus-baseline UCI matches
 native/
   evaluation.c   portable C11 evaluation kernel
   engine.cpp     standalone C++20 board, search, and UCI engine
