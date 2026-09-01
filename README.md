@@ -147,7 +147,7 @@ mwahaha-uci
 
 ## Validation
 
-Build the native engine and run the 68-test suite:
+Build the native engine and run the 69-test suite:
 
 ```bash
 python3 scripts/build_native.py
