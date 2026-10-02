@@ -2354,10 +2354,12 @@ std::vector<std::string> split(const std::string& input) {
 }
 
 void parse_position(
-    Board& board,
+    Board& destination,
     const std::string& command,
-    std::vector<uint64_t>& history
+    std::vector<uint64_t>& destination_history
 ) {
+    Board board;
+    std::vector<uint64_t> history;
     auto tokens = split(command);
     if (tokens.size() < 2) {
         throw std::invalid_argument("incomplete position command");
@@ -2395,6 +2397,8 @@ void parse_position(
         board.make_move(move);
         history.push_back(board.key);
     }
+    destination = board;
+    destination_history = std::move(history);
 }
 
 int option_value(const std::vector<std::string>& tokens, const std::string& name) {
