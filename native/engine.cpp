@@ -802,7 +802,16 @@ struct Board {
     MoveList legal_moves_in_place(bool captures_only = false) {
         MoveList legal;
         bool moving_white = white_to_move;
+        int king = king_square(moving_white);
+        bool checked = in_check(moving_white);
+        uint64_t possible_pins = (bishop_attacks(king) | rook_attacks(king))
+            & color_boards[color_index(moving_white)];
         for (const Move& move : pseudo_moves(captures_only)) {
+            if (!checked && move.from != king && !(move.flags & EN_PASSANT)
+                && !(possible_pins & square_bit(move.from))) {
+                legal.push_back(move);
+                continue;
+            }
             UndoState undo = make_move(move);
             if (!in_check(moving_white)) {
                 legal.push_back(move);
