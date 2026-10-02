@@ -142,6 +142,8 @@ def run_match(
         raise ValueError("games must be a positive even number")
     if move_time_ms < 10:
         raise ValueError("move time must be at least 10 ms")
+    if max_plies < 1:
+        raise ValueError("max plies must be positive")
     if not 1 <= candidate_threads <= 64:
         raise ValueError("candidate threads must be between 1 and 64")
     if not 1 <= baseline_threads <= 64:

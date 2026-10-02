@@ -337,6 +337,10 @@ def run_gauntlet(
         raise ValueError("Games per level must be a positive even number")
     if not opponent_elos:
         raise ValueError("At least one opponent Elo is required")
+    if len(set(opponent_elos)) != len(opponent_elos):
+        raise ValueError("Opponent Elo settings must be unique")
+    if max_plies < 1:
+        raise ValueError("Max plies must be positive")
     if move_time_ms < 10:
         raise ValueError("Move time must be at least 10 ms")
     if candidate_threads < 1 or candidate_threads > 64:
