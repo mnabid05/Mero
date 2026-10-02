@@ -362,21 +362,35 @@ struct Board {
         }
 
         int square = 0;
+        int rank_count = 1;
+        int rank_width = 0;
         for (char token : placement) {
             if (token == '/') {
+                if (rank_width != 8 || ++rank_count > 8) {
+                    throw std::invalid_argument("invalid FEN rank");
+                }
+                rank_width = 0;
                 continue;
             }
-            if (std::isdigit(static_cast<unsigned char>(token))) {
+            if (token >= '1' && token <= '8') {
                 square += token - '0';
+                rank_width += token - '0';
             } else {
+                Zobrist::piece_index(token);
                 if (square >= 64) {
                     throw std::invalid_argument("invalid FEN placement");
                 }
                 board.squares[square++] = token;
+                ++rank_width;
             }
+            if (rank_width > 8) throw std::invalid_argument("invalid FEN rank width");
         }
-        if (square != 64) {
+        if (square != 64 || rank_count != 8 || rank_width != 8) {
             throw std::invalid_argument("invalid FEN square count");
+        }
+        if (turn != "w" && turn != "b") throw std::invalid_argument("invalid FEN turn");
+        if (board.halfmove < 0 || board.fullmove < 1) {
+            throw std::invalid_argument("invalid FEN move counters");
         }
         board.white_to_move = turn == "w";
         board.castling = 0;
