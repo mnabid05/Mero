@@ -6,6 +6,7 @@ import argparse
 import json
 import math
 import queue
+import re
 import shlex
 import subprocess
 import sys
@@ -96,10 +97,14 @@ class UCIEngine:
         self._lines: queue.Queue[str | None] = queue.Queue()
         self._reader = threading.Thread(target=self._pump, daemon=True)
         self._reader.start()
+        self.options: dict[str, str] = {}
         self._send("uci")
         for line in self._read_until("uciok"):
             if line.startswith("id name "):
                 self.name = line.removeprefix("id name ")
+            option = re.match(r"option name (.+?) type (.+)", line)
+            if option:
+                self.options[option[1]] = option[2]
         for option, value in (options or {}).items():
             normalized = str(value).lower() if isinstance(value, bool) else str(value)
             self._send(f"setoption name {option} value {normalized}")
@@ -158,6 +163,11 @@ class UCIEngine:
         return response[1]
 
     def set_option(self, name: str, value: str | int | bool) -> None:
+        if name not in self.options:
+            raise ValueError(f"{self.name} does not advertise {name}")
+        bounds = re.search(r"\bmin (-?\d+) max (-?\d+)", self.options[name])
+        if bounds and not int(bounds[1]) <= int(value) <= int(bounds[2]):
+            raise ValueError(f"{name} outside advertised range: {value}")
         normalized = str(value).lower() if isinstance(value, bool) else str(value)
         self._send(f"setoption name {name} value {normalized}")
         self._send("isready")
@@ -366,6 +376,7 @@ def run_gauntlet(
             "UCI_Elo": opponent_elos[0],
         },
     ) as opponent:
+        opponent.set_option("UCI_LimitStrength", True)
         game_number = 0
         for elo in opponent_elos:
             opponent.set_option("UCI_Elo", elo)
