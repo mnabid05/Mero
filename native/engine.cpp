@@ -1553,7 +1553,8 @@ private:
                 return razor_score;
             }
         }
-        if (allow_null && depth >= 3 && !in_check
+        if (allow_null && depth >= 3 && !in_check && beta - alpha == 1
+            && static_eval >= beta && std::abs(beta) < MATE - MAX_PLY
             && null_move_safe(board)) {
             Board null_board = board;
             null_board.key ^= ZOBRIST.turn;
@@ -1562,7 +1563,8 @@ private:
             }
             null_board.white_to_move = !null_board.white_to_move;
             null_board.en_passant = -1;
-            ++null_board.halfmove;
+            // Artificial passes must not trigger real-game repetition or rule 50.
+            null_board.halfmove = 0;
             int reduction = 2 + depth / 5;
             int score = -negamax(
                 null_board,
