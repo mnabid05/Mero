@@ -40,6 +40,11 @@ carefully. A 64-game release-candidate match against Mero 5.0 scored 25 wins,
 interval includes zero gain. See [`docs/STRENGTH.md`](docs/STRENGTH.md) for all
 calibration results, exact configurations, and uncertainty.
 
+The final 64-game probe against Stockfish 18's 2300 setting scored 32 wins,
+3 draws and 29 losses: **2316 setting-relative Elo**, with a model interval of
+2231–2402 and a broader paired interval of 2198–2435. The point estimate crosses
+2300, but the experiment does not establish a 2300 minimum or a human rating.
+
 ## Search
 
 - Iterative deepening with hard move-time control
@@ -161,7 +166,7 @@ Linux CI also builds with AddressSanitizer and UndefinedBehaviorSanitizer.
 Replay the published game reports with:
 
 ```bash
-python3 -m scripts.verify_match backtests/mero-6-vs-stockfish18-2300.json
+python3 -m scripts.verify_match backtests/mero-6-final-stockfish18-2300.json
 python3 -m scripts.verify_match backtests/mero-6-vs-5-release-candidate.json
 ```
 
@@ -223,7 +228,7 @@ Both matches alternate colors within paired openings. Every decisive game ended
 in checkmate. See [strength methodology](docs/STRENGTH.md) and the
 [machine-readable reports](backtests/).
 
-The four-thread version 2.3 calibration produced 15 wins, 11 draws, and 14
+The historical four-thread version 2.3 calibration produced 15 wins, 11 draws, and 14
 losses in 40 games against Stockfish 18 settings from 1750–2500. The fitted
 estimate is **2139 Elo (95% interval 2003–2275)** on the tested Apple Silicon
 hardware at 30 ms per move, compared with 2033 for version 2.1 and 1247 for the

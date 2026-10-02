@@ -14,6 +14,57 @@ Every match:
 - limits runaway games by maximum plies;
 - records final FEN positions in JSON.
 
+### Mero 6.0 final calibration
+
+The frozen final search implementation (`54ea3fd`) completed 64 paired games
+against official Stockfish 18 with `UCI_Elo=2300` on Apple Silicon. Mero used
+four threads, Stockfish one, and each received 64 MiB hash and 100 ms per move.
+Sixteen openings were played with reversed colors and repeated once; the cap
+was 400 additional plies. The result was **32 wins, 3 draws, 29 losses
+(52.34%)**, with no engine forfeits. One game reached the cap.
+
+The setting-relative point estimate is **2316**, with a logistic-model 95%
+interval of **2231–2402**. The more conservative pair-effective score interval
+maps to **2198–2435**. Neither includes the full systematic uncertainty of
+Stockfish's calibration or repeated openings. **The point estimate exceeds
+2300; a minimum strength of 2300 has not been established.** This is not a
+chess.com or FIDE rating. Stockfish documents its setting calibration at
+120s+1s, a different time control from this experiment.
+
+All moves, final FENs and result totals were independently replayed. The final
+candidate executable SHA-256 is
+`34f69a772f41ef16aa9cb7bfb3807aa00d08f2b948d5b603042d28fca3723404`.
+See [the final report](../backtests/mero-6-final-stockfish18-2300.json).
+
+Earlier runs are retained rather than selecting only the best result:
+
+| Build | Games | W / D / L | Score | Setting-relative estimate |
+| --- | ---: | --- | ---: | ---: |
+| Pre-hardening candidate | 64 | 35 / 3 / 26 | 57.03% | 2349 |
+| Before fast legality | 64 | 29 / 1 / 34 | 46.09% | 2273 |
+| Final fast-legality build | 64 | 32 / 3 / 29 | 52.34% | 2316 |
+
+These are different builds, so their games are not pooled into one rating.
+The initial candidate still identified itself as version 5.0 in UCI; its
+recorded executable hash identifies the tested 6.0 development build.
+
+A separate 64-game equal-resource release-candidate match against exact Mero
+5.0 (`8b96747`), one thread each at 50 ms/move, scored **25 wins, 22 draws,
+17 losses (56.25%, +44 Elo)**. Its pair-effective interval is **−75 to +163**:
+positive evidence but not a statistically established gain. This preceded the
+final same-ply-history hardening and bitboard existence optimization. See
+[the regression replays](../backtests/mero-6-vs-5-release-candidate.json).
+
+The final legality optimization increased median throughput from 1.03M to
+1.28M nodes/second in five one-million-node probes, about **24.74%**, with both
+builds reaching depth 10 and using identical node-count semantics. Mero 6 fixes
+frontier double counting, so NPS cannot be compared directly with Mero 5.
+
+See [validation details](VALIDATION.md) for reproducible commands, environmental
+limitations, replay checks, and memory-safety results. Development outcomes,
+including neutral and negative trials, are in
+`backtests/mero-6-development-summary.json`.
+
 ### Mero 5.0 selective-quiescence update
 
 Mero 5.0 narrows quiescence search back to captures, promotions, and mandatory
@@ -245,7 +296,7 @@ A credible rating estimate requires:
 - confidence intervals and draw-aware Elo calculation;
 - defenses against opening bias.
 
-The next strength milestone is incremental make/unmake with bitboards, stronger
-static exchange evaluation, repetition history, and automated tuning. Future
-changes should use multiple independent opponents and SPRT-style testing.
+The next strength milestone is automated evaluation tuning and stronger
+independent confirmation. Future changes should use multiple calibrated
+opponents, unseen openings, longer controls, and sequential statistical testing.
 Stockfish and other engines remain outside the runtime and repository.

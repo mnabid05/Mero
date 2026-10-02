@@ -57,8 +57,6 @@ architectural rather than numerical: Stockfish's heuristics are interdependent
 and tuned together, so transplanting individual formulas into a different
 evaluation and search tree can reduce strength.
 
-## Primary reference
-
 ## Mero 6 retained techniques
 
 The 6.0 series retained full-key static-evaluation caching, a precomputed LMR

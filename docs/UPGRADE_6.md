@@ -19,3 +19,15 @@ Validation gates:
 
 Stockfish remains an external test opponent; its source and networks are not
 part of Mero. A short-time-control probe cannot certify a human 2300 rating.
+
+## Completion evidence
+
+The series exceeds 70 nonempty commits with the configured Mohammed Nabid
+GitHub identity. The final frozen build's 64-game setting-relative point
+estimate is 2316; uncertainty still extends below 2300. All favorable and
+unfavorable release-candidate calibrations are retained in `backtests/`.
+
+The native release and reference suite contains 85 passing tests. Linux CI
+also passes AddressSanitizer/UndefinedBehaviorSanitizer checks. Instrumented
+Mac execution remains an explicitly recorded limitation. See `VALIDATION.md`
+for commands and `STRENGTH.md` for results, intervals and exact binary identity.
