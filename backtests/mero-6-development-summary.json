@@ -1,0 +1,69 @@
+{
+  "purpose": "Development evidence, including neutral and negative trials; not independent confirmation",
+  "baseline_revision": "8b96747",
+  "trials": [
+    {
+      "source_revision": "5ed094f",
+      "scope": "correctness changes; one thread",
+      "candidate": "Mero Native Engine 5.0",
+      "candidate_threads": 1,
+      "baseline": "Mero Native Engine 5.0",
+      "baseline_threads": 1,
+      "move_time_ms": 30,
+      "wins": 7,
+      "draws": 6,
+      "losses": 7,
+      "score_percent": 50,
+      "elo_difference": 0
+    },
+    {
+      "source_revision": "31a4046",
+      "scope": "cache and SEE changes; one thread",
+      "candidate": "Mero Native Engine 5.0",
+      "candidate_threads": 1,
+      "baseline": "Mero Native Engine 5.0",
+      "baseline_threads": 1,
+      "move_time_ms": 30,
+      "wins": 14,
+      "draws": 11,
+      "losses": 15,
+      "score_percent": 48.75,
+      "elo_difference": -9
+    },
+    {
+      "source_revision": "18b3323",
+      "scope": "king and passer evaluation; one thread; exploratory concurrent load",
+      "candidate": "Mero Native Engine 5.0",
+      "candidate_threads": 1,
+      "baseline": "Mero Native Engine 5.0",
+      "baseline_threads": 1,
+      "move_time_ms": 50,
+      "wins": 17,
+      "draws": 13,
+      "losses": 10,
+      "score_percent": 58.75,
+      "elo_difference": 61
+    },
+    {
+      "source_revision": "18b3323",
+      "scope": "Stockfish 2300 setting; four candidate threads; exploratory concurrent load",
+      "candidate": "Mero Native Engine 5.0",
+      "candidate_threads": 4,
+      "opponent": "Stockfish 18",
+      "opponent_threads": 1,
+      "move_time_ms": 50,
+      "max_plies": 300,
+      "total_games": 20,
+      "wins": 9,
+      "draws": 0,
+      "losses": 11,
+      "score_percent": 45,
+      "estimate": {
+        "elo": 2265,
+        "confidence_low": 2112,
+        "confidence_high": 2418,
+        "confidence_percent": 95
+      }
+    }
+  ]
+}
