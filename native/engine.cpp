@@ -978,6 +978,8 @@ public:
         node_limit_ = 0;
         static_evals_.fill(-INF);
         search_history_ = game_history;
+        if (search_history_.empty() || search_history_.back() != position.key)
+            search_history_.push_back(position.key);
         deadline_ = deadline;
         RootMoveResult result;
         if (std::chrono::steady_clock::now() >= deadline_) {
@@ -1039,6 +1041,8 @@ public:
         static_evals_.fill(-INF);
         ++generation_;
         search_history_ = game_history;
+        if (search_history_.empty() || search_history_.back() != position.key)
+            search_history_.push_back(position.key);
         deadline_ = std::chrono::steady_clock::now()
             + std::chrono::milliseconds(std::max(1, move_time_ms));
         auto started = std::chrono::steady_clock::now();
