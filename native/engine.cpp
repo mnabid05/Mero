@@ -846,6 +846,17 @@ struct Board {
         return legal;
     }
 
+    bool has_legal_move() {
+        bool moving_white = white_to_move;
+        for (const Move& move : pseudo_moves()) {
+            UndoState undo = make_move(move);
+            bool legal = !in_check(moving_white);
+            unmake_move(move, undo);
+            if (legal) return true;
+        }
+        return false;
+    }
+
     std::vector<Move> legal_moves(bool captures_only = false) const {
         Board position = *this;
         MoveList legal = position.legal_moves_in_place(captures_only);
@@ -1866,6 +1877,7 @@ private:
             return in_check && board.legal_moves_in_place().empty() ? -MATE + ply : 0;
         }
         HistoryGuard history_guard(search_history_, key);
+        if (!in_check && !board.has_legal_move()) return 0;
         TTEntry* entry = probe(key);
         if (entry != nullptr && entry->depth >= 0) {
             int table_score = score_from_table(entry->score, ply);
