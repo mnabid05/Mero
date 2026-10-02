@@ -17,6 +17,12 @@ int main() {
     // Independently reproduced by both frozen native and Python generators.
     assert(perft(ep_pin, 3) == 4135);
     for (const Move& move : ep_pin.legal_moves()) assert(move.uci() != "c4d3");
+    Board no_ep = Board::from_fen("8/6bb/8/8/R1pP2k1/4P3/P7/K7 b - - 0 1");
+    assert(ep_pin.key == no_ep.key);
+    Board legal_ep = Board::from_fen("4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1");
+    assert(legal_ep.key != Board::from_fen("4k3/8/8/3pP3/8/8/8/4K3 w - - 0 1").key);
+    assert(verify_keys(legal_ep, 3));
+    assert(verify_keys(ep_pin, 3));
     assert(Board::from_fen("4k3/8/8/8/8/8/8/2B1K3 w - - 0 1").insufficient_material());
     assert(!Board::from_fen("4k3/8/8/8/8/8/8/2B1KB2 w - - 0 1").insufficient_material());
     for (const char* fen : {
