@@ -59,5 +59,25 @@ evaluation and search tree can reduce strength.
 
 ## Primary reference
 
+## Mero 6 retained techniques
+
+The 6.0 series retained full-key static-evaluation caching, a precomputed LMR
+table, legal-attacker SEE, checking-capture exemptions, and bounded tactical
+extensions. These are implemented locally; no Stockfish source, NNUE network,
+or executable is shipped as a Mero runtime dependency.
+
+Stockfish 18 is an external calibration opponent. Its bundled official
+`wiki/UCI-&-Commands.md` states that `UCI_Elo` is calibrated at **120s+1s**, anchored
+to CCRL 40/4. Mero's 100 ms/move probes use a different time control, so the
+result must be described as **setting-relative calibration**, not a human Elo
+rating or a certified equivalence to CCRL. Four Mero threads versus one opponent
+thread describe a desktop configuration, not an equal-resource algorithm test.
+
+The separate Mero 5 regression gives both versions one thread, 64 MiB hash,
+identical per-move time, and color-reversed openings. Reported intervals do not
+include all systematic uncertainty from repeated openings or engine calibration.
+
+## Official sources
+
 - Stockfish official `src/search.cpp`:
   <https://github.com/official-stockfish/Stockfish/blob/master/src/search.cpp>
