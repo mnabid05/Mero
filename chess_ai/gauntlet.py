@@ -20,6 +20,7 @@ from pathlib import Path
 from .backtest import OPENINGS, opening_board, repetition_key
 from .board import Board
 from .model import BLACK, GameStatus, WHITE, opponent as opposite_color
+from .provenance import engine_metadata
 
 
 @dataclass(frozen=True, slots=True)
@@ -70,6 +71,7 @@ class GauntletReport:
     estimate: RatingEstimate
     levels: tuple[LevelResult, ...]
     games: tuple[GauntletGame, ...]
+    provenance: dict[str, object]
 
     def as_json(self) -> str:
         return json.dumps(asdict(self), indent=2)
@@ -453,6 +455,10 @@ def run_gauntlet(
             estimate_rating(rating_inputs),
             tuple(level_results),
             tuple(games),
+            {"candidate": engine_metadata(candidate_command),
+             "opponent": engine_metadata(opponent_command), "hash_mb_per_engine": 64,
+             "opening_count": len(OPENINGS),
+             "rating_scope": "opponent UCI setting at recorded time control; not a human rating"},
         )
 
 

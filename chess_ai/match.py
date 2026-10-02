@@ -15,6 +15,7 @@ from .backtest import OPENINGS, opening_board, repetition_key
 from .gauntlet import UCIEngine
 from .model import BLACK, GameStatus, WHITE
 from .statistics import paired_interval
+from .provenance import engine_metadata
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,6 +45,7 @@ class MatchReport:
     elo_difference: int
     records: tuple[MatchGame, ...]
     uncertainty: dict[str, object]
+    provenance: dict[str, object]
 
     def as_json(self) -> str:
         return json.dumps(asdict(self), indent=2)
@@ -205,6 +207,9 @@ def run_match(
         score_to_elo(score),
         tuple(records),
         paired_interval([record.candidate_score for record in records]),
+        {"candidate": engine_metadata(candidate_command),
+         "baseline": engine_metadata(baseline_command), "hash_mb_per_engine": 64,
+         "max_plies": max_plies, "opening_count": len(OPENINGS)},
     )
 
 
