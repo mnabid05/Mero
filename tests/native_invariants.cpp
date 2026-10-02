@@ -58,6 +58,14 @@ int main() {
     parse_position(command_board, "position startpos moves e2e4 e7e5", command_history);
     assert(command_history.size() == 3);
     assert(command_history.back() == command_board.key);
+    std::vector<uint64_t> history_test{1, 2, 3};
+    {
+        SuspendHistory suspend(history_test);
+        assert(history_test == std::vector<uint64_t>({1, 2}));
+        { HistoryGuard guard(history_test, 3); assert(history_test.size() == 3); }
+        assert(history_test.size() == 2);
+    }
+    assert(history_test == std::vector<uint64_t>({1, 2, 3}));
     Board pinned = Board::from_fen("4k3/4r3/8/3p4/2B5/8/8/4R1K1 w - - 0 1");
     assert(engine.see(pinned, pinned.find_move("c4d5")) == 100);
     Board king_recapture = Board::from_fen("4k3/4p3/8/8/8/8/8/4R1K1 w - - 0 1");
