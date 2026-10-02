@@ -11,5 +11,18 @@ int main() {
     assert(start.bitboards_valid());
     assert(start.key == ZOBRIST.hash(start));
     assert(perft(start, 4) == 197281);
+    for (const char* fen : {
+        "8/8/8/8/8/8/8/8 w - - 0 1",
+        "4k3/8/8/8/8/8/8/4K3 x - - 0 1",
+        "4k3/8/8/8/8/8/8/4K3 w KK - 0 1",
+        "4k3/8/8/8/8/8/8/4K3 w - d6 0 1",
+        "4k3/8/8/8/8/8/8/4K3 w - - -1 1",
+        "4k3/88/8/8/8/8/4K3 w - - 0 1",
+        "4x3/8/8/8/8/8/8/4K3 w - - 0 1"}) {
+        bool rejected = false;
+        try { (void)Board::from_fen(fen); }
+        catch (const std::invalid_argument&) { rejected = true; }
+        assert(rejected);
+    }
     return 0;
 }
