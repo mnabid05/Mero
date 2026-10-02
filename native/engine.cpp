@@ -972,6 +972,7 @@ public:
         killers_ = {};
         countermoves_ = {};
         continuation_history_ = {};
+        std::fill(eval_cache_.begin(), eval_cache_.end(), EvalEntry{});
     }
 
     struct Result {
@@ -1126,6 +1127,8 @@ public:
     }
 
 private:
+    struct EvalEntry { uint64_t key = 0; int score = 0; bool valid = false; };
+    mutable std::vector<EvalEntry> eval_cache_ = std::vector<EvalEntry>(16384);
     std::vector<TTCluster> table_;
     std::array<std::array<Move, 2>, MAX_PLY> killers_{};
     std::array<std::array<int, 64>, 128> history_{};
@@ -1176,8 +1179,12 @@ private:
     }
 
     int evaluate(const Board& board) const {
+        EvalEntry& cached = eval_cache_[board.key & (eval_cache_.size() - 1)];
+        if (cached.valid && cached.key == board.key) return cached.score;
         int score = mwahaha_evaluate(board.squares.data());
-        return board.white_to_move ? score : -score;
+        score = board.white_to_move ? score : -score;
+        cached = {board.key, score, true};
+        return score;
     }
 
     int capture_value(const Board& board, const Move& move) const {
