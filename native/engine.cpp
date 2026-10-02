@@ -2428,7 +2428,7 @@ int uci_loop() {
                 engine.clear();
             } else if (line.rfind("setoption name Hash value ", 0) == 0) {
                 engine.resize_table(static_cast<std::size_t>(
-                    std::max(1, std::stoi(line.substr(26)))
+                    std::clamp(std::stoi(line.substr(26)), 1, 2048)
                 ));
             } else if (
                 line.rfind("setoption name Threads value ", 0) == 0
@@ -2437,7 +2437,7 @@ int uci_loop() {
             } else if (
                 line.rfind("setoption name Move Overhead value ", 0) == 0
             ) {
-                overhead = std::max(0, std::stoi(line.substr(39)));
+                overhead = std::clamp(std::stoi(line.substr(39)), 0, 5000);
             } else if (line.rfind("position ", 0) == 0) {
                 parse_position(board, line, game_history);
             } else if (line.rfind("go", 0) == 0) {
@@ -2457,11 +2457,12 @@ int uci_loop() {
                         : remaining / std::max(8, moves_to_go) + increment * 3 / 4;
                 }
                 move_time = std::max(1, move_time - overhead);
-                int depth = requested_depth < 1 ? 64 : requested_depth;
+                int depth = requested_depth < 1 ? 64 : std::min(requested_depth, MAX_PLY - 1);
                 if (requested_depth > 0 && option_value(tokens, "movetime") < 0) {
                     move_time = 3'600'000;
                 }
-                if (requested_nodes > 0) {
+                if (requested_nodes > 0 && option_value(tokens, "movetime") < 0
+                    && option_value(tokens, "wtime") < 0 && option_value(tokens, "btime") < 0) {
                     move_time = 3'600'000;
                 }
                 Engine::Result result = engine.search(
