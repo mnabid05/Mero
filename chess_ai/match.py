@@ -25,6 +25,7 @@ class MatchGame:
     reason: str
     plies: int
     final_fen: str
+    moves: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -86,6 +87,7 @@ def _play_game(
                 f"engine forfeit: {error}",
                 len(opening_moves) + played,
                 board.to_fen(),
+                tuple(history),
             )
         board.push(move)
         history.append(notation)
@@ -100,6 +102,7 @@ def _play_game(
                 "threefold repetition",
                 len(opening_moves) + played + 1,
                 board.to_fen(),
+                tuple(history),
             )
     else:
         return MatchGame(
@@ -110,6 +113,7 @@ def _play_game(
             "maximum plies",
             len(opening_moves) + max_plies,
             board.to_fen(),
+            tuple(history),
         )
 
     status = board.status()
@@ -125,6 +129,7 @@ def _play_game(
         status.value,
         len(opening_moves) + played,
         board.to_fen(),
+        tuple(history),
     )
 
 
