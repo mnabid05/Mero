@@ -1503,8 +1503,8 @@ private:
 
         uint64_t key = board.key;
         int prior_visits = prior_repetitions(key, board.halfmove);
-        if (prior_visits >= 2 || board.halfmove >= 100) {
-            return 0;
+        if (prior_visits >= 2 || board.halfmove >= 100 || board.insufficient_material()) {
+            return in_check && board.legal_moves_in_place().empty() ? -MATE + ply : 0;
         }
         HistoryGuard history_guard(search_history_, key);
 
