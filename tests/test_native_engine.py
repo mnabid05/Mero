@@ -28,7 +28,7 @@ class NativeEngineTests(unittest.TestCase):
             capture_output=True,
             text=True,
         )
-        self.assertIn("id name Mero Native Engine 5.0", result.stdout)
+        self.assertIn("id name Mero Native Engine 6.0", result.stdout)
 
     def native_perft(self, fen: str, depth: int) -> int:
         result = subprocess.run(
