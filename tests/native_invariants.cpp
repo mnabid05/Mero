@@ -23,6 +23,12 @@ int main() {
     assert(legal_ep.key != Board::from_fen("4k3/8/8/3pP3/8/8/8/4K3 w - - 0 1").key);
     assert(verify_keys(legal_ep, 3));
     assert(verify_keys(ep_pin, 3));
+    Board late = Board::from_fen("4k3/8/8/8/8/8/8/R3K3 w - - 99 1");
+    Board early = Board::from_fen("4k3/8/8/8/8/8/8/R3K3 w - - 0 1");
+    assert(late.key == early.key);
+    assert(late.search_key() != early.search_key());
+    Board stale = Board::from_fen("7k/5Q2/6K1/8/8/8/8/8 b - - 0 1");
+    assert(!stale.in_check() && !stale.has_legal_move());
     assert(Board::from_fen("4k3/8/8/8/8/8/8/2B1K3 w - - 0 1").insufficient_material());
     assert(!Board::from_fen("4k3/8/8/8/8/8/8/2B1KB2 w - - 0 1").insufficient_material());
     for (const char* fen : {
