@@ -157,6 +157,7 @@ struct Zobrist {
     std::array<uint64_t, 16> castling{};
     std::array<uint64_t, 8> ep_file{};
     uint64_t turn = 0;
+    std::array<uint64_t, 101> rule50{};
 
     Zobrist() {
         uint64_t state = 0x4d77616861686121ULL;
@@ -168,6 +169,7 @@ struct Zobrist {
         for (uint64_t& value : castling) value = splitmix64(state);
         for (uint64_t& value : ep_file) value = splitmix64(state);
         turn = splitmix64(state);
+        for (uint64_t& value : rule50) value = splitmix64(state);
     }
 
     static int piece_index(char piece) {
@@ -583,6 +585,10 @@ struct Board {
             if (!trial.in_check(white_to_move)) return en_passant % 8;
         }
         return -1;
+    }
+
+    uint64_t search_key() const {
+        return key ^ ZOBRIST.rule50[std::clamp(halfmove, 0, 100)];
     }
 
     template <typename Moves>
@@ -1459,7 +1465,7 @@ private:
         int beta
     ) {
         check_time();
-        uint64_t key = board.key;
+        uint64_t key = board.search_key();
         TTEntry* entry = probe(key);
         Move tt_move = entry == nullptr ? Move{} : entry->move;
         auto moves = board.legal_moves_in_place();
@@ -1539,6 +1545,7 @@ private:
         }
         HistoryGuard history_guard(search_history_, key);
 
+        key = board.search_key();
         TTEntry* entry = probe(key);
         // Recursive searches may overwrite this cluster; keep move metadata by value.
         Move tt_move = entry == nullptr ? Move{} : entry->move;
@@ -1878,6 +1885,7 @@ private:
         }
         HistoryGuard history_guard(search_history_, key);
         if (!in_check && !board.has_legal_move()) return 0;
+        key = board.search_key();
         TTEntry* entry = probe(key);
         if (entry != nullptr && entry->depth >= 0) {
             int table_score = score_from_table(entry->score, ply);
@@ -1979,7 +1987,7 @@ private:
     std::vector<Move> principal_variation(Board board, int depth) {
         std::vector<Move> pv;
         for (int index = 0; index < depth; ++index) {
-            TTEntry* entry = probe(board.key);
+            TTEntry* entry = probe(board.search_key());
             if (entry == nullptr || !entry->move.valid()) {
                 break;
             }
