@@ -854,6 +854,28 @@ struct Board {
 
     bool has_legal_move() {
         bool moving_white = white_to_move;
+        // A safe unpinned move proves non-stalemate without allocating a move list.
+        int king = king_square(moving_white);
+        if (!in_check(moving_white)) {
+            uint64_t own = color_boards[color_index(moving_white)];
+            uint64_t possible_pins = bishop_attacks(king) | rook_attacks(king);
+            uint64_t free = own & ~possible_pins & ~square_bit(king);
+            int offset = moving_white ? 0 : 6;
+            uint64_t pawns = free & piece_boards[offset];
+            if (((moving_white ? pawns >> 8 : pawns << 8) & ~occupied) != 0)
+                return true;
+            uint64_t pieces = free & ~pawns;
+            while (pieces) {
+                int from = static_cast<int>(std::countr_zero(pieces));
+                pieces &= pieces - 1;
+                char type = static_cast<char>(std::tolower(squares[from]));
+                uint64_t targets = type == 'n' ? KNIGHT_ATTACKS[from]
+                    : type == 'b' ? bishop_attacks(from)
+                    : type == 'r' ? rook_attacks(from)
+                    : bishop_attacks(from) | rook_attacks(from);
+                if (targets & ~own) return true;
+            }
+        }
         for (const Move& move : pseudo_moves()) {
             UndoState undo = make_move(move);
             bool legal = !in_check(moving_white);
