@@ -955,6 +955,14 @@ struct HistoryGuard {
     ~HistoryGuard() { history.pop_back(); }
 };
 
+struct SuspendHistory {
+    std::vector<uint64_t>& history;
+    uint64_t key;
+    explicit SuspendHistory(std::vector<uint64_t>& values)
+        : history(values), key(values.back()) { history.pop_back(); }
+    ~SuspendHistory() { history.push_back(key); }
+};
+
 class Engine {
 public:
     static int king_pressure(const Board& board) {
@@ -1708,6 +1716,7 @@ private:
                 } else if (depth < 7) {
                     return score;
                 } else {
+                    SuspendHistory suspend(search_history_);
                     int verification = negamax(
                         board,
                         depth - 1 - reduction,
