@@ -1644,6 +1644,7 @@ private:
         }
         HistoryGuard history_guard(search_history_, key);
 
+        if (!in_check && !board.has_legal_move()) return 0;
         key = board.search_key();
         TTEntry* entry = probe(key);
         // Recursive searches may overwrite this cluster; keep move metadata by value.
@@ -1684,6 +1685,7 @@ private:
             && std::abs(alpha) < MATE - MAX_PLY
             && static_eval + 240 < alpha
         ) {
+            SuspendHistory suspend(search_history_);
             int razor_score = quiescence(board, alpha, beta, ply, 0);
             if (razor_score < alpha) {
                 return razor_score;
