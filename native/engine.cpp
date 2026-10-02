@@ -1091,9 +1091,14 @@ public:
         Board board = position;
         auto legal = board.legal_moves_in_place();
         if (legal.empty()) {
+            result.score = board.in_check() ? -MATE : 0;
             return result;
         }
         result.move = legal.front();
+        if (board.insufficient_material() || board.halfmove >= 100) {
+            result.pv = {result.move};
+            return result;
+        }
         int previous = 0;
 
         for (int depth = 1; depth <= max_depth; ++depth) {
@@ -2118,10 +2123,12 @@ private:
         Engine::Result result;
         auto moves = position.legal_moves();
         if (moves.empty()) {
+            result.score = position.in_check() ? -MATE : 0;
             return result;
         }
         result.move = moves.front();
         result.pv = {result.move};
+        if (position.insufficient_material() || position.halfmove >= 100) return result;
         for (const auto& worker : workers_) {
             worker->begin_parallel_search();
         }
