@@ -302,14 +302,22 @@ def _play_game(
                 tuple(history),
             )
     else:
+        final_status = board.status()
+        score = 0.5
+        if final_status == GameStatus.CHECKMATE:
+            score = 0.0 if board.turn == candidate_color else 1.0
+        result = "1/2-1/2"
+        if score != 0.5:
+            winner = candidate_color if score == 1.0 else opposite_color(candidate_color)
+            result = "1-0" if winner == WHITE else "0-1"
         return GauntletGame(
             game_number,
             opponent_elo,
             opening_name,
             "white" if candidate_color == WHITE else "black",
-            "1/2-1/2",
-            0.5,
-            "maximum plies",
+            result,
+            score,
+            "maximum plies" if final_status == GameStatus.ACTIVE else final_status.value,
             len(opening_moves) + max_plies,
             board.to_fen(),
             tuple(history),

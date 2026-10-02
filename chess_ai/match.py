@@ -107,12 +107,16 @@ def _play_game(
                 tuple(history),
             )
     else:
+        final_status = board.status()
+        score = 0.5
+        if final_status == GameStatus.CHECKMATE:
+            score = 0.0 if board.turn == candidate_color else 1.0
         return MatchGame(
             game_number,
             opening_name,
             "white" if candidate_color == WHITE else "black",
-            0.5,
-            "maximum plies",
+            score,
+            "maximum plies" if final_status == GameStatus.ACTIVE else final_status.value,
             len(opening_moves) + max_plies,
             board.to_fen(),
             tuple(history),
