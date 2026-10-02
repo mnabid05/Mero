@@ -957,6 +957,33 @@ struct HistoryGuard {
 
 class Engine {
 public:
+    static int king_pressure(const Board& board) {
+        int score = 0;
+        for (int side = 0; side < 2; ++side) {
+            int offset = side * 6;
+            int king = board.king_square(side != 0);
+            uint64_t zone = KING_ATTACKS[king] | square_bit(king);
+            int units = 0, attackers = 0;
+            for (int type = 1; type <= 4; ++type) {
+                uint64_t pieces = board.piece_boards[offset + type];
+                while (pieces) {
+                    int sq = static_cast<int>(std::countr_zero(pieces));
+                    pieces &= pieces - 1;
+                    uint64_t attacks = type == 1 ? KNIGHT_ATTACKS[sq]
+                        : type == 2 ? board.bishop_attacks(sq)
+                        : type == 3 ? board.rook_attacks(sq)
+                        : board.bishop_attacks(sq) | board.rook_attacks(sq);
+                    int hits = std::popcount(attacks & zone);
+                    if (hits) { ++attackers; units += hits * (type == 4 ? 4 : 2); }
+                }
+            }
+            int danger = attackers >= 2 ? std::min(160, units * attackers * 2) : 0;
+            if (!board.piece_boards[offset + 4]) danger /= 2;
+            score += side == 0 ? danger : -danger;
+        }
+        return score;
+    }
+
     explicit Engine(std::size_t hash_megabytes = 64) {
         search_history_.reserve(MAX_PLY * 2);
         resize_table(hash_megabytes);
@@ -1196,7 +1223,7 @@ private:
     int evaluate(const Board& board) const {
         EvalEntry& cached = eval_cache_[board.key & (eval_cache_.size() - 1)];
         if (cached.valid && cached.key == board.key) return cached.score;
-        int score = mwahaha_evaluate(board.squares.data());
+        int score = mwahaha_evaluate(board.squares.data()) + king_pressure(board);
         score = board.white_to_move ? score : -score;
         cached = {board.key, score, true};
         return score;
