@@ -14,7 +14,9 @@ int main() {
     Board kiwi = Board::from_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1");
     assert(perft(kiwi, 3) == 97862);
     Board ep_pin = Board::from_fen("8/6bb/8/8/R1pP2k1/4P3/P7/K7 b - d3 0 1");
-    assert(perft(ep_pin, 3) == 1269);
+    // Independently reproduced by both frozen native and Python generators.
+    assert(perft(ep_pin, 3) == 4135);
+    for (const Move& move : ep_pin.legal_moves()) assert(move.uci() != "c4d3");
     assert(Board::from_fen("4k3/8/8/8/8/8/8/2B1K3 w - - 0 1").insufficient_material());
     assert(!Board::from_fen("4k3/8/8/8/8/8/8/2B1KB2 w - - 0 1").insufficient_material());
     for (const char* fen : {
