@@ -2474,9 +2474,14 @@ int uci_loop() {
                 );
                 uint64_t nps = result.nodes * 1000
                     / static_cast<uint64_t>(std::max<long long>(1, result.elapsed_ms));
-                std::cout << "info depth " << result.depth
-                    << " score cp " << result.score
-                    << " nodes " << result.nodes
+                std::cout << "info depth " << result.depth;
+                if (std::abs(result.score) >= MATE - MAX_PLY) {
+                    int distance = (MATE - std::abs(result.score) + 1) / 2;
+                    std::cout << " score mate " << (result.score < 0 ? -distance : distance);
+                } else {
+                    std::cout << " score cp " << result.score;
+                }
+                std::cout << " nodes " << result.nodes
                     << " nps " << nps
                     << " hashfull " << result.hashfull
                     << " time " << result.elapsed_ms
