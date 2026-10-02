@@ -1512,6 +1512,8 @@ private:
         HistoryGuard history_guard(search_history_, key);
 
         TTEntry* entry = probe(key);
+        // Recursive searches may overwrite this cluster; keep move metadata by value.
+        Move tt_move = entry == nullptr ? Move{} : entry->move;
         if (entry != nullptr && entry->depth >= depth) {
             int table_score = score_from_table(entry->score, ply);
             if (entry->bound == Bound::Exact) return table_score;
@@ -1599,8 +1601,9 @@ private:
 
         if (
             depth >= 6
+            && !in_check
             && beta - alpha == 1
-            && (entry == nullptr || !entry->move.valid())
+            && !tt_move.valid()
         ) {
             --depth;
         }
@@ -1609,7 +1612,6 @@ private:
         if (moves.empty()) {
             return in_check ? -MATE + ply : 0;
         }
-        Move tt_move = entry == nullptr ? Move{} : entry->move;
         Move counter_move{};
         if (previous_move.valid()) {
             char previous_piece = board.squares[previous_move.to];
