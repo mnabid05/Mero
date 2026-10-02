@@ -66,6 +66,19 @@ int main() {
         assert(history_test.size() == 2);
     }
     assert(history_test == std::vector<uint64_t>({1, 2, 3}));
+    uint64_t random_state = 1729;
+    for (int game = 0; game < 8; ++game) {
+        Board walk = Board::starting();
+        for (int ply = 0; ply < 100; ++ply) {
+            auto legal = walk.legal_moves_in_place();
+            std::string before = walk.fen();
+            assert(walk.has_legal_move() == !legal.empty());
+            assert(walk.fen() == before);
+            assert(walk.key == ZOBRIST.hash(walk));
+            if (legal.empty()) break;
+            walk.make_move(legal[splitmix64(random_state) % legal.size()]);
+        }
+    }
     Board pinned = Board::from_fen("4k3/4r3/8/3p4/2B5/8/8/4R1K1 w - - 0 1");
     assert(engine.see(pinned, pinned.find_move("c4d5")) == 100);
     Board king_recapture = Board::from_fen("4k3/4p3/8/8/8/8/8/4R1K1 w - - 0 1");
