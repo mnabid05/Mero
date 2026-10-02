@@ -1656,7 +1656,7 @@ private:
                 ) {
                     pruned = true;
                 }
-                if (depth == 1 && index > 0 && is_quiet && !gives_check
+                if (depth == 1 && index > 0 && is_quiet && !in_check && !gives_check
                     && static_score + 140 <= alpha) {
                     pruned = true;
                 }
