@@ -21,6 +21,7 @@ from .backtest import OPENINGS, opening_board, repetition_key
 from .board import Board
 from .model import BLACK, GameStatus, WHITE, opponent as opposite_color
 from .provenance import engine_metadata
+from .statistics import paired_interval
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,6 +46,7 @@ class LevelResult:
     draws: int
     losses: int
     score_percent: float
+    paired_uncertainty: dict[str, object]
 
 
 @dataclass(frozen=True, slots=True)
@@ -432,7 +434,8 @@ def run_gauntlet(
             losses = len(level_games) - wins - draws
             score = (wins + 0.5 * draws) / len(level_games) * 100
             level_results.append(
-                LevelResult(elo, len(level_games), wins, draws, losses, round(score, 2))
+                LevelResult(elo, len(level_games), wins, draws, losses, round(score, 2),
+                            paired_interval([game.candidate_score for game in level_games]))
             )
             rating_inputs.extend((elo, game.candidate_score) for game in level_games)
 
