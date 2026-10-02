@@ -569,6 +569,22 @@ struct Board {
         return !(minors & dark) || !(minors & ~dark);
     }
 
+    int ep_hash_file() const {
+        if (en_passant < 0 || !(pawn_attacks(white_to_move) & square_bit(en_passant)))
+            return -1;
+        int victim = en_passant + (white_to_move ? 8 : -8);
+        for (int from : {victim - 1, victim + 1}) {
+            if (from < 0 || from >= 64 || from / 8 != victim / 8
+                || squares[from] != (white_to_move ? 'P' : 'p')) continue;
+            Board trial = *this;
+            char pawn = trial.remove_piece(from);
+            trial.remove_piece(victim);
+            trial.place_piece(pawn, en_passant);
+            if (!trial.in_check(white_to_move)) return en_passant % 8;
+        }
+        return -1;
+    }
+
     template <typename Moves>
     void add_promotions(Moves& moves, int from, int to, int flags) const {
         for (char promotion : {'q', 'r', 'b', 'n'}) {
@@ -707,9 +723,8 @@ struct Board {
         }
 
         key ^= ZOBRIST.castling[castling];
-        if (en_passant >= 0) {
-            key ^= ZOBRIST.ep_file[en_passant % 8];
-        }
+        int old_ep_file = ep_hash_file();
+        if (old_ep_file >= 0) key ^= ZOBRIST.ep_file[old_ep_file];
         key ^= ZOBRIST.turn;
         key ^= ZOBRIST.pieces[Zobrist::piece_index(piece)][move.from];
         if (captured != '.') {
@@ -773,9 +788,8 @@ struct Board {
         }
         white_to_move = !white_to_move;
         key ^= ZOBRIST.castling[castling];
-        if (en_passant >= 0) {
-            key ^= ZOBRIST.ep_file[en_passant % 8];
-        }
+        int new_ep_file = ep_hash_file();
+        if (new_ep_file >= 0) key ^= ZOBRIST.ep_file[new_ep_file];
         return undo;
     }
 
@@ -877,9 +891,8 @@ uint64_t Zobrist::hash(const Board& board) const {
         }
     }
     key ^= castling[board.castling];
-    if (board.en_passant >= 0) {
-        key ^= ep_file[board.en_passant % 8];
-    }
+    int active_ep_file = board.ep_hash_file();
+    if (active_ep_file >= 0) key ^= ep_file[active_ep_file];
     if (!board.white_to_move) {
         key ^= turn;
     }
@@ -1564,9 +1577,8 @@ private:
             && null_move_safe(board)) {
             Board null_board = board;
             null_board.key ^= ZOBRIST.turn;
-            if (null_board.en_passant >= 0) {
-                null_board.key ^= ZOBRIST.ep_file[null_board.en_passant % 8];
-            }
+            int ep_file = null_board.ep_hash_file();
+            if (ep_file >= 0) null_board.key ^= ZOBRIST.ep_file[ep_file];
             null_board.white_to_move = !null_board.white_to_move;
             null_board.en_passant = -1;
             // Artificial passes must not trigger real-game repetition or rule 50.
