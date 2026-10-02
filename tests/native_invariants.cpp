@@ -30,6 +30,17 @@ int main() {
     Board stale = Board::from_fen("7k/5Q2/6K1/8/8/8/8/8 b - - 0 1");
     assert(!stale.in_check() && !stale.has_legal_move());
     Engine engine(1);
+    Board mate = Board::from_fen("7k/6Q1/5K2/8/8/8/8/8 b - - 100 1");
+    auto mate_result = engine.search(mate, 4, 100);
+    assert(mate_result.score == -MATE && !mate_result.move.valid());
+    assert(engine.search(stale, 4, 100).score == 0);
+    auto limited = engine.search(start, 64, 10000, {}, 1);
+    assert(limited.nodes <= 1 && limited.move.valid());
+    assert(start.fen() == Board::starting().fen());
+    EnginePool pool(4);
+    pool.set_threads(2);
+    assert(pool.search(mate, 4, 100).score == -MATE);
+    assert(pool.search(stale, 4, 100).score == 0);
     Board pinned = Board::from_fen("4k3/4r3/8/3p4/2B5/8/8/4R1K1 w - - 0 1");
     assert(engine.see(pinned, pinned.find_move("c4d5")) == 100);
     Board king_recapture = Board::from_fen("4k3/4p3/8/8/8/8/8/4R1K1 w - - 0 1");
