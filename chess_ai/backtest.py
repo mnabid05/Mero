@@ -72,7 +72,12 @@ def opening_board(moves: Sequence[str]) -> Board:
 
 
 def repetition_key(board: Board) -> str:
-    return " ".join(board.to_fen().split()[:4])
+    fields = board.to_fen().split()[:4]
+    if board.en_passant is not None and not any(
+        move.is_en_passant for move in board.legal_moves()
+    ):
+        fields[3] = "-"
+    return " ".join(fields)
 
 
 def play_game(
