@@ -15,7 +15,7 @@ from pathlib import Path
 
 from .backtest import OPENINGS, opening_board, repetition_key
 from .board import Board
-from .model import BLACK, GameStatus, WHITE, opponent
+from .model import BLACK, GameStatus, WHITE, opponent as opposite_color
 
 
 @dataclass(frozen=True, slots=True)
@@ -226,7 +226,7 @@ def _play_game(
             candidate_score = 0.0 if candidate_turn else 1.0
             candidate_wins = candidate_score == 1.0
             winning_color = (
-                candidate_color if candidate_wins else opponent(candidate_color)
+                candidate_color if candidate_wins else opposite_color(candidate_color)
             )
             return GauntletGame(
                 game_number,
