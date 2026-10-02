@@ -31,13 +31,14 @@ Python engine detects the native evaluator library automatically. Without it,
 the dependency-free Python evaluator is used; set `MWAHAHA_PURE_PYTHON=1` to
 force that reference path.
 
-Mero 5.0 retains selective tactical extensions while focusing quiescence on
-captures, promotions, and required check evasions. A fresh one-million-node
-probe measured 1.757 million nodes/second, 7.54% above the frozen Mero 4.0
-baseline. A 20-game paired regression scored 4 wins, 15 draws, and 1 loss
-(57.5%, approximately +53 head-to-head Elo). This is encouraging but does not
-establish a 100-point rating gain. See [`docs/STRENGTH.md`](docs/STRENGTH.md)
-for methodology and limitations.
+Mero 6.0 adds coordinated king-attack evaluation, passed-pawn king support,
+legal-attacker exchange pruning, full-key evaluation caching, and faster
+unpinned move generation. Search now handles check evasions, bounded tactical
+extensions, repetition at the frontier, and rule-fifty cache separation more
+carefully. A 64-game release-candidate match against Mero 5.0 scored 25 wins,
+22 draws, and 17 losses (56.25%, approximately +44 head-to-head Elo); its paired
+interval includes zero gain. See [`docs/STRENGTH.md`](docs/STRENGTH.md) for all
+calibration results, exact configurations, and uncertainty.
 
 ## Search
 
@@ -52,7 +53,7 @@ for methodology and limitations.
 - Parallel principal-root search with configurable UCI threads
 - Three-entry transposition clusters with cached static evaluation
 - Quiescence search for tactical stability
-- Frontier quiet-check search with pseudo-move filtering
+- Legal-capture SEE pruning with checking-capture exemptions
 - Null-move pruning
 - Late-move reductions
 - Check, recapture, and advanced-pawn extensions
@@ -73,6 +74,8 @@ for methodology and limitations.
 - Open and semi-open rook files
 - King shelter
 - Mobility
+- Coordinated attacks around the enemy king (native search)
+- Passed-pawn blockers and both kings' proximity (native search)
 
 ## Chess rules
 
@@ -147,12 +150,23 @@ mwahaha-uci
 
 ## Validation
 
-Build the native engine and run the 69-test suite:
+Build the native engine and run the 85-test suite:
 
 ```bash
 python3 scripts/build_native.py
 python3 -m unittest discover -v
 ```
+
+Linux CI also builds with AddressSanitizer and UndefinedBehaviorSanitizer.
+Replay the published game reports with:
+
+```bash
+python3 -m scripts.verify_match backtests/mero-6-vs-stockfish18-2300.json
+python3 -m scripts.verify_match backtests/mero-6-vs-5-release-candidate.json
+```
+
+Reports include complete moves, final positions, paired uncertainty, executable
+SHA-256 hashes, and host details. See the [validation guide](docs/VALIDATION.md).
 
 Run a color-balanced native A/B match with:
 
