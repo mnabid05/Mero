@@ -907,6 +907,14 @@ struct TTCluster {
 
 class Timeout final : public std::exception {};
 
+struct HistoryGuard {
+    std::vector<uint64_t>& history;
+    explicit HistoryGuard(std::vector<uint64_t>& values, uint64_t key) : history(values) {
+        history.push_back(key);
+    }
+    ~HistoryGuard() { history.pop_back(); }
+};
+
 class Engine {
 public:
     explicit Engine(std::size_t hash_megabytes = 64) {
@@ -1498,16 +1506,7 @@ private:
         if (prior_visits >= 2 || board.halfmove >= 100) {
             return 0;
         }
-        struct HistoryGuard {
-            std::vector<uint64_t>& history;
-            explicit HistoryGuard(std::vector<uint64_t>& values, uint64_t key)
-                : history(values) {
-                history.push_back(key);
-            }
-            ~HistoryGuard() {
-                history.pop_back();
-            }
-        } history_guard(search_history_, key);
+        HistoryGuard history_guard(search_history_, key);
 
         TTEntry* entry = probe(key);
         if (entry != nullptr && entry->depth >= depth) {
@@ -1838,7 +1837,16 @@ private:
         ++nodes_;
         check_time();
         bool in_check = board.in_check();
+        if (ply >= MAX_PLY - 1) {
+            return in_check && board.legal_moves_in_place().empty()
+                ? -MATE + ply : evaluate(board);
+        }
         uint64_t key = board.key;
+        if (prior_repetitions(key, board.halfmove) >= 2
+            || board.halfmove >= 100 || board.insufficient_material()) {
+            return in_check && board.legal_moves_in_place().empty() ? -MATE + ply : 0;
+        }
+        HistoryGuard history_guard(search_history_, key);
         TTEntry* entry = probe(key);
         if (entry != nullptr && entry->depth >= 0) {
             int table_score = score_from_table(entry->score, ply);
