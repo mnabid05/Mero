@@ -15,6 +15,13 @@ kernel through `ctypes`; if it is missing or disabled, the pure-Python evaluator
 preserves a fully functional reference implementation. No layer has a runtime
 chess-engine dependency.
 
+Mero 6 adds native bitboard terms for coordinated king pressure and passed-pawn
+king proximity/blockers on top of the shared C evaluator. The Python reference
+and C evaluation library retain the original evaluation; the native executable
+is the release-strength engine. A per-worker 16,384-entry full-key evaluation
+cache avoids repeating leaf evaluation and is reset on `ucinewgame`. This uses
+roughly 256 KiB per worker beyond the configured transposition-table budget.
+
 ## Position layer
 
 The Python reference stores 64 squares. The C++ engine uses a synchronized
@@ -41,6 +48,16 @@ rays and bit scans to find the nearest blocker instead of walking squares.
 
 The implementation covers normal moves, castling path safety, en passant capture,
 promotion, attack detection, FEN, and terminal states.
+
+For non-check positions, moves by non-king pieces that cannot expose a ray to
+their king skip make/unmake legality filtering. King moves, possible pins, and
+en passant retain full validation. FEN import validates ranks, pieces, kings,
+move counters, castling syntax, and en-passant state before accepting a position.
+UCI replay is transactional: an invalid move leaves the previous position intact.
+
+Repetition hashes include en passant only when a legal en-passant capture exists.
+Search-table keys additionally include the reversible-move counter; identical
+piece placements near the fifty-move boundary cannot share incompatible bounds.
 
 ## Evaluation
 
@@ -94,6 +111,14 @@ The search includes:
 - improving-position context for pruning and late-move reductions;
 - PV, transposition, promotion, MVV-LVA, killer, history, and castling ordering.
 
+Mero 6 bounds extension growth by root depth and permits at most one extension
+per move. Quiet check evasions bypass futility pruning. Null pruning requires a
+non-PV window and an adequate static score; artificial passes do not increment
+the real-game draw clock. Same-ply verification and razoring suspend the current
+history entry while re-searching it. Quiescence tracks repetition and terminal
+draws, and excludes negative exchanges unless they check or promote. SEE filters
+pinned defenders and illegal king captures. LMR logarithms are precomputed.
+
 With `Threads` greater than one, the native engine searches the principal root
 move first and distributes the remaining root candidates across isolated
 workers. Each worker owns its history tables and a slice of the configured hash
@@ -135,6 +160,15 @@ last completed iterative-deepening pass.
 The UCI engine exposes `Threads`, `Hash`, and `Move Overhead` options. It also
 accepts `go nodes` for deterministic development probes and reports `hashfull`
 occupancy with each completed search.
+
+Node limits count each frontier node once and stop at the requested count. Raw
+NPS across the 5.0/6.0 boundary therefore cannot be interpreted as speedup: the
+counter definition changed. Clocks remain active when combined with node or
+depth limits. Mate scores use UCI `score mate` instead of oversized centipawns.
+
+The UCI loop remains synchronous and does not implement asynchronous `stop` or
+pondering. Search clients should use a bounded `go` command. The match client
+also applies a response deadline and reaps stalled processes.
 
 ## Interfaces
 
