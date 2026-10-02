@@ -558,6 +558,17 @@ struct Board {
         return in_check(white_to_move);
     }
 
+    bool insufficient_material() const {
+        if (piece_boards[0] || piece_boards[6] || piece_boards[3]
+            || piece_boards[9] || piece_boards[4] || piece_boards[10]) return false;
+        uint64_t minors = piece_boards[1] | piece_boards[7]
+            | piece_boards[2] | piece_boards[8];
+        if (std::popcount(minors) <= 1) return true;
+        if (piece_boards[1] || piece_boards[7]) return false;
+        constexpr uint64_t dark = 0xAA55AA55AA55AA55ULL;
+        return !(minors & dark) || !(minors & ~dark);
+    }
+
     template <typename Moves>
     void add_promotions(Moves& moves, int from, int to, int flags) const {
         for (char promotion : {'q', 'r', 'b', 'n'}) {
