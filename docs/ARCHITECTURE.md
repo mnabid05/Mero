@@ -55,6 +55,13 @@ en passant retain full validation. FEN import validates ranks, pieces, kings,
 move counters, castling syntax, and en-passant state before accepting a position.
 UCI replay is transactional: an invalid move leaves the previous position intact.
 
+Stalemate detection first looks for a provably legal unpinned pawn push or piece
+move directly in bitboards. Only ambiguous positions require full move generation.
+Across five one-million-node probes, this raised median throughput from 1.03M
+to 1.28M NPS at the same completed depth (10), about 25% over the preceding 6.0
+candidate. This comparison uses the same node-counter definition in both builds;
+see `backtests/mero-6-fast-legality-performance.json`.
+
 Repetition hashes include en passant only when a legal en-passant capture exists.
 Search-table keys additionally include the reversible-move counter; identical
 piece placements near the fifty-move boundary cannot share incompatible bounds.

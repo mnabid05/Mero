@@ -1,0 +1,84 @@
+{
+  "baseline_revision": "020b8b9",
+  "candidate_revision": "54ea3fd",
+  "description": "Same-counter one-million-node starting-position probe; median of five runs. Interactive host, not isolated.",
+  "before": {
+    "engine": "build/release-6/mwahaha-engine",
+    "median_nps": 1027749,
+    "move_time_ms": null,
+    "nodes_requested": 1000000,
+    "runs": [
+      {
+        "depth": 10,
+        "nodes": 1000000,
+        "nps": 1026694,
+        "time_ms": 974
+      },
+      {
+        "depth": 10,
+        "nodes": 1000000,
+        "nps": 1025641,
+        "time_ms": 975
+      },
+      {
+        "depth": 10,
+        "nodes": 1000000,
+        "nps": 1085776,
+        "time_ms": 921
+      },
+      {
+        "depth": 10,
+        "nodes": 1000000,
+        "nps": 1106194,
+        "time_ms": 904
+      },
+      {
+        "depth": 10,
+        "nodes": 1000000,
+        "nps": 1027749,
+        "time_ms": 973
+      }
+    ],
+    "threads": 1
+  },
+  "after": {
+    "engine": "build/optimized-6/mwahaha-engine",
+    "median_nps": 1282051,
+    "move_time_ms": null,
+    "nodes_requested": 1000000,
+    "runs": [
+      {
+        "depth": 10,
+        "nodes": 1000000,
+        "nps": 1303780,
+        "time_ms": 767
+      },
+      {
+        "depth": 10,
+        "nodes": 1000000,
+        "nps": 1230012,
+        "time_ms": 813
+      },
+      {
+        "depth": 10,
+        "nodes": 1000000,
+        "nps": 1251564,
+        "time_ms": 799
+      },
+      {
+        "depth": 10,
+        "nodes": 1000000,
+        "nps": 1282051,
+        "time_ms": 780
+      },
+      {
+        "depth": 10,
+        "nodes": 1000000,
+        "nps": 1307189,
+        "time_ms": 765
+      }
+    ],
+    "threads": 1
+  },
+  "median_nps_change_percent": 24.74
+}
