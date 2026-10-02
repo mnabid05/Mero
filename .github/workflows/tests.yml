@@ -48,7 +48,9 @@ jobs:
         run: |
           build/sanitized/mwahaha-engine --perft 4
           build/sanitized/mwahaha-engine --verify-keys 3
-          build/sanitized/mwahahaha-engine --verify-bitboards 3
+          build/sanitized/mwahaha-engine --verify-bitboards 3
+          build/sanitized/mwahaha-engine --verify-keys-fen 3 '4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1'
+          build/sanitized/mwahaha-engine --perft-fen 3 'r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1'
       - name: Exercise bounded search under sanitizers
         run: |
           printf 'uci\nposition startpos\ngo nodes 100000\nquit\n' |
