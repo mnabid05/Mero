@@ -1705,7 +1705,7 @@ private:
                         }
                         reduction = std::clamp(
                             reduction,
-                            1,
+                            0,
                             std::max(1, next_depth - 1)
                         );
                     }
