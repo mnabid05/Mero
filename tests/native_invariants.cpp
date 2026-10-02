@@ -11,6 +11,12 @@ int main() {
     assert(start.bitboards_valid());
     assert(start.key == ZOBRIST.hash(start));
     assert(perft(start, 4) == 197281);
+    Board kiwi = Board::from_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1");
+    assert(perft(kiwi, 3) == 97862);
+    Board ep_pin = Board::from_fen("8/6bb/8/8/R1pP2k1/4P3/P7/K7 b - d3 0 1");
+    assert(perft(ep_pin, 3) == 1269);
+    assert(Board::from_fen("4k3/8/8/8/8/8/8/2B1K3 w - - 0 1").insufficient_material());
+    assert(!Board::from_fen("4k3/8/8/8/8/8/8/2B1KB2 w - - 0 1").insufficient_material());
     for (const char* fen : {
         "8/8/8/8/8/8/8/8 w - - 0 1",
         "4k3/8/8/8/8/8/8/4K3 x - - 0 1",
