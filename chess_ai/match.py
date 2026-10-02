@@ -65,6 +65,7 @@ def _play_game(
     candidate.new_game()
     baseline.new_game()
     board = opening_board(opening_moves)
+    history = list(opening_moves)
     repetitions: Counter[str] = Counter({repetition_key(board): 1})
 
     for played in range(max_plies):
@@ -74,7 +75,7 @@ def _play_game(
         candidate_turn = board.turn == candidate_color
         engine = candidate if candidate_turn else baseline
         try:
-            notation = engine.choose_move(board, move_time_ms)
+            notation = engine.choose_move(board, move_time_ms, history)
             move = board.find_legal_move(notation)
         except (RuntimeError, ValueError) as error:
             return MatchGame(
@@ -87,6 +88,7 @@ def _play_game(
                 board.to_fen(),
             )
         board.push(move)
+        history.append(notation)
         key = repetition_key(board)
         repetitions[key] += 1
         if repetitions[key] >= 3:

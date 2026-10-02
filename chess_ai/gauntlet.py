@@ -147,8 +147,10 @@ class UCIEngine:
         self._send("isready")
         self._read_until("readyok")
 
-    def choose_move(self, board: Board, move_time_ms: int) -> str:
-        self._send(f"position fen {board.to_fen()}")
+    def choose_move(self, board: Board, move_time_ms: int,
+                    history: Sequence[str] | None = None) -> str:
+        self._send("position startpos moves " + " ".join(history)
+                   if history is not None else f"position fen {board.to_fen()}")
         self._send(f"go movetime {move_time_ms}")
         response = self._read_until("bestmove", max(5.0, move_time_ms / 1000 + 2))[-1].split()
         if len(response) < 2:
@@ -241,6 +243,7 @@ def _play_game(
     candidate.new_game()
     opponent.new_game()
     board = opening_board(opening_moves)
+    history = list(opening_moves)
     repetitions: Counter[str] = Counter({repetition_key(board): 1})
 
     for played in range(max_plies):
@@ -250,7 +253,7 @@ def _play_game(
         candidate_turn = board.turn == candidate_color
         engine = candidate if candidate_turn else opponent
         try:
-            notation = engine.choose_move(board, move_time_ms)
+            notation = engine.choose_move(board, move_time_ms, history)
             move = board.find_legal_move(notation)
         except (RuntimeError, ValueError) as error:
             candidate_score = 0.0 if candidate_turn else 1.0
@@ -270,6 +273,7 @@ def _play_game(
                 board.to_fen(),
             )
         board.push(move)
+        history.append(notation)
         key = repetition_key(board)
         repetitions[key] += 1
         if repetitions[key] >= 3:
