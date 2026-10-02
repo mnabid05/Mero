@@ -30,6 +30,14 @@ int main() {
     Board stale = Board::from_fen("7k/5Q2/6K1/8/8/8/8/8 b - - 0 1");
     assert(!stale.in_check() && !stale.has_legal_move());
     Engine engine(1);
+    Board attack = Board::from_fen("6k1/5ppp/8/7Q/8/3B4/8/6K1 w - - 0 1");
+    Board reflected = Board::from_fen("6k1/8/3b4/8/7q/8/5PPP/6K1 b - - 0 1");
+    assert(Engine::king_pressure(attack) > 0);
+    assert(Engine::king_pressure(attack) == -Engine::king_pressure(reflected));
+    Board passer = Board::from_fen("7k/8/3P4/4K3/8/8/8/8 w - - 0 1");
+    Board passer_reflected = Board::from_fen("8/8/8/8/4k3/3p4/8/7K b - - 0 1");
+    assert(Engine::passed_pawn_activity(passer) > 0);
+    assert(Engine::passed_pawn_activity(passer) == -Engine::passed_pawn_activity(passer_reflected));
     Board mate = Board::from_fen("7k/6Q1/5K2/8/8/8/8/8 b - - 100 1");
     auto mate_result = engine.search(mate, 4, 100);
     assert(mate_result.score == -MATE && !mate_result.move.valid());
