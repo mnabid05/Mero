@@ -103,6 +103,13 @@ class UCIEngine:
         self._reader = threading.Thread(target=self._pump, daemon=True)
         self._reader.start()
         self.options: dict[str, str] = {}
+        try:
+            self._initialize(options)
+        except Exception:
+            self.close()
+            raise
+
+    def _initialize(self, options: dict[str, str | int | bool] | None) -> None:
         self._send("uci")
         for line in self._read_until("uciok"):
             if line.startswith("id name "):
