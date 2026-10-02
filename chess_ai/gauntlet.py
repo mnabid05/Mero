@@ -109,8 +109,11 @@ class UCIEngine:
     def _send(self, command: str) -> None:
         if self.process.stdin is None:
             raise RuntimeError("UCI engine stdin is unavailable")
-        self.process.stdin.write(f"{command}\n")
-        self.process.stdin.flush()
+        try:
+            self.process.stdin.write(f"{command}\n")
+            self.process.stdin.flush()
+        except (BrokenPipeError, OSError) as error:
+            raise RuntimeError("UCI engine pipe closed") from error
 
     def _pump(self) -> None:
         assert self.process.stdout is not None
@@ -163,9 +166,18 @@ class UCIEngine:
             try:
                 self._send("quit")
                 self.process.wait(timeout=2)
-            except (BrokenPipeError, subprocess.TimeoutExpired):
+            except (RuntimeError, subprocess.TimeoutExpired):
                 self.process.terminate()
-                self.process.wait(timeout=2)
+                try:
+                    self.process.wait(timeout=2)
+                except subprocess.TimeoutExpired:
+                    self.process.kill()
+        self.process.wait(timeout=2)
+        self._reader.join(timeout=2)
+        if self.process.stdin is not None:
+            self.process.stdin.close()
+        if self.process.stdout is not None:
+            self.process.stdout.close()
 
     def __enter__(self) -> "UCIEngine":
         return self
