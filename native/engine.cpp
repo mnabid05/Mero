@@ -1125,9 +1125,9 @@ private:
     }
 
     void check_time() {
+        if (node_limit_ != 0 && nodes_ >= node_limit_) throw Timeout{};
         if ((nodes_ & 2047ULL) == 0) {
-            if ((node_limit_ != 0 && nodes_ >= node_limit_)
-                || std::chrono::steady_clock::now() >= deadline_) {
+            if (std::chrono::steady_clock::now() >= deadline_) {
                 throw Timeout{};
             }
         }
@@ -1493,12 +1493,12 @@ private:
         bool allow_null,
         const Move& previous_move
     ) {
-        ++nodes_;
-        check_time();
-        bool in_check = board.in_check();
         if (depth <= 0) {
             return quiescence(board, alpha, beta, ply, 0);
         }
+        ++nodes_;
+        check_time();
+        bool in_check = board.in_check();
         if (ply >= MAX_PLY - 1) {
             return evaluate(board);
         }
