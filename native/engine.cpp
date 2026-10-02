@@ -1507,7 +1507,7 @@ private:
 
         for (std::size_t index = 0; index < moves.size(); ++index) {
             ScopedMove applied(board, moves[index]);
-            prefetch_table(board.key);
+            prefetch_table(board.search_key());
             int score;
             if (index == 0) {
                 score = -negamax(
@@ -1711,7 +1711,7 @@ private:
             bool pruned = false;
             {
                 ScopedMove applied(board, move);
-                prefetch_table(board.key);
+                prefetch_table(board.search_key());
                 bool gives_check = board.in_check();
                 if (
                     depth <= 2
@@ -1962,7 +1962,7 @@ private:
                 continue;
             }
             ScopedMove applied(board, move);
-            prefetch_table(board.key);
+            prefetch_table(board.search_key());
             if (losing_capture && !board.in_check()) continue;
             int score = -quiescence(board, -beta, -alpha, ply + 1, qply + 1);
             if (score >= beta) {
