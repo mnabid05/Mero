@@ -2,7 +2,7 @@ name: Tests
 
 on:
   push:
-    branches: [main]
+    branches: [main, codex/mero-2300]
   pull_request:
 
 permissions:
@@ -34,3 +34,22 @@ jobs:
         run: |
           printf 'uci\nisready\nposition startpos\ngo movetime 50\nquit\n' |
             build/native/mwahaha-engine
+
+  sanitizers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Build instrumented native engine
+        run: python scripts/build_native.py --sanitize --output-dir build/sanitized
+      - name: Validate instrumented move generation and hashing
+        run: |
+          build/sanitized/mwahaha-engine --perft 4
+          build/sanitized/mwahaha-engine --verify-keys 3
+          build/sanitized/mwahahaha-engine --verify-bitboards 3
+      - name: Exercise bounded search under sanitizers
+        run: |
+          printf 'uci\nposition startpos\ngo nodes 100000\nquit\n' |
+            build/sanitized/mwahaha-engine
