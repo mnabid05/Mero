@@ -14,6 +14,7 @@ from pathlib import Path
 from .backtest import OPENINGS, opening_board, repetition_key
 from .gauntlet import UCIEngine
 from .model import BLACK, GameStatus, WHITE
+from .statistics import paired_interval
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,6 +43,7 @@ class MatchReport:
     score_percent: float
     elo_difference: int
     records: tuple[MatchGame, ...]
+    uncertainty: dict[str, object]
 
     def as_json(self) -> str:
         return json.dumps(asdict(self), indent=2)
@@ -198,6 +200,7 @@ def run_match(
         round(score * 100, 2),
         score_to_elo(score),
         tuple(records),
+        paired_interval([record.candidate_score for record in records]),
     )
 
 
