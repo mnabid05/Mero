@@ -984,6 +984,38 @@ public:
         return score;
     }
 
+    static int passed_pawn_activity(const Board& board) {
+        auto distance = [](int a, int b) {
+            return std::max(std::abs(a / 8 - b / 8), std::abs(a % 8 - b % 8));
+        };
+        int score = 0;
+        for (int side = 0; side < 2; ++side) {
+            bool white = side == 0;
+            uint64_t pawns = board.piece_boards[side * 6];
+            uint64_t enemy = board.piece_boards[(1 - side) * 6];
+            while (pawns) {
+                int sq = static_cast<int>(std::countr_zero(pawns));
+                pawns &= pawns - 1;
+                int rank = white ? 7 - sq / 8 : sq / 8;
+                if (rank < 3 || rank >= 7) continue;
+                uint64_t files = FILE_A << (sq % 8);
+                if (sq % 8) files |= FILE_A << (sq % 8 - 1);
+                if (sq % 8 < 7) files |= FILE_A << (sq % 8 + 1);
+                uint64_t ahead = white ? square_bit((sq / 8) * 8) - 1
+                    : ~(square_bit((sq / 8 + 1) * 8) - 1);
+                if (enemy & files & ahead) continue;
+                int next = sq + (white ? -8 : 8);
+                int activity = rank * 3 * (distance(board.king_square(!white), next)
+                    - distance(board.king_square(white), next));
+                if (board.squares[next] != '.') activity -= rank * 8;
+                int heavy = std::popcount(board.piece_boards[4] | board.piece_boards[10]);
+                if (heavy) activity /= 2;
+                score += white ? activity : -activity;
+            }
+        }
+        return score;
+    }
+
     explicit Engine(std::size_t hash_megabytes = 64) {
         search_history_.reserve(MAX_PLY * 2);
         resize_table(hash_megabytes);
@@ -1223,7 +1255,8 @@ private:
     int evaluate(const Board& board) const {
         EvalEntry& cached = eval_cache_[board.key & (eval_cache_.size() - 1)];
         if (cached.valid && cached.key == board.key) return cached.score;
-        int score = mwahaha_evaluate(board.squares.data()) + king_pressure(board);
+        int score = mwahaha_evaluate(board.squares.data()) + king_pressure(board)
+            + passed_pawn_activity(board);
         score = board.white_to_move ? score : -score;
         cached = {board.key, score, true};
         return score;
