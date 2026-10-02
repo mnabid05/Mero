@@ -973,6 +973,7 @@ public:
         const std::vector<uint64_t>& game_history,
         std::chrono::steady_clock::time_point deadline
     ) {
+        root_depth_ = depth;
         nodes_ = 0;
         node_limit_ = 0;
         static_evals_.fill(-INF);
@@ -1051,6 +1052,7 @@ public:
         int previous = 0;
 
         for (int depth = 1; depth <= max_depth; ++depth) {
+            root_depth_ = depth;
             int window = depth >= 4 ? 55 : INF;
             int alpha = std::max(-INF, previous - window);
             int beta = std::min(INF, previous + window);
@@ -1100,6 +1102,7 @@ private:
     std::vector<uint64_t> search_history_;
     uint64_t nodes_ = 0;
     uint64_t node_limit_ = 0;
+    int root_depth_ = 0;
     uint16_t generation_ = 0;
     std::chrono::steady_clock::time_point deadline_{};
 
@@ -1659,13 +1662,9 @@ private:
                 }
                 if (!pruned) {
                     int next_depth = depth - 1;
-                    if (gives_check && depth <= 3) {
-                        ++next_depth;
-                    }
-                    if (recapture && depth <= 3) {
-                        ++next_depth;
-                    }
-                    if (advanced_pawn && depth <= 3) {
+                    // One extension per move avoids growth on checking recaptures.
+                    if (depth <= 3 && ply < 2 * root_depth_
+                        && (gives_check || recapture || advanced_pawn)) {
                         ++next_depth;
                     }
                     int reduction = 0;
