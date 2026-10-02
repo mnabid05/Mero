@@ -2017,13 +2017,11 @@ private:
         for (const Move& move : moves) {
             bool losing_capture = !in_check && move.promotion == '\0'
                 && static_exchange_evaluation(board, move) < 0;
-            if (!in_check && move.promotion == '\0'
-                && stand_pat + capture_value(board, move) + 140 < alpha) {
-                continue;
-            }
+            bool delta_pruned = !in_check && move.promotion == '\0'
+                && stand_pat + capture_value(board, move) + 140 < alpha;
             ScopedMove applied(board, move);
             prefetch_table(board.search_key());
-            if (losing_capture && !board.in_check()) continue;
+            if ((losing_capture || delta_pruned) && !board.in_check()) continue;
             int score = -quiescence(board, -beta, -alpha, ply + 1, qply + 1);
             if (score >= beta) {
                 store(
