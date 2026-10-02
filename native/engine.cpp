@@ -394,6 +394,14 @@ struct Board {
         }
         board.white_to_move = turn == "w";
         board.castling = 0;
+        if (rights != "-") {
+            for (char right : rights) {
+                if (std::string("KQkq").find(right) == std::string::npos
+                    || std::count(rights.begin(), rights.end(), right) != 1) {
+                    throw std::invalid_argument("invalid FEN castling rights");
+                }
+            }
+        }
         if (rights.find('K') != std::string::npos) {
             board.castling |= WHITE_KING_SIDE;
         }
@@ -407,7 +415,20 @@ struct Board {
             board.castling |= BLACK_QUEEN_SIDE;
         }
         board.en_passant = ep == "-" ? -1 : square_from_name(ep);
+        if (board.en_passant >= 0) {
+            int row = board.en_passant / 8;
+            int victim = board.en_passant + (board.white_to_move ? 8 : -8);
+            if (row != (board.white_to_move ? 2 : 5)
+                || board.squares[board.en_passant] != '.'
+                || board.squares[victim] != (board.white_to_move ? 'p' : 'P')) {
+                throw std::invalid_argument("invalid FEN en passant");
+            }
+        }
         board.rebuild_bitboards();
+        if (std::popcount(board.piece_boards[5]) != 1
+            || std::popcount(board.piece_boards[11]) != 1) {
+            throw std::invalid_argument("FEN requires one king per side");
+        }
         board.key = ZOBRIST.hash(board);
         return board;
     }
