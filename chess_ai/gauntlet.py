@@ -5,9 +5,12 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import queue
 import shlex
 import subprocess
 import sys
+import threading
+import time
 from collections import Counter
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass
@@ -90,6 +93,9 @@ class UCIEngine:
             bufsize=1,
         )
         self.name = " ".join(command)
+        self._lines: queue.Queue[str | None] = queue.Queue()
+        self._reader = threading.Thread(target=self._pump, daemon=True)
+        self._reader.start()
         self._send("uci")
         for line in self._read_until("uciok"):
             if line.startswith("id name "):
@@ -106,19 +112,31 @@ class UCIEngine:
         self.process.stdin.write(f"{command}\n")
         self.process.stdin.flush()
 
-    def _read_until(self, prefix: str) -> list[str]:
+    def _pump(self) -> None:
+        assert self.process.stdout is not None
+        try:
+            for line in self.process.stdout:
+                self._lines.put(line.strip())
+        finally:
+            self._lines.put(None)
+
+    def _read_until(self, prefix: str, timeout: float = 15.0) -> list[str]:
         if self.process.stdout is None:
             raise RuntimeError("UCI engine stdout is unavailable")
         lines: list[str] = []
+        deadline = time.monotonic() + timeout
         while True:
-            line = self.process.stdout.readline()
-            if not line:
+            try:
+                stripped = self._lines.get(timeout=max(0.0, deadline - time.monotonic()))
+            except queue.Empty as error:
+                self.process.kill()
+                raise RuntimeError(f"Engine timed out waiting for {prefix!r}") from error
+            if stripped is None:
                 raise RuntimeError(
                     f"Engine exited before replying with {prefix!r}: {self.command}"
                 )
-            stripped = line.strip()
             lines.append(stripped)
-            if stripped.startswith(prefix):
+            if stripped == prefix or stripped.startswith(prefix + " "):
                 return lines
 
     def new_game(self) -> None:
@@ -129,7 +147,7 @@ class UCIEngine:
     def choose_move(self, board: Board, move_time_ms: int) -> str:
         self._send(f"position fen {board.to_fen()}")
         self._send(f"go movetime {move_time_ms}")
-        response = self._read_until("bestmove")[-1].split()
+        response = self._read_until("bestmove", max(5.0, move_time_ms / 1000 + 2))[-1].split()
         if len(response) < 2:
             raise RuntimeError(f"Malformed bestmove response from {self.name}")
         return response[1]
