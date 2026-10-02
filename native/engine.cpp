@@ -2531,7 +2531,8 @@ int uci_loop() {
                 }
                 move_time = std::max(1, move_time - overhead);
                 int depth = requested_depth < 1 ? 64 : std::min(requested_depth, MAX_PLY - 1);
-                if (requested_depth > 0 && option_value(tokens, "movetime") < 0) {
+                if (requested_depth > 0 && option_value(tokens, "movetime") < 0
+                    && option_value(tokens, "wtime") < 0 && option_value(tokens, "btime") < 0) {
                     move_time = 3'600'000;
                 }
                 if (requested_nodes > 0 && option_value(tokens, "movetime") < 0
