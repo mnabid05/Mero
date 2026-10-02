@@ -1214,6 +1214,18 @@ private:
         int target,
         bool white
     ) const {
+        auto legal_source = [&](uint64_t sources) {
+            while (sources) {
+                int from = static_cast<int>(std::countr_zero(sources));
+                sources &= sources - 1;
+                Board trial = board;
+                char piece = trial.remove_piece(from);
+                trial.remove_piece(target);
+                trial.place_piece(piece, target);
+                if (!trial.in_check(white)) return from;
+            }
+            return -1;
+        };
         uint64_t target_bit = square_bit(target);
         uint64_t pawn_sources = white
             ? ((target_bit & ~FILE_A) << 7)
@@ -1223,35 +1235,30 @@ private:
         uint64_t pawn = pawn_sources & board.piece_boards[
             Zobrist::piece_index(white ? 'P' : 'p')
         ];
-        if (pawn != 0) {
-            return static_cast<int>(std::countr_zero(pawn));
-        }
+        int source = legal_source(pawn);
+        if (source >= 0) return source;
         uint64_t knight = KNIGHT_ATTACKS[target] & board.piece_boards[
             Zobrist::piece_index(white ? 'N' : 'n')
         ];
-        if (knight != 0) {
-            return static_cast<int>(std::countr_zero(knight));
-        }
+        source = legal_source(knight);
+        if (source >= 0) return source;
         uint64_t bishop_attacker = board.bishop_attacks(target)
             & board.piece_boards[Zobrist::piece_index(white ? 'B' : 'b')];
-        if (bishop_attacker != 0) {
-            return static_cast<int>(std::countr_zero(bishop_attacker));
-        }
+        source = legal_source(bishop_attacker);
+        if (source >= 0) return source;
         uint64_t rook_attacker = board.rook_attacks(target)
             & board.piece_boards[Zobrist::piece_index(white ? 'R' : 'r')];
-        if (rook_attacker != 0) {
-            return static_cast<int>(std::countr_zero(rook_attacker));
-        }
+        source = legal_source(rook_attacker);
+        if (source >= 0) return source;
         uint64_t queen = (
             board.bishop_attacks(target) | board.rook_attacks(target)
         ) & board.piece_boards[Zobrist::piece_index(white ? 'Q' : 'q')];
-        if (queen != 0) {
-            return static_cast<int>(std::countr_zero(queen));
-        }
+        source = legal_source(queen);
+        if (source >= 0) return source;
         uint64_t king = KING_ATTACKS[target] & board.piece_boards[
             Zobrist::piece_index(white ? 'K' : 'k')
         ];
-        return king == 0 ? -1 : static_cast<int>(std::countr_zero(king));
+        return legal_source(king);
     }
 
     int static_exchange_evaluation(const Board& board, const Move& move) const {
