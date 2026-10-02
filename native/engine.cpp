@@ -1407,6 +1407,7 @@ private:
         TTCluster& cluster = table_[key & (table_.size() - 1)];
         for (TTEntry& entry : cluster.entries) {
             if (entry.depth >= 0 && entry.key == key) {
+                entry.generation = generation_;
                 return &entry;
             }
         }
@@ -1462,6 +1463,7 @@ private:
             }
         }
         bool same_position = target->depth >= 0 && target->key == key;
+        Move stored_move = move.valid() || !same_position ? move : target->move;
         if (!same_position || depth >= target->depth || bound == Bound::Exact) {
             *target = {
                 key,
@@ -1469,7 +1471,7 @@ private:
                 score_to_table(score, ply),
                 static_eval,
                 bound,
-                move,
+                stored_move,
                 generation_
             };
         }
