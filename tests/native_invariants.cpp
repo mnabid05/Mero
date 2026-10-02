@@ -41,6 +41,15 @@ int main() {
     pool.set_threads(2);
     assert(pool.search(mate, 4, 100).score == -MATE);
     assert(pool.search(stale, 4, 100).score == 0);
+    Board command_board = start;
+    std::vector<uint64_t> command_history{start.key};
+    try { parse_position(command_board, "position startpos moves e2e4 a8a1", command_history); }
+    catch (const std::invalid_argument&) {}
+    assert(command_board.fen() == start.fen());
+    assert(command_history == std::vector<uint64_t>{start.key});
+    parse_position(command_board, "position startpos moves e2e4 e7e5", command_history);
+    assert(command_history.size() == 3);
+    assert(command_history.back() == command_board.key);
     Board pinned = Board::from_fen("4k3/4r3/8/3p4/2B5/8/8/4R1K1 w - - 0 1");
     assert(engine.see(pinned, pinned.find_move("c4d5")) == 100);
     Board king_recapture = Board::from_fen("4k3/4p3/8/8/8/8/8/4R1K1 w - - 0 1");
