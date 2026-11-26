@@ -2535,7 +2535,8 @@ int uci_loop() {
             } else if (
                 line.rfind("setoption name Move Overhead value ", 0) == 0
             ) {
-                overhead = std::clamp(std::stoi(line.substr(39)), 0, 5000);
+                constexpr char prefix[] = "setoption name Move Overhead value ";
+                overhead = std::clamp(std::stoi(line.substr(sizeof(prefix) - 1)), 0, 5000);
             } else if (line.rfind("position ", 0) == 0) {
                 parse_position(board, line, game_history);
             } else if (line.rfind("go", 0) == 0) {
