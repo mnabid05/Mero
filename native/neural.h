@@ -44,4 +44,30 @@ struct Accumulator {
                                 / (input_scale * output_scale));
     }
 };
+
+class Evaluator {
+    Accumulator sums;
+    Masks previous{};
+
+    template<int sign>
+    void apply(int piece, std::uint64_t mask) {
+        while (mask) {
+            sums.change<sign>(piece, std::countr_zero(mask));
+            mask &= mask - 1;
+        }
+    }
+
+public:
+    Evaluator() { sums.reset(); }
+
+    int evaluate(const Masks& current) {
+        // Removing before adding keeps each partial sum within the trained bound.
+        for (int piece = 0; piece < 12; ++piece)
+            apply<-1>(piece, previous[piece] & ~current[piece]);
+        for (int piece = 0; piece < 12; ++piece)
+            apply<1>(piece, current[piece] & ~previous[piece]);
+        previous = current;
+        return sums.residual();
+    }
+};
 }
