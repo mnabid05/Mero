@@ -964,9 +964,9 @@ const auto REDUCTIONS = [] {
     std::array<std::array<int, 256>, MAX_PLY> table{};
     for (int depth = 1; depth < MAX_PLY; ++depth)
         for (int move = 1; move < 256; ++move)
-            table[depth][move] = static_cast<int>(0.75
+            table[depth][move] = static_cast<int>(0.60
                 + std::log(static_cast<double>(depth))
-                * std::log(static_cast<double>(move + 1)) / 2.15);
+                * std::log(static_cast<double>(move + 1)) / 2.32);
     return table;
 }();
 
@@ -1846,6 +1846,8 @@ private:
                         && !gives_check
                     ) {
                         reduction = REDUCTIONS[std::min(depth, MAX_PLY - 1)][index];
+                        // Preserve more depth on a wide-window principal variation.
+                        if (beta-alpha>1) --reduction;
                         int history_score = history_[
                             static_cast<int>(moving_piece)
                         ][move.to];
