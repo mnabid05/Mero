@@ -1814,10 +1814,9 @@ private:
                 prefetch_table(board.search_key());
                 bool gives_check = board.in_check();
                 if (
-                    depth <= 2
-                    && index >= static_cast<std::size_t>(
-                        8 + depth * 4 + (improving ? 4 : 0)
-                    )
+                    depth <= 3 && beta-alpha==1 && !advanced_pawn
+                    && quiets_tried.size() >= static_cast<std::size_t>(
+                        (3 + depth*depth) * (improving ? 2 : 1))
                     && is_quiet
                     && !in_check
                     && !gives_check
