@@ -1,0 +1,14 @@
+[package]
+name = "mero-bullet-fit"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+# Checkout and revision verification instructions are in docs/SELFPLAY.md.
+[dependencies]
+bullet_lib = { path = "../../build/tools/bullet/crates/bullet_lib" }
+
+[features]
+metal = ["bullet_lib/metal"]
+cuda = ["bullet_lib/cuda"]
+rocm = ["bullet_lib/rocm"]
