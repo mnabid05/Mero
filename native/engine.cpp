@@ -1047,7 +1047,8 @@ public:
         return score;
     }
 
-    explicit Engine(std::size_t hash_megabytes = 64) {
+    explicit Engine(std::size_t hash_megabytes = 64, int neural_blend = 50)
+        : neural_blend_(neural_blend) {
         search_history_.reserve(MAX_PLY * 2);
         resize_table(hash_megabytes);
     }
@@ -1235,6 +1236,7 @@ private:
     struct EvalEntry { uint64_t key = 0; int score = 0; bool valid = false; };
     mutable std::vector<EvalEntry> eval_cache_ = std::vector<EvalEntry>(16384);
     mutable mero_neural::Evaluator neural_;
+    int neural_blend_;
     std::vector<TTCluster> table_;
     std::array<std::array<Move, 2>, MAX_PLY> killers_{};
     std::array<std::array<int, 64>, 128> history_{};
@@ -1289,7 +1291,8 @@ private:
         if (cached.valid && cached.key == board.key) return cached.score;
         int score = mwahaha_evaluate(board.squares.data()) + king_pressure(board)
             + passed_pawn_activity(board);
-        score += neural_.evaluate(board.piece_boards) / 2;
+        if (neural_blend_)
+            score += neural_.evaluate(board.piece_boards) * neural_blend_ / 100;
         score = board.white_to_move ? score : -score;
         cached = {board.key, score, true};
         return score;
@@ -2150,6 +2153,14 @@ public:
         return thread_count_;
     }
 
+    void set_neural_blend(int percent) {
+        percent = std::clamp(percent, 0, 100);
+        if (neural_blend_ != percent) {
+            neural_blend_ = percent;
+            rebuild();  // All cached scores depend on evaluation settings.
+        }
+    }
+
     void clear() {
         for (const auto& worker : workers_) {
             worker->clear();
@@ -2183,6 +2194,7 @@ public:
 private:
     std::size_t hash_megabytes_ = 64;
     int thread_count_ = 1;
+    int neural_blend_ = 50;
     std::vector<std::unique_ptr<Engine>> workers_;
 
     void rebuild() {
@@ -2193,7 +2205,7 @@ private:
         );
         workers_.reserve(static_cast<std::size_t>(thread_count_));
         for (int index = 0; index < thread_count_; ++index) {
-            workers_.push_back(std::make_unique<Engine>(per_worker));
+            workers_.push_back(std::make_unique<Engine>(per_worker, neural_blend_));
         }
     }
 
@@ -2516,6 +2528,7 @@ int uci_loop() {
                 std::cout << "id author Mohammed Nabid\n";
                 std::cout << "option name Hash type spin default 64 min 1 max 2048\n";
                 std::cout << "option name Threads type spin default 1 min 1 max 64\n";
+                std::cout << "option name NeuralBlend type spin default 50 min 0 max 100\n";
                 std::cout << "option name Move Overhead type spin default 10 min 0 max 5000\n";
                 std::cout << "uciok\n" << std::flush;
             } else if (line == "isready") {
@@ -2524,6 +2537,9 @@ int uci_loop() {
                 board = Board::starting();
                 game_history = {board.key};
                 engine.clear();
+            } else if (line.rfind("setoption name NeuralBlend value ", 0) == 0) {
+                constexpr char prefix[] = "setoption name NeuralBlend value ";
+                engine.set_neural_blend(std::stoi(line.substr(sizeof(prefix) - 1)));
             } else if (line.rfind("setoption name Hash value ", 0) == 0) {
                 engine.resize_table(static_cast<std::size_t>(
                     std::clamp(std::stoi(line.substr(26)), 1, 2048)
