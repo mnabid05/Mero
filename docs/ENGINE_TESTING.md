@@ -70,6 +70,12 @@ flags. The cap is 2,000 **pairs**. Accept or reject only at Fastchess's LLR
 boundary (approximately ±2.944); a cap without a boundary is inconclusive.
 Do not replace this gate with a two-game infrastructure smoke test.
 
+Capture Fastchess stdout in a local match log and use
+`python3 -m scripts.sprt_status build/<run>/match.log` from the repo root to
+summarize W/D/L, warnings, faults and the latest printed LLR. The summarizer
+does not edit branches. It requires an explicit test decision and matching
+boundary; a capped or incomplete result never authorizes promotion.
+
 ## Later: Bullet
 
 Pinned [Bullet](https://github.com/jw1912/bullet) source: `5d70177680437b7c0ddf958bd4722d95afa78b0c`.
