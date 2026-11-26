@@ -8,6 +8,7 @@ class MeroNet(nn.Module):
         self.features = nn.Embedding(FEATURES + 1, width, padding_idx=PADDING)
         self.bias = nn.Parameter(torch.full((width,), 0.3))
         self.output = nn.Linear(width, 1, bias=False)
+        self.dropout = nn.Dropout(0.15)
         nn.init.normal_(self.features.weight, std=0.025)
         with torch.no_grad():
             self.features.weight[PADDING].zero_()
@@ -17,4 +18,4 @@ class MeroNet(nn.Module):
 
     def forward(self, white, black, prior):
         difference = self.side(white) - self.side(black)
-        return prior + 512 * self.output(difference).squeeze(-1)
+        return prior + 512 * self.output(self.dropout(difference)).squeeze(-1)
