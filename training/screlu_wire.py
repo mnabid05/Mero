@@ -8,8 +8,9 @@ HEADER = struct.Struct("<8s6I")
 DIMS = (768,512,8,255,64,400)
 COUNTS = (768*512,512,8*1024,8)
 MAGIC = b"MRSCREL1"
+RESIDUAL_MAGIC = b"MRSCRES1"
 
-def pack(tensors):
+def pack(tensors, residual=False):
     if len(tensors) != 4:
         raise ValueError("expected features, bias, bucket heads, output biases")
     payload = bytearray()
@@ -19,10 +20,11 @@ def pack(tensors):
             raise ValueError("incorrect int16 tensor size")
         if sys.byteorder != "little": row.byteswap()
         payload.extend(row.tobytes())
-    return HEADER.pack(MAGIC,*DIMS)+hashlib.sha256(payload).digest()+payload
+    return HEADER.pack(RESIDUAL_MAGIC if residual else MAGIC,*DIMS)+hashlib.sha256(payload).digest()+payload
 
 def unpack(blob):
-    if len(blob) != HEADER.size+32+2*sum(COUNTS) or HEADER.unpack_from(blob) != (MAGIC,*DIMS):
+    if (len(blob) != HEADER.size+32+2*sum(COUNTS) or blob[:8] not in (MAGIC,RESIDUAL_MAGIC)
+            or HEADER.unpack_from(blob)[1:] != DIMS):
         raise ValueError("wrong SCReLU format, dimensions or length")
     payload = memoryview(blob)[HEADER.size+32:]
     if hashlib.sha256(payload).digest() != blob[HEADER.size:HEADER.size+32]:
@@ -38,12 +40,16 @@ def unpack(blob):
     ft,bias,_,_ = rows
     if any(abs(bias[i])+64*max(map(abs,ft[i::512])) > 32767 for i in range(512)):
         raise ValueError("unsafe int16 feature accumulator")
+    if blob[:8]==RESIDUAL_MAGIC and (any(rows[3]) or any(
+        rows[2][b*1024+i] != -rows[2][b*1024+512+i] for b in range(8) for i in range(512))):
+        raise ValueError("residual must reverse exactly with the side to move")
     return rows
 
 def emit_header(blob,path):
     rows = unpack(blob)
     with path.open("w") as f:
         f.write("#pragma once\n#include <cstdint>\nnamespace mero_screlu_weights {\n")
+        f.write("inline constexpr bool residual = "+("true" if blob[:8]==RESIDUAL_MAGIC else "false")+";\n")
         for name,row,cols in zip(("feature","bias","heads","out_bias"),rows,(512,512,1024,8)):
             multidim = len(row) != cols
             dims = (f"[{len(row)//cols}]" if multidim else "")+f"[{cols}]"

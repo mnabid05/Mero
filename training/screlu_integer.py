@@ -4,7 +4,7 @@ from .screlu import WIDTH, QA, QB, SCALE
 from .features import PADDING
 from .screlu_wire import pack, unpack
 
-def quantized(model):
+def quantized(model, residual=False):
     params = (model.embed.weight[:PADDING],model.bias,model.head,model.out_bias)
     rows = []
     for weight,scale in zip(params,(QA,QA,QB,QA*QB),strict=True):
@@ -12,7 +12,7 @@ def quantized(model):
         if not q.isfinite().all() or q.min() < -32768 or q.max() > 32767:
             raise ValueError("cannot represent weight as int16")
         rows.append(q.to(torch.int16).flatten().tolist())
-    blob = pack(rows)
+    blob = pack(rows,residual=residual)
     unpack(blob)  # Reject unsafe accumulator bounds before publication.
     return blob
 

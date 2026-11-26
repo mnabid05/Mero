@@ -4,6 +4,19 @@ from pathlib import Path
 from training.screlu_wire import unpack, pack, COUNTS
 
 class EnvelopeTests(unittest.TestCase):
+    def test_residual_cannot_smuggle_a_turn_bonus(self):
+        import array
+        rows=[array.array("h",[0])*n for n in COUNTS]
+        rows[2][0]=1
+        with self.assertRaisesRegex(ValueError,"reverse exactly"):
+            unpack(pack(rows,residual=True))
+        rows[2][512]=-1
+        rows[3][1]=1
+        with self.assertRaisesRegex(ValueError,"reverse exactly"):
+            unpack(pack(rows,residual=True))
+        rows[3][1]=0
+        self.assertEqual(unpack(pack(rows,residual=True))[2][512],-1)
+
     def test_format_rejects_short_payload(self):
         with self.assertRaises(ValueError):
             unpack(b"MRSCREL1")

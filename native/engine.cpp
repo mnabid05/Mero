@@ -1261,9 +1261,7 @@ public:
 private:
     struct EvalEntry { uint64_t key = 0; int score = 0; bool valid = false; };
     mutable std::vector<EvalEntry> eval_cache_ = std::vector<EvalEntry>(16384);
-#ifndef MERO_SCRELU
     mutable mero_neural::Evaluator neural_;
-#endif
     int neural_blend_;
     std::vector<TTCluster> table_;
     std::array<std::array<Move, 2>, MAX_PLY> killers_{};
@@ -1318,6 +1316,17 @@ private:
         EvalEntry& cached = eval_cache_[board.key & (eval_cache_.size() - 1)];
         if (cached.valid && cached.key == board.key) return cached.score;
 #ifdef MERO_SCRELU
+        if constexpr (mero_screlu_weights::residual) {
+            int score=mwahaha_evaluate(board.squares.data()) + king_pressure(board)
+                + passed_pawn_activity(board);
+            bool eligible=std::popcount(board.occupied)>3;
+            if (eligible) score+=neural_.evaluate(board.piece_boards)/2;
+            if (!board.white_to_move) score=-score;
+            if (neural_blend_ && eligible)
+                score+=std::clamp(board.network_score(),-64,64)*neural_blend_/100;
+            cached={board.key,score,true};
+            return score;
+        }
         if (neural_blend_ == 100 && std::popcount(board.occupied)>3) {
             int score=std::clamp(board.network_score(),-MATE/2,MATE/2);
             cached={board.key,score,true};
@@ -2586,7 +2595,8 @@ int uci_loop() {
         try {
             if (line == "uci") {
 #ifdef MERO_SCRELU
-                std::cout << "id name Mero SCReLU 512 experimental\n";
+                std::cout << "id name Mero SCReLU 512 experimental"
+                          << (mero_screlu_weights::residual ? " bounded residual" : "") << '\n';
 #else
                 std::cout << "id name Mero Native Engine 7.0\n";
 #endif
@@ -2720,6 +2730,19 @@ void trace_network(const std::string& line) {
 }  // namespace
 
 int main(int argc, char** argv) {
+    if (argc==2 && std::string(argv[1])=="--quiet-prior-scores") {
+        Engine engine(1);
+        std::string fen;
+        while (std::getline(std::cin,fen)) {
+            Board board=Board::from_fen(fen);
+            bool quiet=!board.in_check() && std::popcount(board.occupied)>3;
+            if (quiet) for (auto move : board.legal_moves_in_place(true)) {
+                if (move.promotion || engine.see(board,move)>0) { quiet=false; break; }
+            }
+            std::cout << engine.static_score(board) << ' ' << quiet << '\n';
+        }
+        return 0;
+    }
     if (argc==2 && std::string(argv[1])=="--static-scores") {
         Engine engine(1);
         std::string fen;
