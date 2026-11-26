@@ -6,7 +6,7 @@ class ModelTests(unittest.TestCase):
     def test_reflection_negates_prediction(self):
         import torch
         from training.model import MeroNet
-        model = MeroNet(8)
+        model = MeroNet(8).eval()
         a = torch.tensor([[0, 10, 45]])
         b = torch.tensor([[400, 383, 29]])
         prior = torch.tensor([75.0])
