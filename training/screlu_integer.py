@@ -12,7 +12,7 @@ def quantized(model, residual=False):
         if not q.isfinite().all() or q.min() < -32768 or q.max() > 32767:
             raise ValueError("cannot represent weight as int16")
         rows.append(q.to(torch.int16).flatten().tolist())
-    blob = pack(rows,residual=residual)
+    blob = pack(rows,residual=residual,width=model.bias.numel())
     unpack(blob)  # Reject unsafe accumulator bounds before publication.
     return blob
 
@@ -20,8 +20,9 @@ class Reference:
     def __init__(self, blob):
         ft,bias,heads,out = unpack(blob)
         as64 = lambda x: torch.tensor(x.tolist(),dtype=torch.int64)
-        self.ft = torch.cat([as64(ft).view(PADDING,WIDTH),torch.zeros(1,WIDTH,dtype=torch.int64)])
-        self.bias, self.head, self.out = as64(bias), as64(heads).view(8,2*WIDTH), as64(out)
+        width=len(bias)
+        self.ft = torch.cat([as64(ft).view(PADDING,width),torch.zeros(1,width,dtype=torch.int64)])
+        self.bias, self.head, self.out = as64(bias), as64(heads).view(8,2*width), as64(out)
 
     def __call__(self, stm, other):
         def side(ids):

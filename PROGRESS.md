@@ -1,5 +1,16 @@
 # Mero: Torch-style evaluator experiment
 
+## Scaled standalone campaign (in progress, not promoted)
+
+Fresh Mero 7 self-play: 5,000 nodes/move, eight random plies, 20M quiet-row
+target. The ten-worker generator produced identical records and move histories
+to the previous generator on all 48 sampled games. Its first sealed
+256-game production shard has 21,541 records: independent legal replay and
+upstream Rust format verification both passed. Strict 256/384-wide inference
+includes all endgames; no hardcoded material is mixed into these networks.
+No scaled training, queen-gate pass, SPRT pass or new rating is claimed here.
+See [protocol and commands](docs/SCALE-CAMPAIGN.md).
+
 Branch `feat/torch-screlu-512` starts from the released Mero 7 (`d74a206`).
 It does not include the unpromoted magic-slider change. Its separate [Phase 1
 ledger](https://github.com/mnabid05/Mero/blob/feat/phase-1-perft/PROGRESS.md)

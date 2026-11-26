@@ -32,15 +32,29 @@ def run(args):
                                            (args.fastchess,args.candidate,args.baseline,args.book))
     if digest(candidate) == digest(baseline):
         raise ValueError("expected different frozen binaries")
-    if digest(book) != "5835239f88cc2c7511b177c32392a69f3ede21819cf0616f80a7f907cd21d17e":
+    seed=1701
+    openings=[f"file={book}","format=pgn","order=random","plies=8"]
+    if getattr(args,"fresh",False):
+        from .fresh_openings import verify
+        manifest=verify(book)
+        if manifest["pairs"]!=2000: raise ValueError("need 2000 fresh opening pairs")
+        if not getattr(args,"baseline_sha",None) or digest(baseline)!=args.baseline_sha:
+            raise ValueError("fresh strength tests require the pinned release executable")
+        if getattr(args,"standalone_gate",None):
+            gate=json.loads(args.standalone_gate.read_text())
+            if gate.get("passed") is not True or digest(candidate)!=gate.get("binary_sha256"):
+                raise ValueError("candidate did not pass its pre-registered queen gate")
+        seed=manifest["seed"]
+        openings=[f"file={book}","format=epd","order=sequential"]
+    elif digest(book) != "5835239f88cc2c7511b177c32392a69f3ede21819cf0616f80a7f907cd21d17e":
         raise ValueError("expected the pinned 8moves_v3 PGN")
     dest = args.output.resolve()
     dest.mkdir(parents=True, exist_ok=False)  # Never resume contaminated statistics.
     command = [str(harness), "-engine", f"cmd={candidate}", "name=New", "-engine",
                f"cmd={baseline}", "name=Main", "-each", "tc=8+0.08", "option.Threads=1",
                "option.Hash=16", "-rounds", "2000", "-repeat", "-concurrency", str(args.jobs),
-               "-openings", f"file={book}", "format=pgn", "order=random", "plies=8",
-               "-srand", "1701", "-sprt", "elo0=0", "elo1=10", "alpha=0.05", "beta=0.05",
+               "-openings", *openings,
+               "-srand", str(seed), "-sprt", "elo0=0", "elo1=10", "alpha=0.05", "beta=0.05",
                "model=normalized", "-ratinginterval", "8", "-recover"]
     metadata = dict(command=command, sha256={n:digest(p) for n,p in
                     zip(("fastchess","candidate","baseline","book"),(harness,candidate,baseline,book))})
@@ -91,4 +105,7 @@ if __name__ == "__main__":
     for arg in ("fastchess","candidate","baseline","book","output"):
         p.add_argument(arg,type=Path)
     p.add_argument("--jobs",type=int,choices=range(1,65),default=4)
+    p.add_argument("--fresh",action="store_true",help="require a checksummed 2,000-pair disjoint eight-ply EPD")
+    p.add_argument("--baseline-sha",help="frozen release executable digest (mandatory with --fresh)")
+    p.add_argument("--standalone-gate",type=Path,help="qualification report bound to this NNUE executable")
     raise SystemExit(run(p.parse_args()))

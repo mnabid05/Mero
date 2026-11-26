@@ -10,9 +10,16 @@ from pathlib import Path
 from chess_ai.board import Board
 
 def inputs(path,limit):
-    raw=path.read_bytes()
-    rows=list(struct.iter_unpack("<Q16s8x",raw))
-    random.Random(4816).shuffle(rows)
+    size=path.stat().st_size
+    if size%32: raise ValueError("truncated Bullet file")
+    def records():
+        # A deterministic bounded sample; never load the training corpus to probe it.
+        indices=random.Random(4816).sample(range(size//32),min(size//32,limit*16))
+        with path.open("rb") as stream:
+            for ix in indices:
+                stream.seek(32*ix)
+                yield struct.unpack("<Q16s8x",stream.read(32))
+    rows=records()
     fens=[]
     cases=[]
     positions=0
@@ -45,7 +52,8 @@ def inputs(path,limit):
 
 def probe(data,engines):
     n,fens,cases=inputs(data,256)
-    out=dict(positions=n,removals=len(cases),dataset_sha256=hashlib.sha256(data.read_bytes()).hexdigest(),
+    with data.open("rb") as stream: digest=hashlib.file_digest(stream,"sha256").hexdigest()
+    out=dict(positions=n,removals=len(cases),dataset_sha256=digest,
              method="median sign-adjusted cp loss on removing one piece, normalized White to move; same material bucket; synthetic diagnostic only",engines={})
     for name,exe in engines:
         p=subprocess.run([exe,"--static-scores"],input="\n".join(fens)+"\n",text=True,capture_output=True,

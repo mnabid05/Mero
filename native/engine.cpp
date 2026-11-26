@@ -9,6 +9,8 @@
 #include <bit>
 #include <chrono>
 #include <charconv>
+#include <condition_variable>
+#include <optional>
 #include <cctype>
 #include <cstddef>
 #include <cmath>
@@ -1100,6 +1102,7 @@ public:
 
     void clear() {
         std::fill(table_.begin(), table_.end(), TTCluster{});
+        generation_ = 0;
         history_ = {};
         capture_history_ = {};
         killers_ = {};
@@ -1336,6 +1339,13 @@ private:
         EvalEntry& cached = eval_cache_[board.key & (eval_cache_.size() - 1)];
         if (cached.valid && cached.key == board.key) return cached.score;
 #ifdef MERO_SCRELU
+        if constexpr (mero_screlu_weights::standalone) {
+            // Every static score, including sparse endings, comes from the net.
+            // Draw and mate adjudication remain chess rules in the search.
+            int score=std::clamp(board.network_score(),-MATE/2,MATE/2);
+            cached={board.key,score,true};
+            return score;
+        }
         if constexpr (mero_screlu_weights::residual) {
             int score=mwahaha_evaluate(board.squares.data()) + king_pressure(board)
                 + passed_pawn_activity(board);
@@ -2650,7 +2660,7 @@ int uci_loop() {
                 line=="go" || line.rfind("go ",0)==0) finish(true);
             if (line == "uci") {
 #ifdef MERO_SCRELU
-                std::cout << "id name Mero SCReLU 512 experimental"
+                std::cout << "id name Mero SCReLU " << mero_screlu_weights::width << " experimental"
                           << (mero_screlu_weights::residual ? " bounded residual" : "") << '\n';
 #else
                 std::cout << "id name Mero Native Engine 7.0\n";

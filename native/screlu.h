@@ -12,29 +12,29 @@
 
 namespace mero_screlu {
 using Masks = std::array<std::uint64_t,12>;
-using Vector = std::array<std::int16_t,512>;
+using Vector = std::array<std::int16_t,mero_screlu_weights::width>;
 
 template<bool add>
 inline void apply(Vector& v,const std::int16_t* w) {
 #if !defined(MERO_SCALAR_ONLY) && defined(__AVX512BW__)
-    for (int i=0;i<512;i+=32) {
+    for (int i=0;i<mero_screlu_weights::width;i+=32) {
         auto x=_mm512_loadu_si512(v.data()+i), y=_mm512_loadu_si512(w+i);
         _mm512_storeu_si512(v.data()+i,add?_mm512_add_epi16(x,y):_mm512_sub_epi16(x,y));
     }
 #elif !defined(MERO_SCALAR_ONLY) && defined(__AVX2__)
-    for (int i=0;i<512;i+=16) {
+    for (int i=0;i<mero_screlu_weights::width;i+=16) {
         auto x=_mm256_loadu_si256(reinterpret_cast<const __m256i*>(v.data()+i));
         auto y=_mm256_loadu_si256(reinterpret_cast<const __m256i*>(w+i));
         _mm256_storeu_si256(reinterpret_cast<__m256i*>(v.data()+i),
                             add?_mm256_add_epi16(x,y):_mm256_sub_epi16(x,y));
     }
 #elif !defined(MERO_SCALAR_ONLY) && defined(__ARM_NEON)
-    for (int i=0;i<512;i+=8) {
+    for (int i=0;i<mero_screlu_weights::width;i+=8) {
         auto x=vld1q_s16(v.data()+i), y=vld1q_s16(w+i);
         vst1q_s16(v.data()+i,add?vaddq_s16(x,y):vsubq_s16(x,y));
     }
 #else
-    for (int i=0;i<512;++i) v[i] += add?w[i]:-w[i];
+    for (int i=0;i<mero_screlu_weights::width;++i) v[i] += add?w[i]:-w[i];
 #endif
 }
 
@@ -47,7 +47,7 @@ struct State {
     State() { reset({}); }
 
     void reset(const Masks& occupied) {
-        std::copy_n(mero_screlu_weights::bias,512,white.begin());
+        std::copy_n(mero_screlu_weights::bias,mero_screlu_weights::width,white.begin());
         black=white;
         dirty=occupied;
     }
@@ -73,9 +73,9 @@ struct State {
         const auto& them=white_to_move?black:white;
         const auto& h=mero_screlu_weights::heads[bucket];
         std::int64_t sum=mero_screlu_weights::out_bias[bucket]*255;
-        for (int i=0;i<512;++i) {
+        for (int i=0;i<mero_screlu_weights::width;++i) {
             int u=std::clamp<int>(us[i],0,255), t=std::clamp<int>(them[i],0,255);
-            sum += std::int64_t(u*u)*h[i] + std::int64_t(t*t)*h[i+512];
+            sum += std::int64_t(u*u)*h[i] + std::int64_t(t*t)*h[i+mero_screlu_weights::width];
         }
         return static_cast<int>(sum*400/(255*255*64));
     }

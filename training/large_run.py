@@ -1,0 +1,93 @@
+"""Generate a resumable, hash-pinned Mero 7 corpus. A partial shard never counts."""
+import argparse
+import fcntl
+import hashlib
+import json
+import os
+import platform
+import re
+import shutil
+import subprocess
+import tempfile
+import time
+from pathlib import Path
+
+def sha(path):
+    with path.open("rb") as f:
+        return hashlib.file_digest(f,"sha256").hexdigest()
+
+def atomic(path, data):
+    with tempfile.NamedTemporaryFile("w",dir=path.parent,delete=False) as f:
+        json.dump(data,f,indent=2)
+        f.write("\n"); f.flush(); os.fsync(f.fileno())
+    os.replace(f.name,path)
+
+def shard_seed(seed,i):
+    return int.from_bytes(hashlib.sha256(f"mero7-corpus-v2:{seed}:{i}".encode()).digest()[:8],"little")
+
+def power():
+    if platform.system()!="Darwin": return
+    status=subprocess.check_output(["pmset","-g","batt"],text=True)
+    pct=re.search(r"(\d+)%",status)
+    if "'AC Power'" not in status or (pct and int(pct[1])<=25 and "discharging" in status):
+        raise RuntimeError("power guard: use sustained AC; sealed shards are safe to resume")
+
+def check_shard(path,config,i,hashes=False):
+    manifest=json.loads((path/"COMPLETE.json").read_text())
+    expected=dict(games=config["games_per_shard"],nodes=config["nodes"],seed=shard_seed(config["seed"],i),
+                  opening_plies=8,mode="mero7",format="bulletformat-chessboard-v1")
+    if any(manifest[k]!=v for k,v in expected.items()): raise ValueError(f"shard provenance mismatch: {path}")
+    count=manifest["positions"]
+    if count<=0 or (path/"positions.bullet").stat().st_size!=32*count or not (path/"games.tsv").is_file():
+        raise ValueError(f"incomplete binary/ledger: {path}")
+    if hashes:
+        verified=json.loads((path/"verified.json").read_text())
+        if verified!={p:sha(path/p) for p in ("positions.bullet","games.tsv","COMPLETE.json")}:
+            raise ValueError(f"checksum mismatch: {path}")
+    return count
+
+def generate(binary,root,*,target,games_per_shard,workers,seed):
+    binary=binary.resolve(strict=True); root.mkdir(parents=True,exist_ok=True)
+    with (root/".generator.lock").open("a") as lock:
+        fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        cfg=dict(schema=1,producer=sha(binary),seed=seed,games_per_shard=games_per_shard,nodes=5000,source="Mero 7")
+        cfgpath=root/"campaign.json"
+        if cfgpath.exists():
+            if json.loads(cfgpath.read_text())!=cfg: raise ValueError("refusing to mix different producer, seed or limits")
+        else: atomic(cfgpath,cfg)
+        total=i=0
+        shards=sorted(root.glob("shard-[0-9][0-9][0-9][0-9][0-9][0-9]"))
+        for i,path in enumerate(shards):
+            if path.name!=f"shard-{i:06d}": raise ValueError("non-contiguous sealed shards")
+            total+=check_shard(path,cfg,i,hashes=True)
+        i=len(shards)
+        start=time.monotonic(); initial=total
+        while total<target:
+            power()
+            if shutil.disk_usage(root).free < 2*1024**3: raise RuntimeError("less than 2 GiB free")
+            # A killed writer can leave a private attempt behind; never overwrite or count it.
+            attempt=Path(tempfile.mkdtemp(prefix=f".attempt-{i:06d}-",dir=root))
+            path=attempt/"out"
+            subprocess.run([binary,"datagen",path,str(games_per_shard),"5000",str(workers),
+                str(shard_seed(seed,i)),"mero7"],check=True,stdout=subprocess.DEVNULL)
+            count=check_shard(path,cfg,i)
+            atomic(path/"verified.json",{p:sha(path/p) for p in ("positions.bullet","games.tsv","COMPLETE.json")})
+            path.rename(root/f"shard-{i:06d}"); attempt.rmdir()
+            total+=count; i+=1
+            rate=(total-initial)/max(time.monotonic()-start,0.001)
+            progress=dict(quiet_positions=total,sealed_shards=i,target=target,
+                positions_per_second=round(rate,1),eta_hours=round(max(0,target-total)/rate/3600,2))
+            atomic(root/"progress.json",progress)
+            print(json.dumps(progress),flush=True)
+        return total
+
+if __name__=="__main__":
+    p=argparse.ArgumentParser(description=__doc__)
+    p.add_argument("binary",type=Path); p.add_argument("root",type=Path)
+    p.add_argument("--target",type=int,default=20_000_000)
+    p.add_argument("--games-per-shard",type=int,default=256)
+    p.add_argument("--workers",type=int,default=os.cpu_count() or 1)
+    p.add_argument("--seed",type=int,default=2026112601)
+    a=p.parse_args()
+    if min(a.target,a.games_per_shard,a.workers)<1: p.error("positive limits required")
+    generate(**vars(a))

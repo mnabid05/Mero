@@ -33,9 +33,9 @@ struct GeneratedGame {
     std::vector<BulletRecord> rows;
 };
 
-GeneratedGame generate_game(uint64_t seed, unsigned game_id, unsigned nodes, int blend) {
+GeneratedGame generate_game(uint64_t seed, unsigned game_id, unsigned nodes, Engine& engine) {
     uint64_t rng=seed+uint64_t(game_id)*0x9e3779b97f4a7c15ULL;
-    auto engine=std::make_unique<Engine>(8,blend);  // fresh TT & move histories per game
+    engine.clear();  // release search, fresh histories; reuse allocated worker storage
     Board board=Board::starting();
     std::vector<uint64_t> history{board.key};
     GeneratedGame game;
@@ -60,7 +60,7 @@ GeneratedGame generate_game(uint64_t seed, unsigned game_id, unsigned nodes, int
         if (ply<8) {
             move=legal[splitmix64(rng)%legal.size()];
         } else {
-            auto result=engine->search(board,MAX_PLY-2,2'000'000'000,history,nodes);
+            auto result=engine.search(board,MAX_PLY-2,2'000'000'000,history,nodes);
             move=result.move;
             if (std::find(legal.begin(),legal.end(),move)==legal.end())
                 throw std::logic_error("search returned a nonlegal move");
@@ -93,15 +93,16 @@ uint64_t datagen_number(std::string_view arg,uint64_t lo,uint64_t hi) {
 
 int datagen_main(int argc,char** argv) {
     if (argc!=8) throw std::invalid_argument(
-        "datagen NEW_DIR GAMES NODES_PER_MOVE WORKERS SEED hce|active");
+        "datagen NEW_DIR GAMES NODES_PER_MOVE WORKERS SEED hce|active|mero7");
     const std::filesystem::path path(argv[2]);
     unsigned games=datagen_number(argv[3],1,1'000'000);
     unsigned nodes=datagen_number(argv[4],64,10'000'000);
-    unsigned workers=datagen_number(argv[5],1,32);
+    unsigned workers=datagen_number(argv[5],1,256);
     uint64_t seed=datagen_number(argv[6],0,UINT64_MAX);
     std::string mode=argv[7];
-    if (mode!="hce" && mode!="active") throw std::invalid_argument("expected hce or active");
+    if (mode!="hce" && mode!="active" && mode!="mero7") throw std::invalid_argument("expected hce, active or mero7");
 #ifdef MERO_SCRELU
+    if (mode=="mero7") throw std::invalid_argument("Mero 7 generation requires --release-control");
     if (mode=="hce") throw std::invalid_argument("build with --release-control for HCE bootstrap");
 #endif
     int blend=mode=="hce" ? 0 : DEFAULT_BLEND;
@@ -117,16 +118,46 @@ int datagen_main(int argc,char** argv) {
     ledger<<"game\twhite_wdl\ttermination\tfirst\trows\tkept_plies\tuci_moves\n";
     uint64_t total=0;
     unsigned completed=0;
-    for (unsigned base=0;base<games;base+=workers) {
-        // Bounded memory and stable file order independent of thread scheduling.
-        std::vector<std::future<GeneratedGame>> batch;
-        for (unsigned k=base;k<std::min(base+workers,games);++k)
-            batch.emplace_back(std::async(std::launch::async,generate_game,seed,k,nodes,blend));
-        for (unsigned k=0;k<batch.size();++k) {
-            auto g=batch[k].get();
-            for (const auto& r:g.rows)
-                records.write(reinterpret_cast<const char*>(r.data()),r.size());
-            ledger<<base+k<<'\t'<<g.white_result<<'\t'<<g.reason<<'\t'<<total<<'\t'<<g.rows.size()<<'\t';
+    // Dynamic work stealing avoids the fixed-batch barrier on long endgames.
+    // The bounded reorder ring still produces byte-identical shards across worker counts.
+    std::mutex mutex;
+    std::condition_variable changed;
+    const unsigned window=std::min(games,workers*4);
+    std::vector<std::optional<GeneratedGame>> ready(window);
+    unsigned next=0,written=0;
+    bool exiting=false;
+    std::exception_ptr failure;
+    std::vector<std::jthread> pool;
+    try {
+        for (unsigned t=0;t<std::min(workers,games);++t) pool.emplace_back([&] {
+            try {
+                auto engine=std::make_unique<Engine>(8,blend);
+                for (;;) {
+                    std::unique_lock lock(mutex);
+                    changed.wait(lock,[&]{return exiting || next==games || next-written<window;});
+                    if (exiting || next==games) return;
+                    unsigned k=next++;
+                    lock.unlock();
+                    auto game=generate_game(seed,k,nodes,*engine);
+                    lock.lock();
+                    ready[k%window].emplace(std::move(game));
+                    lock.unlock();
+                    changed.notify_all();
+                }
+            } catch (...) {
+                std::lock_guard lock(mutex);
+                failure=std::current_exception(); exiting=true; changed.notify_all();
+            }
+        });
+        for (unsigned k=0;k<games;++k) {
+            std::unique_lock lock(mutex);
+            auto& slot=ready[k%window];
+            changed.wait(lock,[&]{return failure || slot.has_value();});
+            if (failure) std::rethrow_exception(failure);
+            auto g=std::move(*slot); slot.reset(); ++written;
+            lock.unlock(); changed.notify_all();
+            if (!g.rows.empty()) records.write(reinterpret_cast<const char*>(g.rows.data()),g.rows.size()*sizeof(BulletRecord));
+            ledger<<k<<'\t'<<g.white_result<<'\t'<<g.reason<<'\t'<<total<<'\t'<<g.rows.size()<<'\t';
             for (unsigned j=0;j<g.kept.size();++j) ledger<<(j ? "," : "")<<g.kept[j];
             ledger<<'\t';
             for (unsigned j=0;j<g.moves.size();++j) ledger<<(j ? " " : "")<<g.moves[j].uci();
@@ -134,6 +165,11 @@ int datagen_main(int argc,char** argv) {
             total+=g.rows.size(); completed+=g.white_result>=0;
         }
     }
+    catch (...) {
+        { std::lock_guard lock(mutex); exiting=true; }
+        changed.notify_all(); throw;
+    }
+    pool.clear();
     records.close(); ledger.close();
     auto done=output("COMPLETE.json");
     done<<"{\"format\":\"bulletformat-chessboard-v1\",\"games\":"<<games

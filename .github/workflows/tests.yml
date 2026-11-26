@@ -2,7 +2,7 @@ name: Tests
 
 on:
   push:
-    branches: [main, codex/mero-2300, feat/torch-screlu-512, feat/torch-bounded-residual, feat/bullet-selfplay, feat/bullet-metal-pilot, feat/uci-search-control]
+    branches: [main, codex/mero-2300, feat/torch-screlu-512, feat/torch-bounded-residual, feat/bullet-selfplay, feat/bullet-metal-pilot, feat/uci-search-control, feat/mero7-streamed-selfplay]
   pull_request:
 
 permissions:
@@ -34,6 +34,13 @@ jobs:
           python -m scripts.check_screlu_fixtures build/bullet/mwahaha-engine --weights training/checkpoints/mero-bullet-pilot.bin --fixture tests/bullet_golden.json
       - name: Run unit tests
         run: python -m unittest discover -v
+      - name: Compile both untrained standalone-width fixtures (no training data required)
+        run: |
+          for width in 256 384; do
+            python -m training.scale_fixture "$width" "build/probe-$width.bin"
+            python scripts/build_native.py --native-arch --screlu "build/probe-$width.bin" --output-dir "build/n$width"
+            printf '4k3/8/8/8/8/8/8/3QK3 w - - 0 1\n' | "build/n$width/mwahaha-engine" --static-scores
+          done
       - name: Compile package
         run: python -m compileall -q chess_ai
       - name: Validate starting-position perft

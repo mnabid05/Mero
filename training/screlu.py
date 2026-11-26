@@ -7,11 +7,11 @@ from .features import FEATURES, PADDING
 WIDTH, BUCKETS, QA, QB, SCALE = 512, 8, 255, 64, 400
 
 class Network(nn.Module):
-    def __init__(self):
+    def __init__(self, width=WIDTH):
         super().__init__()
-        self.embed = nn.EmbeddingBag(FEATURES+1, WIDTH, mode="sum", padding_idx=PADDING)
-        self.bias = nn.Parameter(torch.full((WIDTH,), 0.35))
-        self.head = nn.Parameter(torch.zeros(BUCKETS, 2*WIDTH))
+        self.embed = nn.EmbeddingBag(FEATURES+1, width, mode="sum", padding_idx=PADDING)
+        self.bias = nn.Parameter(torch.full((width,), 0.35))
+        self.head = nn.Parameter(torch.zeros(BUCKETS, 2*width))
         self.out_bias = nn.Parameter(torch.zeros(BUCKETS))
         with torch.no_grad():
             self.embed.weight.normal_(0,0.018)
@@ -44,6 +44,7 @@ class Network(nn.Module):
         can learn new interactions. No C evaluator is called by this model.
         """
         h = legacy.output.in_features
+        if self.bias.numel()!=512: raise ValueError("legacy warm start is not used by standalone networks")
         if 2*h + 10 > WIDTH:
             raise ValueError("legacy model is too wide")
         self.head.zero_()

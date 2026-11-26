@@ -1,0 +1,112 @@
+"""Split by games/openings, hold validation in bounded memory and externally shuffle training."""
+import argparse
+import csv
+import hashlib
+import json
+import random
+import struct
+import tempfile
+from contextlib import ExitStack
+from pathlib import Path
+import numpy as np
+from .large_run import atomic, check_shard, sha
+
+def flipped_layout(layout):
+    occ=int.from_bytes(layout[:8],"little")
+    ranks=[[] for _ in range(8)]
+    i=0
+    while occ:
+        sq=(occ&-occ).bit_length()-1
+        pc=(layout[8+i//2]>>(4*(i%2)))&15
+        ranks[sq//8].append(pc^8)
+        occ&=occ-1; i+=1
+    pcs=bytearray(16)
+    for i,pc in enumerate(pc for rank in reversed(ranks) for pc in rank):
+        pcs[i//2]|=pc<<(4*(i%2))
+    return layout[:8][::-1]+pcs
+
+def games(shard,seed):
+    with (shard/"positions.bullet").open("rb") as stream,(shard/"games.tsv").open() as ledger:
+        offset=0
+        for row in csv.DictReader(ledger,delimiter="\t"):
+            n=int(row["rows"])
+            if int(row["first"])!=offset or not 0<=n<=512: raise ValueError("invalid row range")
+            offset+=n
+            data=stream.read(n*32)
+            if len(data)!=n*32: raise ValueError("unexpected end of game")
+            opening=" ".join(row["uci_moves"].split(maxsplit=8)[:8])
+            held=int.from_bytes(hashlib.blake2b(f"{seed}/{opening}".encode(),digest_size=8).digest(),"little")%64==0
+            yield held,data
+        if stream.read(1): raise ValueError("unclaimed records")
+
+def split(root,dest,minimum=10_000_000,seed=831908,valid_limit=16384):
+    shards=sorted(root.glob("shard-[0-9][0-9][0-9][0-9][0-9][0-9]"))
+    cfg=json.loads((root/"campaign.json").read_text())
+    n=0
+    for i,path in enumerate(shards):
+        if path.name!=f"shard-{i:06d}": raise ValueError("noncontiguous shard ids")
+        n+=check_shard(path,cfg,i,hashes=True)
+    if n<minimum: raise ValueError(f"only {n} sealed positions (need {minimum} training rows)")
+    rng=random.Random(seed)
+    held_seen=0
+    sample=[]
+    for shard in shards:
+        for held,data in games(shard,seed):
+            if held:
+                for off in range(0,len(data),32):
+                    held_seen+=1
+                    row=data[off:off+32]
+                    if len(sample)<valid_limit: sample.append(row)
+                    else:
+                        replacement=rng.randrange(held_seen)
+                        if replacement<valid_limit: sample[replacement]=row
+    excluded=set()
+    unique=[]
+    for row in sample:
+        if row[:24] not in excluded:
+            excluded.update((row[:24],flipped_layout(row[:24]))); unique.append(row)
+    if not unique: raise ValueError("empty validation split")
+    dest.mkdir(parents=True,exist_ok=False)
+    blocked=nt=ng=nvg=0
+    nbuckets=128
+    with tempfile.TemporaryDirectory(prefix="shuffle-",dir=dest) as scratch:
+        paths=[Path(scratch)/str(i) for i in range(nbuckets)]
+        with ExitStack() as handles:
+            files=[handles.enter_context(p.open("wb")) for p in paths]
+            for shard in shards:
+                for held,data in games(shard,seed):
+                    if held:
+                        nvg+=1
+                        continue
+                    ng+=1
+                    keep=bytearray()
+                    for off in range(0,len(data),32):
+                        if data[off:off+24] not in excluded: keep.extend(data[off:off+32])
+                        else: blocked+=1
+                    nt+=len(keep)//32
+                    files[rng.randrange(nbuckets)].write(keep)
+        if nt<minimum: raise ValueError(f"only {nt} usable training records")
+        with (dest/"train.bullet").open("xb") as train:
+            rng.shuffle(paths)
+            shuffle=np.random.default_rng(seed)
+            for path in paths:
+                if path.stat().st_size>128*1024**2: raise ValueError("shuffle bucket too large")
+                rows=np.fromfile(path,dtype="V32")
+                shuffle.shuffle(rows)
+                rows.tofile(train)
+    rng.shuffle(unique)
+    (dest/"valid.bullet").write_bytes(b"".join(unique))
+    info=dict(schema=1,seed=seed,source_config=cfg,sealed_shards=len(shards),source_positions=n,
+              holdout_seen=held_seen,removed_train_collisions=blocked,groups={})
+    for name,positions,ngames in [("train",nt,ng),("valid",len(unique),nvg)]:
+        p=dest/(name+".bullet")
+        if p.stat().st_size!=positions*32: raise ValueError("output length mismatch")
+        info["groups"][name]=dict(positions=positions,games=ngames,sha256=sha(p))
+    atomic(dest/"split.json",info)
+    return info
+
+if __name__=="__main__":
+    p=argparse.ArgumentParser(description=__doc__)
+    for name in ("root","dest"): p.add_argument(name,type=Path)
+    a=p.parse_args()
+    print(json.dumps(split(a.root,a.dest),indent=2))

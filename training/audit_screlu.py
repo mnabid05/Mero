@@ -8,6 +8,8 @@ import torch
 from chess_ai.board import Board
 from .screlu_data import encode
 from .screlu_integer import Reference
+from .screlu_wire import STANDALONE_MAGIC
+from .large_run import sha, atomic
 
 START = Board.starting().to_fen()
 SPECIAL = [
@@ -67,16 +69,23 @@ def run(weights,binaries):
     for binary in binaries:
         if ask(binary,"--screlu-scores",unique) != [[truth[f]] for f in unique]:
             raise ValueError(f"{binary}: fresh FEN parity failure")
+        if weights.read_bytes()[:8]==STANDALONE_MAGIC and ask(binary,"--static-scores",unique)!=[
+                [max(-50000,min(50000,truth[f]))] for f in unique]:
+            raise ValueError(f"{binary}: static evaluation is not purely the standalone network")
         actual=ask(binary,"--screlu-trace",[f"{f} | {seq}" for f,seq in lines])
         if actual != [[truth[f] for f in path] for path in traces]:
             raise ValueError(f"{binary}: move/undo parity failure")
-    return dict(kernels=len(binaries), unique_fens=len(unique),material_buckets=8,
+    return dict(kernels=len(binaries),binary_sha256=sha(binaries[0]),kernel_sha256=[sha(p) for p in binaries],
+                weights_sha256=sha(weights),unique_fens=len(unique),material_buckets=8,
                 trace_paths=len(traces),trace_scores=sum(map(len,traces)),integer_mismatches=0)
 
 if __name__=="__main__":
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument("weights",type=Path)
     p.add_argument("binaries",type=Path,nargs="+")
+    p.add_argument("--report",type=Path)
     a=p.parse_args()
     torch.set_num_threads(1)
-    print(json.dumps(run(a.weights,a.binaries),indent=2))
+    result=run(a.weights,a.binaries)
+    if a.report: atomic(a.report,result)
+    print(json.dumps(result,indent=2))
