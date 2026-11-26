@@ -76,3 +76,15 @@ the combined research branch defaults to the release evaluator.
 [Disabled control](backtests/bounded512-zero-control.json);
 [512 games](backtests/bounded512-confirmation.json).
 The Mac's formal SPRT power preflight still refused to run on discharging AC.
+
+## UCI control and diagnostic integrity (separate feature)
+
+`feat/uci-search-control` adds asynchronous `stop`, responsive `isready`, and
+honors `go infinite` until cancellation. New live tests cover one and three
+workers, immediate stop, readiness, repeated stop, a terminal board, explicit
+quit and reuse for a finite search. The reported PV starts with the chosen
+root move and terminates at a repetition. With Mero 7 evaluation on both
+sides, 32 paired fixed-node openings split **21W/22D/21L**; no clocks or
+engines failed. Fastchess emitted 64 PV warnings from the frozen main engine
+and **none** from the patched one. [Fixed-node report](backtests/uci-control-fixednodes.json).
+This fixes protocol behavior; it is not a strength promotion.

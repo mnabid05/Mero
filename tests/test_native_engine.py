@@ -91,7 +91,7 @@ class NativeEngineTests(unittest.TestCase):
         self.assertLess(self.native_see(poisoned_pawn, "d1d5"), -700)
 
     def test_native_uci_returns_legal_move(self):
-        commands = "uci\nisready\nposition startpos\ngo movetime 50\nquit\n"
+        commands = "uci\nisready\nposition startpos\ngo movetime 50\n"
         result = subprocess.run(
             [NATIVE_ENGINE],
             input=commands,
@@ -124,7 +124,6 @@ class NativeEngineTests(unittest.TestCase):
             "setoption name Threads value 4\n"
             "position startpos moves e2e4 e7e5\n"
             "go movetime 100\n"
-            "quit\n"
         )
         result = subprocess.run(
             [NATIVE_ENGINE],
@@ -148,7 +147,6 @@ class NativeEngineTests(unittest.TestCase):
             "uci\n"
             "position fen 4k3/7r/8/8/8/8/p6Q/6K1 w - - 0 1\n"
             "go depth 1\n"
-            "quit\n"
         )
         result = subprocess.run(
             [NATIVE_ENGINE],
@@ -164,7 +162,6 @@ class NativeEngineTests(unittest.TestCase):
             "uci\n"
             "position fen 7k/8/8/8/8/8/4R3/4K3 w - - 0 1\n"
             "go depth 1\n"
-            "quit\n"
         )
         result = subprocess.run(
             [NATIVE_ENGINE],
@@ -176,7 +173,7 @@ class NativeEngineTests(unittest.TestCase):
         self.assertIn("bestmove e2e7", result.stdout)
 
     def test_native_uci_honors_node_limit_and_reports_hashfull(self):
-        commands = "uci\nposition startpos\ngo nodes 10000\nquit\n"
+        commands = "uci\nposition startpos\ngo nodes 10000\n"
         result = subprocess.run(
             [NATIVE_ENGINE],
             input=commands,
@@ -204,7 +201,6 @@ class NativeEngineTests(unittest.TestCase):
                         "uci\n"
                         f"position fen {fen}\n"
                         "go depth 3\n"
-                        "quit\n"
                     ),
                     check=True,
                     capture_output=True,

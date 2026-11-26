@@ -2,7 +2,7 @@ name: Tests
 
 on:
   push:
-    branches: [main, codex/mero-2300, feat/torch-screlu-512, feat/torch-bounded-residual, feat/bullet-selfplay, feat/bullet-metal-pilot]
+    branches: [main, codex/mero-2300, feat/torch-screlu-512, feat/torch-bounded-residual, feat/bullet-selfplay, feat/bullet-metal-pilot, feat/uci-search-control]
   pull_request:
 
 permissions:
@@ -42,7 +42,7 @@ jobs:
         run: build/native/mwahaha-engine --perft 4
       - name: Smoke-test native UCI
         run: |
-          printf 'uci\nisready\nposition startpos\ngo movetime 50\nquit\n' |
+          printf 'uci\nisready\nposition startpos\ngo movetime 50\n' |
             build/native/mwahaha-engine
 
   sanitizers:
@@ -63,5 +63,5 @@ jobs:
           build/sanitized/mwahaha-engine --perft-fen 3 'r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1'
       - name: Exercise bounded search under sanitizers
         run: |
-          printf 'uci\nposition startpos\ngo nodes 100000\nquit\n' |
+          printf 'uci\nposition startpos\ngo nodes 100000\n' |
             build/sanitized/mwahaha-engine

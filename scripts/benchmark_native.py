@@ -46,7 +46,7 @@ def run_probe(
             f"setoption name Threads value {threads}",
             position,
             search,
-            "quit",
+            # EOF drains this finite search; an explicit UCI quit cancels it.
             "",
         )
     )

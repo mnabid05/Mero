@@ -13,6 +13,13 @@ standalone Bullet model is opt-in: it lost its 64-game test against the release.
 
 A self-contained original chess engine written in Python, C, and C++.
 
+The native UCI engine accepts `stop` during a search and replies to `isready`
+while thinking, including with multiple search threads. Interactive clients
+should wait for `bestmove` before sending the next position or quitting. For
+a one-shot shell benchmark, send the finite `go` command and close stdin;
+explicit `quit` cancels work. Reported variations start at the returned move
+and do not continue past a threefold repetition.
+
 Mero plays using its own search and embedded weights. No Stockfish, PyTorch,
 or external chess library is required at runtime.
 

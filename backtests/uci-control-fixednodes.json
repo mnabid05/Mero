@@ -1,0 +1,19 @@
+{
+  "status": "fixed-length diagnostic (not SPRT)",
+  "games": 64,
+  "wins": 21,
+  "draws": 22,
+  "losses": 21,
+  "reported_llr": null,
+  "faults": [],
+  "warnings": {
+    "Bestmove does not match beginning of last PV": 34,
+    "PV continues after threefold repetition": 30
+  },
+  "nodes": 20000,
+  "seed": 1153,
+  "blend": null,
+  "candidate_sha256": "a66daeb2dd30b2cd43af0828e9de2a30cd1a40a2dcb11dac25c73374dc4bb155",
+  "baseline_sha256": "c8aa94febb60d23ba0697ebfd40c02cda9598656d742928e59f3ee1ee643a796",
+  "book_sha256": "5835239f88cc2c7511b177c32392a69f3ede21819cf0616f80a7f907cd21d17e"
+}
