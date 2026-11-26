@@ -1072,7 +1072,7 @@ public:
         capture_history_ = {};
         killers_ = {};
         countermoves_ = {};
-        continuation_history_ = {};
+        std::fill(continuation_history_.begin(),continuation_history_.end(),0);
         std::fill(eval_cache_.begin(), eval_cache_.end(), EvalEntry{});
     }
 
@@ -1242,7 +1242,9 @@ private:
     std::array<std::array<int, 64>, 128> history_{};
     std::array<std::array<int, 64>, 128> capture_history_{};
     std::array<std::array<Move, 64>, 128> countermoves_{};
-    std::array<std::array<int, 64>, 64> continuation_history_{};
+    // Piece-to-square context prevents different pieces on the same square
+    // from sharing all replies. The table is private to the search worker.
+    std::vector<int16_t> continuation_history_=std::vector<int16_t>(768*768);
     std::array<int, MAX_PLY> static_evals_{};
     std::vector<uint64_t> search_history_;
     uint64_t nodes_ = 0;
@@ -1427,10 +1429,16 @@ private:
         value += bonus - value * std::abs(bonus) / HISTORY_LIMIT;
     }
 
+    static int continuation_tag(const Board& board,const Move& previous) {
+        if (!previous.valid() || board.squares[previous.to]=='.') return -1;
+        return Zobrist::piece_index(board.squares[previous.to])*64+previous.to;
+    }
+
     void update_continuation_history(int previous, int target, int bonus) {
+        if (previous<0) return;
         constexpr int HISTORY_LIMIT = 16'384;
         bonus = std::clamp(bonus, -HISTORY_LIMIT, HISTORY_LIMIT);
-        int& value = continuation_history_[previous][target];
+        auto& value = continuation_history_[previous*768+target];
         value += bonus - value * std::abs(bonus) / HISTORY_LIMIT;
     }
 
@@ -1443,6 +1451,7 @@ private:
         const Move& counter_move = Move{},
         const Move& previous_move = Move{}
     ) {
+        const int previous_tag=continuation_tag(board,previous_move);
         auto score = [&](const Move& move) {
             if (tt_move.valid() && move == tt_move) {
                 return 10'000'000;
@@ -1470,8 +1479,8 @@ private:
                 value += 680'000;
             }
             value += history_[static_cast<int>(piece)][move.to];
-            if (previous_move.valid() && quiet(board, move)) {
-                value += continuation_history_[previous_move.to][move.to];
+            if (previous_tag>=0 && quiet(board, move)) {
+                value += continuation_history_[previous_tag*768+Zobrist::piece_index(piece)*64+move.to];
             }
             if (quiet(board, move)) {
                 bool enemy_white = !is_white(piece);
@@ -1787,6 +1796,7 @@ private:
             }
         }
         order_moves(board, moves, tt_move, ply, counter_move, previous_move);
+        const int previous_tag=continuation_tag(board,previous_move);
         int original_alpha = alpha;
         int best_score = -INF;
         Move best{};
@@ -1849,8 +1859,8 @@ private:
                         int history_score = history_[
                             static_cast<int>(moving_piece)
                         ][move.to];
-                        int continuation_score = previous_move.valid()
-                            ? continuation_history_[previous_move.to][move.to]
+                        int continuation_score = previous_tag>=0
+                            ? continuation_history_[previous_tag*768+Zobrist::piece_index(moving_piece)*64+move.to]
                             : 0;
                         if (
                             history_score > 3'000
@@ -1931,8 +1941,8 @@ private:
                     update_history(moving_piece, move.to, bonus);
                     if (previous_move.valid()) {
                         update_continuation_history(
-                            previous_move.to,
-                            move.to,
+                            previous_tag,
+                            Zobrist::piece_index(moving_piece)*64+move.to,
                             bonus
                         );
                     }
@@ -1944,8 +1954,8 @@ private:
                         );
                         if (previous_move.valid()) {
                             update_continuation_history(
-                                previous_move.to,
-                                previous.to,
+                                previous_tag,
+                                Zobrist::piece_index(board.squares[previous.from])*64+previous.to,
                                 -bonus / 2
                             );
                         }

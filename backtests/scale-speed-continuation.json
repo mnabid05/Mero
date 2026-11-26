@@ -1,0 +1,213 @@
+{
+  "binary_sha256": {
+    "baseline": "c8aa94febb60d23ba0697ebfd40c02cda9598656d742928e59f3ee1ee643a796",
+    "candidate": "d708026a31bd8a13357302f77a89661a37053ce79f4ce1dfa6a5a5b5a38c75f6"
+  },
+  "aggregate_nps": {
+    "baseline": 650847,
+    "candidate": 630956
+  },
+  "median_paired_ratio": 1.0185839674117338,
+  "samples": [
+    {
+      "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      "baseline": {
+        "depth": 9,
+        "score": [
+          "cp",
+          25
+        ],
+        "bestmove": "d2d4",
+        "nodes": 240000,
+        "ms": 349,
+        "nps": 687679
+      },
+      "candidate": {
+        "depth": 9,
+        "score": [
+          "cp",
+          25
+        ],
+        "bestmove": "d2d4",
+        "nodes": 240000,
+        "ms": 309,
+        "nps": 776699
+      }
+    },
+    {
+      "fen": "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+      "candidate": {
+        "depth": 6,
+        "score": [
+          "cp",
+          -77
+        ],
+        "bestmove": "d5e6",
+        "nodes": 240000,
+        "ms": 597,
+        "nps": 402010
+      },
+      "baseline": {
+        "depth": 6,
+        "score": [
+          "cp",
+          -77
+        ],
+        "bestmove": "d5e6",
+        "nodes": 240000,
+        "ms": 479,
+        "nps": 501043
+      }
+    },
+    {
+      "fen": "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1",
+      "baseline": {
+        "depth": 12,
+        "score": [
+          "cp",
+          33
+        ],
+        "bestmove": "b4f4",
+        "nodes": 240000,
+        "ms": 203,
+        "nps": 1182266
+      },
+      "candidate": {
+        "depth": 14,
+        "score": [
+          "cp",
+          89
+        ],
+        "bestmove": "b4f4",
+        "nodes": 240000,
+        "ms": 200,
+        "nps": 1200000
+      }
+    },
+    {
+      "fen": "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10",
+      "candidate": {
+        "depth": 8,
+        "score": [
+          "cp",
+          71
+        ],
+        "bestmove": "c3d5",
+        "nodes": 240000,
+        "ms": 406,
+        "nps": 591133
+      },
+      "baseline": {
+        "depth": 8,
+        "score": [
+          "cp",
+          71
+        ],
+        "bestmove": "c3d5",
+        "nodes": 240000,
+        "ms": 415,
+        "nps": 578313
+      }
+    },
+    {
+      "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      "candidate": {
+        "depth": 9,
+        "score": [
+          "cp",
+          25
+        ],
+        "bestmove": "d2d4",
+        "nodes": 240000,
+        "ms": 418,
+        "nps": 574162
+      },
+      "baseline": {
+        "depth": 9,
+        "score": [
+          "cp",
+          25
+        ],
+        "bestmove": "d2d4",
+        "nodes": 240000,
+        "ms": 345,
+        "nps": 695652
+      }
+    },
+    {
+      "fen": "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+      "baseline": {
+        "depth": 6,
+        "score": [
+          "cp",
+          -77
+        ],
+        "bestmove": "d5e6",
+        "nodes": 240000,
+        "ms": 558,
+        "nps": 430107
+      },
+      "candidate": {
+        "depth": 6,
+        "score": [
+          "cp",
+          -77
+        ],
+        "bestmove": "d5e6",
+        "nodes": 240000,
+        "ms": 523,
+        "nps": 458891
+      }
+    },
+    {
+      "fen": "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1",
+      "candidate": {
+        "depth": 14,
+        "score": [
+          "cp",
+          89
+        ],
+        "bestmove": "b4f4",
+        "nodes": 240000,
+        "ms": 198,
+        "nps": 1212121
+      },
+      "baseline": {
+        "depth": 12,
+        "score": [
+          "cp",
+          33
+        ],
+        "bestmove": "b4f4",
+        "nodes": 240000,
+        "ms": 199,
+        "nps": 1206030
+      }
+    },
+    {
+      "fen": "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10",
+      "baseline": {
+        "depth": 8,
+        "score": [
+          "cp",
+          71
+        ],
+        "bestmove": "c3d5",
+        "nodes": 240000,
+        "ms": 402,
+        "nps": 597014
+      },
+      "candidate": {
+        "depth": 8,
+        "score": [
+          "cp",
+          71
+        ],
+        "bestmove": "c3d5",
+        "nodes": 240000,
+        "ms": 392,
+        "nps": 612244
+      }
+    }
+  ]
+}
