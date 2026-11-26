@@ -2,7 +2,7 @@ name: Tests
 
 on:
   push:
-    branches: [main, codex/mero-2300, feat/torch-screlu-512]
+    branches: [main, codex/mero-2300, feat/torch-screlu-512, feat/torch-bounded-residual]
   pull_request:
 
 permissions:

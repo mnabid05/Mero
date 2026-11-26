@@ -19,7 +19,7 @@ def verify(binary, weights, fixture):
 if __name__=="__main__":
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument("binary",type=Path)
-    p.add_argument("--weights",type=Path,default=Path("training/checkpoints/mero-screlu512.bin"))
+    p.add_argument("--weights",type=Path,default=Path("training/checkpoints/mero-bounded512.bin"))
     p.add_argument("--fixture",type=Path,default=Path("tests/screlu_golden.json"))
     args=p.parse_args()
     verify(args.binary,args.weights,args.fixture)

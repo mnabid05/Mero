@@ -1,308 +1,308 @@
 {
-  "sha256": "d8ad2842e67e1adba80434f5d2ff18c2cd91ab40137dd65645f408453776d01e",
+  "sha256": "c6e06cebd3685299c3a85f5d7d31742980db0e54a37a44528340738ec44d797d",
   "positions": [
     [
       "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
-      52
+      0
     ],
     [
       "4k3/8/8/8/8/8/8/4K3 b - - 0 1",
-      52
+      0
     ],
     [
       "r3k3/8/8/8/8/8/8/4K3 w - - 0 1",
-      -366
+      4
     ],
     [
       "r3k3/8/8/8/8/8/8/4K3 b - - 0 1",
-      458
+      -4
     ],
     [
       "rn2k3/8/8/8/8/8/8/4K3 w - - 0 1",
-      -609
+      9
     ],
     [
       "rn2k3/8/8/8/8/8/8/4K3 b - - 0 1",
-      702
+      -9
     ],
     [
       "rnb1k3/8/8/8/8/8/8/4K3 w - - 0 1",
-      -800
+      19
     ],
     [
       "rnb1k3/8/8/8/8/8/8/4K3 b - - 0 1",
-      883
+      -19
     ],
     [
       "rnbqk3/8/8/8/8/8/8/4K3 w - - 0 1",
-      -1657
+      11
     ],
     [
       "rnbqk3/8/8/8/8/8/8/4K3 b - - 0 1",
-      1777
+      -11
     ],
     [
       "rnbqkb2/8/8/8/8/8/8/4K3 w - - 0 1",
-      -1927
+      6
     ],
     [
       "rnbqkb2/8/8/8/8/8/8/4K3 b - - 0 1",
-      2034
+      -6
     ],
     [
       "rnbqkbn1/8/8/8/8/8/8/4K3 w - - 0 1",
-      -2137
+      5
     ],
     [
       "rnbqkbn1/8/8/8/8/8/8/4K3 b - - 0 1",
-      2244
+      -5
     ],
     [
       "rnbqkbnr/8/8/8/8/8/8/4K3 w - - 0 1",
-      -2514
+      10
     ],
     [
       "rnbqkbnr/8/8/8/8/8/8/4K3 b - - 0 1",
-      2614
+      -10
     ],
     [
       "rnbqkbnr/p7/8/8/8/8/8/4K3 w - - 0 1",
-      -2370
+      36
     ],
     [
       "rnbqkbnr/p7/8/8/8/8/8/4K3 b - - 0 1",
-      2486
+      -36
     ],
     [
       "rnbqkbnr/pp6/8/8/8/8/8/4K3 w - - 0 1",
-      -2451
+      44
     ],
     [
       "rnbqkbnr/pp6/8/8/8/8/8/4K3 b - - 0 1",
-      2527
+      -44
     ],
     [
       "rnbqkbnr/ppp5/8/8/8/8/8/4K3 w - - 0 1",
-      -2489
+      52
     ],
     [
       "rnbqkbnr/ppp5/8/8/8/8/8/4K3 b - - 0 1",
-      2560
+      -52
     ],
     [
       "rnbqkbnr/pppp4/8/8/8/8/8/4K3 w - - 0 1",
-      -2485
+      64
     ],
     [
       "rnbqkbnr/pppp4/8/8/8/8/8/4K3 b - - 0 1",
-      2526
+      -64
     ],
     [
       "rnbqkbnr/ppppp3/8/8/8/8/8/4K3 w - - 0 1",
-      -2403
+      105
     ],
     [
       "rnbqkbnr/ppppp3/8/8/8/8/8/4K3 b - - 0 1",
-      2530
+      -105
     ],
     [
       "rnbqkbnr/pppppp2/8/8/8/8/8/4K3 w - - 0 1",
-      -2490
+      115
     ],
     [
       "rnbqkbnr/pppppp2/8/8/8/8/8/4K3 b - - 0 1",
-      2595
+      -115
     ],
     [
       "rnbqkbnr/ppppppp1/8/8/8/8/8/4K3 w - - 0 1",
-      -2611
+      122
     ],
     [
       "rnbqkbnr/ppppppp1/8/8/8/8/8/4K3 b - - 0 1",
-      2699
+      -122
     ],
     [
       "rnbqkbnr/pppppppp/8/8/8/8/8/4K3 w - - 0 1",
-      -2686
+      131
     ],
     [
       "rnbqkbnr/pppppppp/8/8/8/8/8/4K3 b - - 0 1",
-      2727
+      -131
     ],
     [
       "rnbqkbnr/pppppppp/8/8/8/8/P7/4K3 w - - 0 1",
-      -2614
+      137
     ],
     [
       "rnbqkbnr/pppppppp/8/8/8/8/P7/4K3 b - - 0 1",
-      2887
+      -137
     ],
     [
       "rnbqkbnr/pppppppp/8/8/8/8/PP6/4K3 w - - 0 1",
-      -2628
+      125
     ],
     [
       "rnbqkbnr/pppppppp/8/8/8/8/PP6/4K3 b - - 0 1",
-      2890
+      -125
     ],
     [
       "rnbqkbnr/pppppppp/8/8/8/8/PPP5/4K3 w - - 0 1",
-      -2620
+      117
     ],
     [
       "rnbqkbnr/pppppppp/8/8/8/8/PPP5/4K3 b - - 0 1",
-      2858
+      -117
     ],
     [
       "rnbqkbnr/pppppppp/8/8/8/8/PPPP4/4K3 w - - 0 1",
-      -2608
+      111
     ],
     [
       "rnbqkbnr/pppppppp/8/8/8/8/PPPP4/4K3 b - - 0 1",
-      2799
+      -111
     ],
     [
       "rnbqkbnr/pppppppp/8/8/8/8/PPPPP3/4K3 w - - 0 1",
-      -2500
+      92
     ],
     [
       "rnbqkbnr/pppppppp/8/8/8/8/PPPPP3/4K3 b - - 0 1",
-      2896
+      -92
     ],
     [
       "rnbqkbnr/pppppppp/8/8/8/8/PPPPPP2/4K3 w - - 0 1",
-      -2470
+      85
     ],
     [
       "rnbqkbnr/pppppppp/8/8/8/8/PPPPPP2/4K3 b - - 0 1",
-      2834
+      -85
     ],
     [
       "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPP1/4K3 w - - 0 1",
-      -2451
+      79
     ],
     [
       "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPP1/4K3 b - - 0 1",
-      2791
+      -79
     ],
     [
       "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/4K3 w - - 0 1",
-      -2424
+      67
     ],
     [
       "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/4K3 b - - 0 1",
-      2730
+      -67
     ],
     [
       "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/R3K3 w - - 0 1",
-      -2013
+      19
     ],
     [
       "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/R3K3 b - - 0 1",
-      2439
+      -19
     ],
     [
       "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RN2K3 w - - 0 1",
-      -1917
+      15
     ],
     [
       "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RN2K3 b - - 0 1",
-      2294
+      -15
     ],
     [
       "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNB1K3 w - - 0 1",
-      -1651
+      12
     ],
     [
       "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNB1K3 b - - 0 1",
-      1992
+      -12
     ],
     [
       "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQK3 w - - 0 1",
-      -836
+      7
     ],
     [
       "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQK3 b - - 0 1",
-      1147
+      -7
     ],
     [
       "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKB2 w - - 0 1",
-      -573
+      0
     ],
     [
       "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKB2 b - - 0 1",
-      804
+      0
     ],
     [
       "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBN1 w - - 0 1",
-      -331
+      0
     ],
     [
       "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBN1 b - - 0 1",
-      547
+      0
     ],
     [
       "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w - - 0 1",
-      105
+      0
     ],
     [
       "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b - - 0 1",
-      105
+      0
     ]
   ],
   "paths": [
     [
       "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 | e2e4 a7a6 e4e5 d7d5 e5d6",
       [
-        105,
-        61,
-        115,
-        39,
-        94,
-        81,
-        94,
-        39,
-        115,
-        61,
-        105
+        0,
+        -3,
+        2,
+        -2,
+        0,
+        1,
+        0,
+        -2,
+        2,
+        -3,
+        0
       ]
     ],
     [
       "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1 | e1g1 e8c8",
       [
-        63,
-        -102,
-        166,
-        -102,
-        63
+        0,
+        0,
+        -4,
+        0,
+        0
       ]
     ],
     [
       "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1 | e1c1 e8g8",
       [
-        63,
-        44,
-        -56,
-        44,
-        63
+        0,
+        -2,
+        4,
+        -2,
+        0
       ]
     ],
     [
       "1r5k/P7/8/8/8/8/7p/K7 w - - 0 1 | a7b8n h2h1r",
       [
-        -94,
-        293,
-        -182,
-        293,
-        -94
+        21,
+        26,
+        -2,
+        26,
+        21
       ]
     ],
     [
       "4k3/8/8/8/3Pp3/8/8/4K3 b - d3 0 1 | e4d3",
       [
-        60,
-        -81,
-        60
+        -1,
+        9,
+        -1
       ]
     ]
   ]

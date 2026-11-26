@@ -140,7 +140,7 @@ def main() -> int:
         args.cxx_compiler,
         args.sanitize,
         None if args.release_control else (args.screlu or
-            Path(__file__).resolve().parents[1]/"training/checkpoints/mero-screlu512.bin"),
+            Path(__file__).resolve().parents[1]/"training/checkpoints/mero-bounded512.bin"),
         args.native_arch,
         args.scalar_only,
     )
