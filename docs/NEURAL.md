@@ -19,6 +19,16 @@ diffing piece bitboards. Set UCI `NeuralBlend` to 0 to disable the network.
 
 ## Reproduce the release experiment
 
+The [original float checkpoint](../training/checkpoints/mero-7.pt) contains the
+selected width and learned state dictionary, not executable model code. Load it
+with `training.export.load_model` to fine-tune, or reproduce the shipped header
+without collecting any data:
+
+```sh
+python -m training.export training/checkpoints/mero-7.pt build/reexported-weights.h
+cmp build/reexported-weights.h native/mero_weights.h
+```
+
 Use a local Stockfish 18 binary. From the repository root, in a fresh environment:
 
 ```sh
