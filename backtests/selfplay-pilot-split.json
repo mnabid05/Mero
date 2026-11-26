@@ -1,0 +1,16 @@
+{
+  "seed": 1701,
+  "source_sha256": "2e2a7a2d208eddb1a89d0c5f7ca34022a39795b5d696b86bdd319bc6cc6e9d8e",
+  "groups": {
+    "train": {
+      "games": 206,
+      "positions": 16143,
+      "sha256": "8a10f7c8d4941feb471140472456b792663da367d153ba3560b6fd179b1685d4"
+    },
+    "valid": {
+      "games": 50,
+      "positions": 3374,
+      "sha256": "e5f8c4cbf02a4b2f2a4aafa27bd410fc9e6f53fc8004fe14cccdd912a6d85d6c"
+    }
+  }
+}

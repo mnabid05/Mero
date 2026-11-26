@@ -1,0 +1,22 @@
+{
+  "format": "bulletformat-chessboard-v1",
+  "games": 256,
+  "completed": 256,
+  "positions": 19521,
+  "seed": 290341,
+  "workers": 4,
+  "nodes": 5000,
+  "opening_plies": 8,
+  "mode": "hce",
+  "positions_sha256": "2e2a7a2d208eddb1a89d0c5f7ca34022a39795b5d696b86bdd319bc6cc6e9d8e",
+  "upstream_byte_parity": true,
+  "white_wins": 125,
+  "draws": 39,
+  "black_wins": 92,
+  "terminal_reasons": {
+    "checkmate": 217,
+    "threefold": 27,
+    "material": 7,
+    "rule50": 5
+  }
+}
