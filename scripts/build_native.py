@@ -25,6 +25,9 @@ def build(
     compiler: str | None = None,
     cxx_compiler: str | None = None,
     sanitize: bool = False,
+    screlu: Path | None = None,
+    native_arch: bool = False,
+    scalar_only: bool = False,
 ) -> tuple[Path, Path]:
     root = Path(__file__).resolve().parents[1]
     source = root / "native" / "evaluation.c"
@@ -63,6 +66,8 @@ def build(
         compile_c[compile_c.index("-O3")] = "-O1"
         compile_c.remove("-DNDEBUG")
     compile_c.extend(sanitizer_flags)
+    if native_arch:
+        compile_c.append("-march=native")
     subprocess.run(compile_c, check=True)
 
     link_library = [
@@ -96,6 +101,19 @@ def build(
         compile_engine[compile_engine.index("-O3")] = "-O1"
         compile_engine.remove("-DNDEBUG")
     compile_engine.extend(sanitizer_flags)
+    if native_arch:
+        compile_engine.append("-march=native")
+    if screlu:
+        import sys
+        sys.path.insert(0, str(root))
+        try:
+            from training.screlu_wire import emit_header
+            emit_header(screlu.read_bytes(), output_dir / "mero_screlu_weights.h")
+        finally:
+            sys.path.pop(0)
+        compile_engine.extend(["-DMERO_SCRELU", "-I", str(output_dir.resolve())])
+        if scalar_only:
+            compile_engine.append("-DMERO_SCALAR_ONLY")
     subprocess.run(compile_engine, check=True)
     return output, engine_output
 
@@ -108,6 +126,11 @@ def main() -> int:
         default=Path(__file__).resolve().parents[1] / "build" / "native",
     )
     parser.add_argument("--compiler")
+    arch=parser.add_mutually_exclusive_group()
+    arch.add_argument("--screlu", type=Path, help="override the checked-in SCReLU checkpoint")
+    arch.add_argument("--release-control", action="store_true", help="build the previous Mero 7 evaluator")
+    parser.add_argument("--native-arch", action="store_true", help="tune for the build machine")
+    parser.add_argument("--scalar-only", action="store_true", help="use the portable SCReLU kernel")
     parser.add_argument("--cxx-compiler")
     parser.add_argument("--sanitize", action="store_true", help="enable address and undefined-behavior checks")
     args = parser.parse_args()
@@ -116,6 +139,10 @@ def main() -> int:
         args.compiler,
         args.cxx_compiler,
         args.sanitize,
+        None if args.release_control else (args.screlu or
+            Path(__file__).resolve().parents[1]/"training/checkpoints/mero-screlu512.bin"),
+        args.native_arch,
+        args.scalar_only,
     )
     print(library)
     print(engine)
