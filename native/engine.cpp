@@ -1,4 +1,5 @@
 #include <algorithm>
+#include "neural.h"
 #include <array>
 #include <atomic>
 #include <bit>
@@ -1233,6 +1234,7 @@ public:
 private:
     struct EvalEntry { uint64_t key = 0; int score = 0; bool valid = false; };
     mutable std::vector<EvalEntry> eval_cache_ = std::vector<EvalEntry>(16384);
+    mutable mero_neural::Evaluator neural_;
     std::vector<TTCluster> table_;
     std::array<std::array<Move, 2>, MAX_PLY> killers_{};
     std::array<std::array<int, 64>, 128> history_{};
@@ -1287,6 +1289,7 @@ private:
         if (cached.valid && cached.key == board.key) return cached.score;
         int score = mwahaha_evaluate(board.squares.data()) + king_pressure(board)
             + passed_pawn_activity(board);
+        score += neural_.evaluate(board.piece_boards) / 2;
         score = board.white_to_move ? score : -score;
         cached = {board.key, score, true};
         return score;
