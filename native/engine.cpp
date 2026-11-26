@@ -2603,6 +2603,15 @@ int uci_loop() {
 }  // namespace
 
 int main(int argc, char** argv) {
+    if (argc == 2 && std::string(argv[1]) == "--neural-scores") {
+        mero_neural::Evaluator evaluator;
+        std::string fen;
+        while (std::getline(std::cin, fen)) {
+            Board board = Board::from_fen(fen);
+            std::cout << evaluator.evaluate(board.piece_boards) << '\n';
+        }
+        return 0;
+    }
     if (argc >= 4 && std::string(argv[1]) == "--see-fen") {
         std::ostringstream fen;
         for (int index = 3; index < argc; ++index) {
