@@ -67,10 +67,13 @@ int main() {
     }
     assert(history_test == std::vector<uint64_t>({1, 2, 3}));
     uint64_t random_state = 1729;
+    mero_neural::Evaluator incremental;
     for (int game = 0; game < 8; ++game) {
         Board walk = Board::starting();
         for (int ply = 0; ply < 100; ++ply) {
             auto legal = walk.legal_moves_in_place();
+            mero_neural::Evaluator rebuilt;
+            assert(incremental.evaluate(walk.piece_boards) == rebuilt.evaluate(walk.piece_boards));
             std::string before = walk.fen();
             assert(walk.has_legal_move() == !legal.empty());
             assert(walk.fen() == before);
