@@ -2,7 +2,22 @@
 
 A self-contained original chess engine written in Python, C, and C++.
 
-**No Stockfish. No engine wrapper. No chess library. No runtime dependency.**
+Mero plays using its own search and embedded weights. No Stockfish, PyTorch,
+or external chess library is required at runtime.
+
+Mero 7's evaluator was trained in PyTorch on Stockfish 18 search scores from
+archived Mero games and random legal continuations. Of 116,633 labeled positions,
+96,784 trained the release network and 19,844 formed an opening-held-out
+validation set after overlap filtering. The selected 64-unit network reduced
+mean absolute teacher-score error from 388 to 268 centipawns on that set;
+the release uses a half-strength correction to the native evaluation.
+
+**Estimated strength: 2377 Elo in the release test.** Mero scored 37 wins,
+4 draws and 23 losses against Stockfish 18 set to 2300 across 64 games at
+100 ms per move (four threads to one). The paired 95% approximation spans
+2256–2498. This is neither a human rating nor evidence of frontier strength.
+See the [match report](backtests/mero-7-stockfish18-2300.json),
+[training recipe](docs/NEURAL.md), and [training audit](backtests/mero-7-training.json).
 
 The project implements its own board representation, legal move generator,
 evaluation, search, time management, UCI protocol, terminal game, and strength
@@ -31,7 +46,7 @@ Python engine detects the native evaluator library automatically. Without it,
 the dependency-free Python evaluator is used; set `MWAHAHA_PURE_PYTHON=1` to
 force that reference path.
 
-Mero 6.0 adds coordinated king-attack evaluation, passed-pawn king support,
+The preceding Mero 6.0 release added coordinated king-attack evaluation, passed-pawn king support,
 legal-attacker exchange pruning, full-key evaluation caching, and faster
 unpinned move generation. Search now handles check evasions, bounded tactical
 extensions, repetition at the frontier, and rule-fifty cache separation more
@@ -40,7 +55,7 @@ carefully. A 64-game release-candidate match against Mero 5.0 scored 25 wins,
 interval includes zero gain. See [`docs/STRENGTH.md`](docs/STRENGTH.md) for all
 calibration results, exact configurations, and uncertainty.
 
-The final 64-game probe against Stockfish 18's 2300 setting scored 32 wins,
+The Mero 6.0 probe against Stockfish 18's 2300 setting scored 32 wins,
 3 draws and 29 losses: **2316 setting-relative Elo**, with a model interval of
 2231–2402 and a broader paired interval of 2198–2435. The point estimate crosses
 2300, but the experiment does not establish a 2300 minimum or a human rating.
@@ -155,7 +170,8 @@ mwahaha-uci
 
 ## Validation
 
-Build the native engine and run the 85-test suite:
+Build the native engine and run the test suite (the two optional Torch tests
+also run if PyTorch is installed):
 
 ```bash
 python3 scripts/build_native.py
@@ -166,8 +182,8 @@ Linux CI also builds with AddressSanitizer and UndefinedBehaviorSanitizer.
 Replay the published game reports with:
 
 ```bash
-python3 -m scripts.verify_match backtests/mero-6-final-stockfish18-2300.json
-python3 -m scripts.verify_match backtests/mero-6-vs-5-release-candidate.json
+python3 -m scripts.verify_match backtests/mero-7-stockfish18-2300.json
+python3 -m scripts.verify_match backtests/mero-7-neural-ablation.json
 ```
 
 Reports include complete moves, final positions, paired uncertainty, executable
@@ -249,8 +265,8 @@ python3 -m chess_ai.gauntlet \
   --json-out gauntlet.json
 ```
 
-External engines are test opponents only and are not included in or required by
-Mero.
+External engines are optional test opponents and offline label sources. They
+are not bundled with Mero or invoked during normal play.
 
 ## Project layout
 
