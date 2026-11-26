@@ -19,3 +19,11 @@ and `050413c4`, respectively.
 | Candidate | SPRT vs main | Latest passing strength commit |
 | --- | --- | --- |
 | `22d8a21` vs `d74a206`, attempt 1 | **Invalid.** 8+0.08, 4 lanes, 1 thread/16 MiB per engine, seed 1701, paired eight-ply PGN prefixes, normalized [0,10], α=β=.05. Interrupted at 11 finished games (1W/1D/9L): four simultaneous time forfeits during a 30-second clamshell sleep, no completed LLR decision. [Fault record](backtests/screlu512-sprt-01-invalid.json). | None for this candidate |
+
+**Do not promote the standalone model.** Despite its lower teacher error, it
+lost all 64 games in a separate 20,000-nodes/move diagnostic (32 color pairs,
+seed 1701). All ended in checkmate, none on time. On 1,477 sampled positions,
+averaging its scores for opposite sides to move gave a median +141.5 cp for
+the mover; the Mero 7 score was antisymmetric (median 0). This is a plausible
+search-calibration problem, not proof of a single cause. Test a bounded,
+antisymmetric correction to the proven evaluator on a separate branch.
