@@ -150,6 +150,7 @@ def run_match(
     candidate_threads: int = 1,
     baseline_threads: int = 1,
     show_progress: bool = False,
+    baseline_neural_blend: int | None = None,
 ) -> MatchReport:
     if games < 2 or games % 2:
         raise ValueError("games must be a positive even number")
@@ -169,6 +170,8 @@ def run_match(
     ) as candidate, UCIEngine(
         baseline_command, {**common, "Threads": baseline_threads}
     ) as baseline:
+        if baseline_neural_blend is not None:
+            baseline.set_option("NeuralBlend", baseline_neural_blend)
         for index in range(games):
             opening_name, opening_moves = OPENINGS[(index // 2) % len(OPENINGS)]
             record = _play_game(
@@ -209,7 +212,8 @@ def run_match(
         paired_interval([record.candidate_score for record in records]),
         {"candidate": engine_metadata(candidate_command),
          "baseline": engine_metadata(baseline_command), "hash_mb_per_engine": 64,
-         "max_plies": max_plies, "opening_count": len(OPENINGS)},
+         "max_plies": max_plies, "opening_count": len(OPENINGS),
+         "baseline_neural_blend": baseline_neural_blend},
     )
 
 
@@ -222,6 +226,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--max-plies", type=int, default=160)
     parser.add_argument("--candidate-threads", type=int, default=1)
     parser.add_argument("--baseline-threads", type=int, default=1)
+    parser.add_argument("--baseline-neural-blend", type=int,
+                        help="set baseline NeuralBlend (use 0 for a same-binary control)")
     parser.add_argument("--json-out", type=Path)
     args = parser.parse_args(argv)
     report = run_match(
@@ -233,6 +239,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         candidate_threads=args.candidate_threads,
         baseline_threads=args.baseline_threads,
         show_progress=True,
+        baseline_neural_blend=args.baseline_neural_blend,
     )
     print(
         f"\nResult: {report.wins} wins, {report.draws} draws, "
