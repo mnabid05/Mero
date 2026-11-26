@@ -1083,6 +1083,8 @@ public:
 
     int static_score(const Board& board) const { return evaluate(board); }
 
+    void watch_stop(const std::atomic_bool* flag) { stop_flag_=flag; }
+
     void resize_table(std::size_t megabytes) {
         std::size_t bytes = std::max<std::size_t>(1, megabytes) * 1024 * 1024;
         std::size_t entries = std::max<std::size_t>(
@@ -1178,16 +1180,27 @@ public:
     std::vector<Move> line_after_move(
         const Board& position,
         const Move& move,
-        int depth
+        int depth,
+        const std::vector<uint64_t>& game_history
     ) {
-        std::vector<Move> line{move};
-        if (depth <= 1) {
-            return line;
-        }
+        if (!move.valid()) return {};
+        std::vector<Move> line;
         Board board = position;
-        board.make_move(move);
-        auto tail = principal_variation(board, depth - 1);
-        line.insert(line.end(), tail.begin(), tail.end());
+        auto history=game_history;
+        if (history.empty() || history.back()!=board.key) history.push_back(board.key);
+        Move next=move;
+        for (;;) {
+            line.push_back(next);
+            board.make_move(next);
+            if (static_cast<int>(line.size())>=depth || board.halfmove>=100 ||
+                board.insufficient_material() || std::count(history.begin(),history.end(),board.key)>=2) break;
+            history.push_back(board.key);
+            TTEntry* entry=probe(board.search_key());
+            if (!entry || !entry->move.valid()) break;
+            auto legal=board.legal_moves_in_place();
+            if (std::find(legal.begin(),legal.end(),entry->move)==legal.end()) break;
+            next=entry->move;
+        }
         return line;
     }
 
@@ -1258,7 +1271,7 @@ public:
         result.elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::steady_clock::now() - started
         ).count();
-        result.pv = principal_variation(position, result.depth);
+        result.pv = line_after_move(position,result.move,result.depth,game_history);
         return result;
     }
 
@@ -1277,6 +1290,7 @@ private:
     std::vector<uint64_t> search_history_;
     uint64_t nodes_ = 0;
     uint64_t node_limit_ = 0;
+    const std::atomic_bool* stop_flag_ = nullptr;
     int root_depth_ = 0;
     uint16_t generation_ = 0;
     std::chrono::steady_clock::time_point deadline_{};
@@ -1296,6 +1310,8 @@ private:
     }
 
     void check_time() {
+        if ((nodes_ & 255ULL)==0 && stop_flag_ &&
+            stop_flag_->load(std::memory_order_relaxed)) throw Timeout{};
         if (node_limit_ != 0 && nodes_ >= node_limit_) throw Timeout{};
         if ((nodes_ & 2047ULL) == 0) {
             if (std::chrono::steady_clock::now() >= deadline_) {
@@ -2164,23 +2180,6 @@ private:
             && std::popcount(board.occupied) > 6;
     }
 
-    std::vector<Move> principal_variation(Board board, int depth) {
-        std::vector<Move> pv;
-        for (int index = 0; index < depth; ++index) {
-            TTEntry* entry = probe(board.search_key());
-            if (entry == nullptr || !entry->move.valid()) {
-                break;
-            }
-            auto legal = board.legal_moves();
-            auto found = std::find(legal.begin(), legal.end(), entry->move);
-            if (found == legal.end()) {
-                break;
-            }
-            pv.push_back(*found);
-            board.make_move(*found);
-        }
-        return pv;
-    }
 };
 
 class EnginePool {
@@ -2205,6 +2204,10 @@ public:
 
     int threads() const {
         return thread_count_;
+    }
+
+    void watch_stop(const std::atomic_bool* flag) {
+        for (auto& worker : workers_) worker->watch_stop(flag);
     }
 
     void set_neural_blend(int percent) {
@@ -2415,7 +2418,8 @@ private:
             result.pv = workers_[best_worker]->line_after_move(
                 position,
                 result.move,
-                depth
+                depth,
+                game_history
             );
             FixedList<std::pair<int, Move>, 256> ranked_moves;
             for (std::size_t index = 0; index < moves.size(); ++index) {
@@ -2589,14 +2593,61 @@ int run_bench(int depth) {
     return 0;
 }
 
+std::string uci_result(const Engine::Result& result) {
+    std::ostringstream out;
+    uint64_t nps = result.nodes * 1000
+        / static_cast<uint64_t>(std::max<long long>(1, result.elapsed_ms));
+    out << "info depth " << result.depth;
+    if (std::abs(result.score) >= MATE - MAX_PLY) {
+        int distance = (MATE - std::abs(result.score) + 1) / 2;
+        out << " score mate " << (result.score < 0 ? -distance : distance);
+    } else {
+        out << " score cp " << result.score;
+    }
+    out << " nodes " << result.nodes
+        << " nps " << nps
+        << " hashfull " << result.hashfull
+        << " time " << result.elapsed_ms
+        << " pv";
+    for (const Move& move : result.pv) {
+        out << ' ' << move.uci();
+    }
+    if (result.pv.empty() && result.move.valid()) out << ' ' << result.move.uci();
+    out << "\nbestmove " << result.move.uci()
+        << '\n';
+    return out.str();
+}
+
 int uci_loop() {
     Board board = Board::starting();
     EnginePool engine;
     std::vector<uint64_t> game_history{board.key};
     int overhead = 10;
+    std::mutex output;
+    std::atomic_bool stopped{false};
+    std::future<void> active;
+    bool infinite=false;
+    auto finish=[&](bool cancel) {
+        if (!active.valid()) return;
+        if (cancel) {
+            stopped.store(true,std::memory_order_relaxed);
+            stopped.notify_all();
+        }
+        active.get();
+    };
     std::string line;
     while (std::getline(std::cin, line)) {
         try {
+            if (line=="isready") {
+                std::lock_guard lock(output);
+                std::cout << "readyok\n" << std::flush;
+                continue;
+            }
+            if (line=="stop") { finish(true); continue; }
+            if (line=="quit") { finish(true); break; }
+            if (line=="uci" || line=="bench" || line=="ucinewgame" ||
+                line.rfind("setoption ",0)==0 || line.rfind("position ",0)==0 ||
+                line=="go" || line.rfind("go ",0)==0) finish(true);
             if (line == "uci") {
 #ifdef MERO_SCRELU
                 std::cout << "id name Mero SCReLU 512 experimental"
@@ -2612,8 +2663,6 @@ int uci_loop() {
                 std::cout << "uciok\n" << std::flush;
             } else if (line == "bench") {
                 run_bench(12);
-            } else if (line == "isready") {
-                std::cout << "readyok\n" << std::flush;
             } else if (line == "ucinewgame") {
                 board = Board::starting();
                 game_history = {board.key};
@@ -2636,7 +2685,7 @@ int uci_loop() {
                 overhead = std::clamp(std::stoi(line.substr(sizeof(prefix) - 1)), 0, 5000);
             } else if (line.rfind("position ", 0) == 0) {
                 parse_position(board, line, game_history);
-            } else if (line.rfind("go", 0) == 0) {
+            } else if (line=="go" || line.rfind("go ",0)==0) {
                 auto tokens = split(line);
                 int requested_depth = option_value(tokens, "depth");
                 int requested_nodes = option_value(tokens, "nodes");
@@ -2662,39 +2711,31 @@ int uci_loop() {
                     && option_value(tokens, "wtime") < 0 && option_value(tokens, "btime") < 0) {
                     move_time = 3'600'000;
                 }
-                Engine::Result result = engine.search(
-                    board,
-                    depth,
-                    move_time,
-                    game_history,
-                    static_cast<uint64_t>(std::max(0, requested_nodes))
-                );
-                uint64_t nps = result.nodes * 1000
-                    / static_cast<uint64_t>(std::max<long long>(1, result.elapsed_ms));
-                std::cout << "info depth " << result.depth;
-                if (std::abs(result.score) >= MATE - MAX_PLY) {
-                    int distance = (MATE - std::abs(result.score) + 1) / 2;
-                    std::cout << " score mate " << (result.score < 0 ? -distance : distance);
-                } else {
-                    std::cout << " score cp " << result.score;
-                }
-                std::cout << " nodes " << result.nodes
-                    << " nps " << nps
-                    << " hashfull " << result.hashfull
-                    << " time " << result.elapsed_ms
-                    << " pv";
-                for (const Move& move : result.pv) {
-                    std::cout << ' ' << move.uci();
-                }
-                std::cout << "\nbestmove " << result.move.uci()
-                    << '\n' << std::flush;
-            } else if (line == "quit") {
-                break;
+                infinite=std::find(tokens.begin(),tokens.end(),"infinite")!=tokens.end();
+                if (infinite) { move_time=2'000'000'000; depth=MAX_PLY-1; }
+                stopped.store(false,std::memory_order_relaxed);
+                engine.watch_stop(&stopped);
+                active=std::async(std::launch::async,
+                    [&,board,game_history,depth,move_time,requested_nodes,infinite] {
+                        try {
+                            auto result=engine.search(board,depth,move_time,game_history,
+                                static_cast<uint64_t>(std::max(0,requested_nodes)));
+                            if (infinite) stopped.wait(false,std::memory_order_relaxed);
+                            std::lock_guard lock(output);
+                            std::cout<<uci_result(result)<<std::flush;
+                        } catch (const std::exception& e) {
+                            std::lock_guard lock(output);
+                            std::cout<<"info string error: "<<e.what()<<"\nbestmove 0000\n"<<std::flush;
+                        }
+                    });
             }
         } catch (const std::exception& error) {
             std::cout << "info string error: " << error.what() << '\n' << std::flush;
         }
     }
+    // A finite search fed by a shell pipe drains on EOF. Explicit quit
+    // cancels immediately; an infinite search never holds a dead pipe open.
+    finish(infinite);
     return 0;
 }
 
