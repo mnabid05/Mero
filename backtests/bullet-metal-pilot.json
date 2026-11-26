@@ -1,0 +1,76 @@
+{
+  "split": {
+    "seed": 1701,
+    "source_sha256": "2e2a7a2d208eddb1a89d0c5f7ca34022a39795b5d696b86bdd319bc6cc6e9d8e",
+    "groups": {
+      "train": {
+        "games": 206,
+        "positions": 16143,
+        "sha256": "8a10f7c8d4941feb471140472456b792663da367d153ba3560b6fd179b1685d4"
+      },
+      "valid": {
+        "games": 50,
+        "positions": 3374,
+        "sha256": "e5f8c4cbf02a4b2f2a4aafa27bd410fc9e6f53fc8004fe14cccdd912a6d85d6c"
+      }
+    }
+  },
+  "backend": "Bullet/Metal",
+  "bullet_revision": "5d70177680437b7c0ddf958bd4722d95afa78b0c",
+  "evaluation": "minimum deployed mixed-target MSE on whole-game validation split; not Elo",
+  "float_probe_max_error_cp": 0.00014921875003892637,
+  "float_probes": 16,
+  "checkpoints": [
+    {
+      "superbatch": 5,
+      "mixed_mse": 0.05891469866037369,
+      "outcome_brier": 0.15867879986763,
+      "mae_search_cp": 388.1973876953125
+    },
+    {
+      "superbatch": 10,
+      "mixed_mse": 0.0566110797226429,
+      "outcome_brier": 0.15576137602329254,
+      "mae_search_cp": 378.3796691894531
+    },
+    {
+      "superbatch": 15,
+      "mixed_mse": 0.055644869804382324,
+      "outcome_brier": 0.1550859957933426,
+      "mae_search_cp": 371.77593994140625
+    },
+    {
+      "superbatch": 20,
+      "mixed_mse": 0.05553664639592171,
+      "outcome_brier": 0.1551666110754013,
+      "mae_search_cp": 370.5871276855469
+    },
+    {
+      "superbatch": 25,
+      "mixed_mse": 0.054872576147317886,
+      "outcome_brier": 0.15385164320468903,
+      "mae_search_cp": 368.148193359375
+    },
+    {
+      "superbatch": 30,
+      "mixed_mse": 0.05475616455078125,
+      "outcome_brier": 0.15377680957317352,
+      "mae_search_cp": 367.4662170410156
+    },
+    {
+      "superbatch": 35,
+      "mixed_mse": 0.05467919632792473,
+      "outcome_brier": 0.15369758009910583,
+      "mae_search_cp": 367.0379333496094
+    },
+    {
+      "superbatch": 40,
+      "mixed_mse": 0.054689981043338776,
+      "outcome_brier": 0.1537363976240158,
+      "mae_search_cp": 367.0068054199219
+    }
+  ],
+  "selected": "mero-bullet-35",
+  "net_sha256": "56a817d41f91761a5b30702028cc48cfa395f10e47c302f484c1519b81b52653",
+  "upstream_quantised_sha256": "e24f74bc510c7c88d0363a9319bae3f007c8ad0cf47dcf9e1adc35840c7c489c"
+}

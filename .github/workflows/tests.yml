@@ -2,7 +2,7 @@ name: Tests
 
 on:
   push:
-    branches: [main, codex/mero-2300, feat/torch-screlu-512, feat/torch-bounded-residual, feat/bullet-selfplay]
+    branches: [main, codex/mero-2300, feat/torch-screlu-512, feat/torch-bounded-residual, feat/bullet-selfplay, feat/bullet-metal-pilot]
   pull_request:
 
 permissions:
@@ -27,6 +27,10 @@ jobs:
           python -m scripts.check_screlu_fixtures build/native/mwahaha-engine
           python scripts/build_native.py --scalar-only --output-dir build/scalar
           python -m scripts.check_screlu_fixtures build/scalar/mwahaha-engine
+      - name: Verify optional Metal-trained checkpoint on Linux
+        run: |
+          python scripts/build_native.py --native-arch --screlu training/checkpoints/mero-bullet-pilot.bin --output-dir build/bullet
+          python -m scripts.check_screlu_fixtures build/bullet/mwahaha-engine --weights training/checkpoints/mero-bullet-pilot.bin --fixture tests/bullet_golden.json
       - name: Run unit tests
         run: python -m unittest discover -v
       - name: Compile package
