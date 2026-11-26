@@ -65,3 +65,14 @@ all 8 heads (<0.001 cp maximum error) and exact C++ integer inference parity.
 The network lost 0W/0D/64L at equal nodes (32 pairs, seed 33097, 20,000
 nodes/move, no clock/engine faults). **Do not release it.** No accepted
 promotion SPRT, no new absolute Elo estimate. [Reproduction and data](docs/BULLET.md).
+
+Follow-up: with the bounded correction disabled, four opening pairs split
+4W/0D/4L and each pair had the same actual outcome with colors reversed.
+With it enabled, a fresh independent 256-pair fixed-node match returned
+**175W/126D/211L**, 46.48% (Fastchess relative Elo **−24.47 ±26.07**).
+This estimate applies at 20,000 nodes/move, not to a human or timed pool.
+No forfeits. The bounded model also does not justify replacing Mero 7;
+the combined research branch defaults to the release evaluator.
+[Disabled control](backtests/bounded512-zero-control.json);
+[512 games](backtests/bounded512-confirmation.json).
+The Mac's formal SPRT power preflight still refused to run on discharging AC.

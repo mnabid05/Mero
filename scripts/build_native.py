@@ -127,8 +127,9 @@ def main() -> int:
     )
     parser.add_argument("--compiler")
     arch=parser.add_mutually_exclusive_group()
-    arch.add_argument("--screlu", type=Path, help="override the checked-in SCReLU checkpoint")
-    arch.add_argument("--release-control", action="store_true", help="build the previous Mero 7 evaluator")
+    arch.add_argument("--screlu", type=Path, help="opt in to an experimental SCReLU checkpoint")
+    arch.add_argument("--bounded512", action="store_true", help="opt in to the bounded 512-wide experiment")
+    arch.add_argument("--release-control", action="store_true", help="explicitly build Mero 7 (the default)")
     parser.add_argument("--native-arch", action="store_true", help="tune for the build machine")
     parser.add_argument("--scalar-only", action="store_true", help="use the portable SCReLU kernel")
     parser.add_argument("--cxx-compiler")
@@ -139,8 +140,8 @@ def main() -> int:
         args.compiler,
         args.cxx_compiler,
         args.sanitize,
-        None if args.release_control else (args.screlu or
-            Path(__file__).resolve().parents[1]/"training/checkpoints/mero-bounded512.bin"),
+        (Path(__file__).resolve().parents[1]/"training/checkpoints/mero-bounded512.bin"
+            if args.bounded512 else args.screlu),
         args.native_arch,
         args.scalar_only,
     )

@@ -1,8 +1,8 @@
 # Mero's SCReLU candidate
 
-This branch builds an experimental evaluator by default; it is not a claim to
-replicate the [Torch engine](https://www.chess.com/news/view/torch-chess-engine)
-or to have achieved 3000 Elo. The design follows the requested two-perspective
+This branch keeps Mero 7 as its default and offers experimental evaluators. It
+does not replicate the [Torch engine](https://www.chess.com/news/view/torch-chess-engine)
+or establish a 3000 Elo rating. The design follows the requested two-perspective
 NNUE, implemented and trained here in PyTorch. Stockfish was an offline source
 of scores for the existing corpus, never a runtime dependency.
 
@@ -35,17 +35,17 @@ of scores for the existing corpus, never a runtime dependency.
 ## Play and verify
 
 ```sh
-python3 scripts/build_native.py --native-arch
-build/native/mwahaha-engine bench
-python3 -m scripts.check_screlu_fixtures build/native/mwahaha-engine
-python3 scripts/build_native.py --scalar-only --output-dir build/scalar512
+python3 scripts/build_native.py --bounded512 --native-arch --output-dir build/bounded
+build/bounded/mwahaha-engine bench
+python3 -m scripts.check_screlu_fixtures build/bounded/mwahaha-engine
+python3 scripts/build_native.py --bounded512 --scalar-only --output-dir build/scalar512
 python3 -m scripts.check_screlu_fixtures build/scalar512/mwahaha-engine
 ```
 
-Use the executable as a UCI engine; the existing web app also finds it in
-`build/native/`. To build the old evaluator from this checkout use
+Use the executable as a UCI engine. A normal build goes in `build/native/`,
+which the web app finds automatically. To explicitly build the release evaluator use
 `--release-control --output-dir build/control`. For a promotion match use the
-frozen main binary (see the ledger). The default checkpoint on this branch is
+frozen main binary (see the ledger). The opt-in `--bounded512` checkpoint is
 `mero-bounded512.bin`: the two halves of each bucket head are exact negatives,
 and the output bias is zero. Its correction is clamped to ±64 cp and added to
 the unmodified Mero 7 evaluation. For this checkpoint `NeuralBlend=0` restores

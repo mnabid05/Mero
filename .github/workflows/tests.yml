@@ -24,8 +24,9 @@ jobs:
         run: python scripts/build_native.py --native-arch
       - name: Validate native-architecture and portable neural kernels
         run: |
-          python -m scripts.check_screlu_fixtures build/native/mwahaha-engine
-          python scripts/build_native.py --scalar-only --output-dir build/scalar
+          python scripts/build_native.py --native-arch --bounded512 --output-dir build/bounded
+          python -m scripts.check_screlu_fixtures build/bounded/mwahaha-engine
+          python scripts/build_native.py --bounded512 --scalar-only --output-dir build/scalar
           python -m scripts.check_screlu_fixtures build/scalar/mwahaha-engine
       - name: Verify optional Metal-trained checkpoint on Linux
         run: |
