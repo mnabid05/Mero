@@ -44,7 +44,7 @@ def create(registry,dest,control,seed,count=2000):
         dest.with_suffix(".json").write_text(json.dumps(manifest,separators=(",",":"))+"\n")
     return manifest["sha256"]
 
-def verify(path):
+def verify(path, *, replay=False):
     data=json.loads(path.with_suffix(".json").read_text())
     epds=path.read_text().splitlines()
     if (data["format"]!="fresh-8ply-v1" or sha(path)!=data["sha256"] or
@@ -52,6 +52,14 @@ def verify(path):
         [r[0] for r in data["openings"]]!=epds or
         any(len(moves)!=8 or abs(cp)>120 for _,moves,cp in data["openings"])):
         raise ValueError("invalid or modified opening shard")
+    if replay:
+        for epd,moves,_ in data["openings"]:
+            board=Board.starting()
+            for move in moves:
+                board.play_uci(move)
+            if (" ".join(board.to_fen().split()[:4])!=epd or
+                    board.is_in_check() or not board.legal_moves()):
+                raise ValueError("opening does not match its legal eight-ply replay")
     return data
 if __name__=="__main__":
     p=argparse.ArgumentParser(description=__doc__)

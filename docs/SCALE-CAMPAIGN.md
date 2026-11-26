@@ -51,3 +51,39 @@ crash-free native bench, record paired NPS, then run color-paired Fastchess
 at 8+0.08, one thread/16 MiB each, normalized SPRT [0,+10], alpha=beta=.05.
 Reserve disjoint fresh eight-ply EPDs for each hypothesis. Do not run clocked
 tests against an all-core generator. No merge without an actual H1 decision.
+
+### Running the frozen M4 experiment
+
+[Campaign inputs](../backtests/scale-campaign-inputs.json) pin the release,
+producer, native Metal trainer, Fastchess, six individually built search binaries,
+and nine non-overlapping 2,000-pair opening sets. The actual corpus remains
+local. Book seeds, full EPD hashes and candidate source revisions are public;
+byte hashes for compiled programs refer to this particular M4 build.
+
+```sh
+# Use the project's Python environment with NumPy and PyTorch.
+build/torch-env/bin/python -m scripts.scale_campaign follow
+# Or isolate/resume just one stage after datagen:
+build/torch-env/bin/python -m scripts.scale_campaign prepare
+build/torch-env/bin/python -m scripts.scale_campaign networks
+build/torch-env/bin/python -m scripts.scale_campaign search
+```
+
+`follow` is a finite local job. While the generator owns the lock it uses
+no compute. If the generator stops short, it exits without starting a fit;
+resume datagen with the command above, then restart the controller.
+The first fit uses width 256 and WDL 0.625. If its queen gate fails or the
+network does not pass SPRT, try width 384 and WDL 0.5. The training split
+excludes the actual qualification layouts, including their synthetic removals
+and color-reversed copies. Each match requires the frozen 40-FEN depth-12
+bench, an NPS sample, legal eight-ply book replay and non-discharging power.
+A second, never-before-used book confirms a standalone H1 before release review.
+Faulted and inconclusive runs never qualify; do not keep replaying the same
+opening set until it wins. No branch is merged or pushed by the runner.
+
+Dataset diagnostics (no model training):
+
+```sh
+python3 -m training.label_profile build/mero20m-01 build/label-profile.json --first 63
+python3 -m training.replay_teacher build/mero20m-01/shard-000046 build/phase1-baseline/mwahaha-engine build/teacher-replay.json --first 17 --games 8
+```

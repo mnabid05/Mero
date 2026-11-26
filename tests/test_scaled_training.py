@@ -48,3 +48,15 @@ class ScaleContracts(unittest.TestCase):
             p=Path(d)/"x.epd"; p.write_text("x\nx\n")
             (p.with_suffix(".json")).write_text(json.dumps(dict(format="fresh-8ply-v1",sha256=sha(p),pairs=2)))
             with self.assertRaises(ValueError):verify(p)
+
+    @unittest.skipUnless(importlib.util.find_spec("numpy"),"optional split dependency")
+    def test_qualification_panels_share_no_training_features(self):
+        from training.large_split import panel_layouts,flipped_layout
+        from training.probe_material import PANEL
+        excluded=panel_layouts()
+        self.assertGreater(len(excluded),1000)
+        self.assertTrue(all(flipped_layout(x) in excluded for x in excluded))
+        # Original layouts appear in the historical file; counterfactuals do not
+        # need an artificial score or an evaluation label to be held out.
+        data=PANEL.read_bytes()
+        self.assertGreaterEqual(sum(data[i:i+24] in excluded for i in range(0,len(data),32)),256)

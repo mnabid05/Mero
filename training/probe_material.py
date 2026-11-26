@@ -9,6 +9,9 @@ import subprocess
 from pathlib import Path
 from chess_ai.board import Board
 
+PANEL=Path(__file__).resolve().parent/"data/selfplay-pilot-v1/positions.bullet"
+PANEL_HASH="2e2a7a2d208eddb1a89d0c5f7ca34022a39795b5d696b86bdd319bc6cc6e9d8e"
+
 def inputs(path,limit):
     size=path.stat().st_size
     if size%32: raise ValueError("truncated Bullet file")

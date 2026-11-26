@@ -1,0 +1,151 @@
+{
+  "description": "Completed-game outcomes by teacher score, not a match or Elo estimate.",
+  "config": {
+    "schema": 1,
+    "producer": "d3731fd9860c5479944da87c830a703c0cf18f478144a6800b1c746efaef63dc",
+    "seed": 2026112601,
+    "games_per_shard": 256,
+    "nodes": 5000,
+    "source": "Mero 7"
+  },
+  "sealed_shards": 63,
+  "verified_manifest_sha256": [
+    "be70e3b7833d6cde5d30376d1c80ccb02c32adca2bb17e6272fa5e45cceec80d",
+    "4e3c60a7fe50b04da72824000a69d2661378ec8edcba4e361efedf87dde48621",
+    "ad4c1f633e71e89bbe72f949fa51edb4c2ec3e86fd315d81b69743687885a7e7",
+    "f26097bc63355ccd4b8382b6c79687dbb43b6edd0da05ccb49f639682f42af90",
+    "a2ea81038e988946c66ded3667131c6da2f8bacbaf894ff214297e2c4fb75075",
+    "68f4dd6285361e6d6cdbfb0e4a159452b86ac5a38eb802bce530f797be9364af",
+    "d8ac944e63e4ea8d45a6b32da06b14698f931f8f9e81858e6f64979db6ab1966",
+    "b31043f61b10e73784de47f505f6dc9c08e1533ba49a15bf1953345937b9055d",
+    "2ae2756ddd455e71f6b01ba304acc8ac7f434b7a08c7748285195f168c947899",
+    "9c10a6df88ac34b7680c4acaf7329e8a51e8902abb9e2756085f006dde2c04a1",
+    "cb4eccd5a4b1ed616a853a9d383d487dcd253d1f99f32aa2906734c0aadb9f59",
+    "b1ca33489d384e1d1f519009c060bbd0a91d4ac638e3d1ec7d4875ca1ad3a808",
+    "2d10d242e84200c43800e9f5f0c90187c6d47cc17036ef9493b9e3ccaba01eab",
+    "4be7b20e0204e3eb3a3c7bcb7958d8cc09c75ee37cb49c81abcaf47b45e231da",
+    "7a7e42c86e41293323c22071aee8aacac06a0c2f399626a3656f0772077be75c",
+    "752f36901acb0cffa830d607ea0ecce1f588f66987dec3d063e5665d9eac90ff",
+    "9ad73b5f603a6aa6394a3987c6e624514b959d0035b9f57e7fab34e5cd48ca6b",
+    "459e2a03238182a1344de930d18a84c6ee2c7a60cfce3a07229852992b5f8208",
+    "799fa24dd443852be0b2f380faf26a1287d6612e225abd5f30cd7e84f2486dc7",
+    "ade37a42bbc2a8b2c8256a1364b8febfdc6460d1554965bfb265bc36487a6495",
+    "72aaaa17c2e2c219699d32db1df60dd350eff8895aa7163d957f049e2f34f5a4",
+    "025fe5e28169682d5845b6e0a4b8c683c75366bcebcb775f726afc06feee06be",
+    "c25b6323cb013e2e656ff6212a960a3692b9c627772ddba3ad425aff6bb6f9d4",
+    "1a7728ebea4716d4258935d4d3b119ebebcfd403d8c34ffc535137c01311b093",
+    "d9814bb8158f3125855d31fb435db7a55d504dfe14a8f53e187166d56ccd3780",
+    "61498fbf07fb00efd4d185e6699b6c35777977fbd31d301fb9c4bddd6f41ab92",
+    "c8327a47dbcb44a9a6c5e3852b9f54bab3171e46b11310ff0e3ff005f52ec29d",
+    "61e0be1ccf99fb19b6c793491bb175b57342c91914a00facdd9efcedbf43d87a",
+    "e3958b028808faa292e74b6d0ba75686d3b3fccf1d93c7ad0fea9b54cadd5d06",
+    "3217c83272182a1cfcfdbb3b92a11d896eeaef7706d49e8215684d414400984b",
+    "ee153f30c17b7e9a350e29b59070c98b37cf8957588c628c6c722c462cd98dad",
+    "8327fef2bf047474a891e7ab6a25cc7499ca7fda47155b4192ef1e071131a506",
+    "95acc617c9f3780ba3165ff221514a306de1e08b30c49ace146b96659c5ca73d",
+    "8293125b4d633715a64a841dcc88ab0aaa3f8952189defe360d1f91bd07dac0d",
+    "df532488e1b2031ae33592acda47112c68ebecc5f27da48c9270587955bbf6c8",
+    "f13beb5e33a50913d1ed3bf8c22d0cc694d8882f9be0d7255ee8ac8c37e67989",
+    "fa0429cc3579cfc1a10aa66fd2c10068347b17ad886cf71036848666832bdefa",
+    "9bd1d6ed9388da82a5b810b187801c56951bd7682f68c675df18d7ab42510294",
+    "d37d331f60ceeeb8099bff9050d7656acbac5386f0af353ab29071eb6ce97ee7",
+    "c2aca63160d54a5fba3cf3ea24dbce219b89de88c0e4286bd16d2fd151ae9ae8",
+    "07f00a37ecf72ddc62408e090360c3f2200a17e627cd4d14b6d30cf331d04cd5",
+    "28d25634b55e1706e00b3da7fe77d2c75f06a3d5c2f29d919ec390158a5552bd",
+    "8cbcf65e78c36c278210177b9c89df2ef21275fefea119884d0d218de1a2c763",
+    "f63ada3a53be87906e02a2a26b1f25e7c1bd59da40c50703451c28d082c73bd0",
+    "c763b7450dc6be31aa95fab25fe5150cb1078bbd79203882a08806f7ec99c3f2",
+    "208f45b71e39841b14a888e795834da5cb909404e2c3841139f56bd494855937",
+    "f5bd095240d9bdc0d8d239e06d0ac44c1a90f316ccc41ba5b054737b00f841ba",
+    "9b236abef6d8b1734d40b3da8b5402c5775bb6576f608de6e04d152d863c9290",
+    "4254a7c64f3ee37829d7b0b89142393f0bde58d0d8309357de4d28a2af61f1fe",
+    "f9f72d9f47c8bcdfd5d0de2ddd626422cd53c707bdff5ea4d2ab8870638caae5",
+    "31ba2268c3ce105cec6f770a629d378352aa3702c3cefc259ed4906d713bde5c",
+    "1ccb6b8be3733c8ed1810f13b97b9e9a6c8e042c65bfdc476319ea3e0dadd6cc",
+    "0c9f581cf9c1ee3944704c065f2b951b764860962b90de34e06ed5b006763c8d",
+    "9d403b9a763a6ea8918f085d9981cb473d3166f3220e926ec2ec8ce8fa1faf5a",
+    "ec0a920207cd2f17b30cb4b000d966795a7476225e59fb5d5c7b5be056979f89",
+    "7ed07691d5caf9118828608d949fb840656ac4adca7e919abe5207b71e3e9b0a",
+    "f65662e0645242365fd7338311338db48c540d38bb5325d15e828430d3feb3e1",
+    "336c13e513ed68e1dcec024479e7bc460bdcf0a2e40e378045ed9c16c555ad82",
+    "985f193b252ec7e5befe1e36fc78bc4e64a4998bafb5a0811e94ee28423b1fb9",
+    "e3e04d577ab4712ee3f0043a6a1e056bd6a618bc263f50f77f65d67300756f43",
+    "bea8c9ebb6282937b2fb46f82b97f02d5a044542c9dace178f6bf064037270b2",
+    "00500aee89c5ecb9d9a5e32d638e9440e237040f0f5f6c798270d58dcaa17a08",
+    "1f1de714f2945c118c1fbaf7e9517f90535afb627561eaf68d648b2b442a3b14"
+  ],
+  "quiet_positions": 1365596,
+  "rows_by_head": [
+    134176,
+    203160,
+    186506,
+    163270,
+    153999,
+    163074,
+    184610,
+    176801
+  ],
+  "white_loss_draw_win_games": [
+    5636,
+    2271,
+    8218
+  ],
+  "truncated_games_excluded": 3,
+  "groups": [
+    {
+      "cp_at_least": null,
+      "cp_below": -300,
+      "n": 279041,
+      "mover_loss_draw_win": [
+        248588,
+        26559,
+        3894
+      ],
+      "mover_score": 0.06154
+    },
+    {
+      "cp_at_least": -300,
+      "cp_below": -100,
+      "n": 183494,
+      "mover_loss_draw_win": [
+        112849,
+        46327,
+        24318
+      ],
+      "mover_score": 0.25876
+    },
+    {
+      "cp_at_least": -100,
+      "cp_below": 100,
+      "n": 427187,
+      "mover_loss_draw_win": [
+        152462,
+        129260,
+        145465
+      ],
+      "mover_score": 0.49181
+    },
+    {
+      "cp_at_least": 100,
+      "cp_below": 300,
+      "n": 191468,
+      "mover_loss_draw_win": [
+        28278,
+        49134,
+        114056
+      ],
+      "mover_score": 0.724
+    },
+    {
+      "cp_at_least": 300,
+      "cp_below": null,
+      "n": 284406,
+      "mover_loss_draw_win": [
+        4418,
+        29335,
+        250653
+      ],
+      "mover_score": 0.93289
+    }
+  ]
+}

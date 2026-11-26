@@ -1,0 +1,10 @@
+{
+  "games": 8,
+  "first": 17,
+  "searches": 762,
+  "quiet_labels": 488,
+  "ledger_sha256": "9d7cee4eb9afc23f8a606e9bea531836d10d7a0889581762a5f2aeb5cb52f819",
+  "records_sha256": "ac419cf460bc2505d8ed7b5d35c8e26b74db66a60b69ac206a32501335272e95",
+  "release_sha256": "c8aa94febb60d23ba0697ebfd40c02cda9598656d742928e59f3ee1ee643a796",
+  "all_moves_and_scores_equal": true
+}

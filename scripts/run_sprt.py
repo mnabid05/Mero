@@ -6,6 +6,7 @@ import platform
 import re
 import signal
 import subprocess
+import time
 from pathlib import Path
 
 from .sprt_status import FAULT, GAME, summarize
@@ -36,7 +37,7 @@ def run(args):
     openings=[f"file={book}","format=pgn","order=random","plies=8"]
     if getattr(args,"fresh",False):
         from .fresh_openings import verify
-        manifest=verify(book)
+        manifest=verify(book,replay=True)
         if manifest["pairs"]!=2000: raise ValueError("need 2000 fresh opening pairs")
         if not getattr(args,"baseline_sha",None) or digest(baseline)!=args.baseline_sha:
             raise ValueError("fresh strength tests require the pinned release executable")
@@ -70,6 +71,7 @@ def run(args):
             if platform.system()=="Darwin":
                 awake=subprocess.Popen(["/usr/bin/caffeinate","-i","-w",str(child.pid)])
             while child.poll() is None:
+                wall=time.time()
                 try:
                     child.wait(timeout=5)
                 except subprocess.TimeoutExpired:
@@ -78,6 +80,10 @@ def run(args):
                         game = GAME.match(line.strip())
                         if game and FAULT.search(game[5]):
                             raise RuntimeError("clock or engine fault: " + line.strip())
+                # Wall time advances across clamshell sleep even when a process's
+                # monotonic timeout does not. Invalidate instead of scoring it.
+                if not 0 <= time.time()-wall <= 15:
+                    raise RuntimeError("clock supervision gap (sleep or wall-clock adjustment)")
         except (KeyboardInterrupt, RuntimeError, OSError, subprocess.SubprocessError) as error:
             interrupted = str(error) or "operator interrupt"
             if child.poll() is None:

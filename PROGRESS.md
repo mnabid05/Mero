@@ -11,6 +11,14 @@ includes all endgames; no hardcoded material is mixed into these networks.
 No scaled training, queen-gate pass, SPRT pass or new rating is claimed here.
 See [protocol and commands](docs/SCALE-CAMPAIGN.md).
 
+Checkpoint: 63 sealed shards, 1,365,596 quiet records, 16,125 completed
+games and three capped games excluded. Mero 7 UCI independently reproduced
+all 762 searched moves and all 488 saved cp scores in an eight-game sample.
+The mover scored 6.2% in positions below −300 cp and 93.3% at +300 cp or
+higher, counting draws as half. This is a label audit, not an engine rating.
+All six isolated search hypotheses have frozen binaries, NPS samples and
+reserved books; none has a passing SPRT. Release remains `d74a206`.
+
 Branch `feat/torch-screlu-512` starts from the released Mero 7 (`d74a206`).
 It does not include the unpromoted magic-slider change. Its separate [Phase 1
 ledger](https://github.com/mnabid05/Mero/blob/feat/phase-1-perft/PROGRESS.md)

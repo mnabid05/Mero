@@ -10,6 +10,8 @@ from contextlib import ExitStack
 from pathlib import Path
 import numpy as np
 from .large_run import atomic, check_shard, sha
+from .probe_material import inputs, PANEL, PANEL_HASH
+from chess_ai.board import Board
 
 def flipped_layout(layout):
     occ=int.from_bytes(layout[:8],"little")
@@ -24,6 +26,25 @@ def flipped_layout(layout):
     for i,pc in enumerate(pc for rank in reversed(ranks) for pc in rank):
         pcs[i//2]|=pc<<(4*(i%2))
     return layout[:8][::-1]+pcs
+
+def panel_layouts():
+    """Freeze and exclude both sides of every pre-registered base/removal case."""
+    if sha(PANEL)!=PANEL_HASH:
+        raise ValueError("qualification panel changed")
+    _,fens,_=inputs(PANEL,256)
+    blocked=set()
+    for fen in fens:
+        board=Board.from_fen(fen)
+        if board.turn!="w": raise ValueError("expected normalized panel")
+        sorted_pieces=sorted((sq^56,p) for sq,p in board.pieces())
+        occ=sum(1<<sq for sq,_ in sorted_pieces)
+        pcs=bytearray(16)
+        for i,(_,p) in enumerate(sorted_pieces):
+            code="pnbrqk".index(p.lower()) | (8 if p.islower() else 0)
+            pcs[i//2] |= code<<((i%2)*4)
+        layout=occ.to_bytes(8,"little")+pcs
+        blocked.update((layout,flipped_layout(layout)))
+    return blocked
 
 def games(shard,seed):
     with (shard/"positions.bullet").open("rb") as stream,(shard/"games.tsv").open() as ledger:
@@ -60,7 +81,8 @@ def split(root,dest,minimum=10_000_000,seed=831908,valid_limit=16384):
                     else:
                         replacement=rng.randrange(held_seen)
                         if replacement<valid_limit: sample[replacement]=row
-    excluded=set()
+    excluded=panel_layouts()
+    panel_count=len(excluded)
     unique=[]
     for row in sample:
         if row[:24] not in excluded:
@@ -96,7 +118,8 @@ def split(root,dest,minimum=10_000_000,seed=831908,valid_limit=16384):
                 rows.tofile(train)
     rng.shuffle(unique)
     (dest/"valid.bullet").write_bytes(b"".join(unique))
-    info=dict(schema=1,seed=seed,source_config=cfg,sealed_shards=len(shards),source_positions=n,
+    info=dict(schema=2,panel_sha256=PANEL_HASH,excluded_panel_layouts=panel_count,
+              seed=seed,source_config=cfg,sealed_shards=len(shards),source_positions=n,
               holdout_seen=held_seen,removed_train_collisions=blocked,groups={})
     for name,positions,ngames in [("train",nt,ng),("valid",len(unique),nvg)]:
         p=dest/(name+".bullet")
