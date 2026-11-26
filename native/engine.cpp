@@ -1700,12 +1700,14 @@ private:
             && static_eval > static_evals_[ply - 2];
         if (
             !in_check
-            && depth <= 3
+            && depth <= 4
             && beta - alpha == 1
             && std::abs(beta) < MATE - MAX_PLY
-            && static_eval - (improving ? 65 : 90) * depth >= beta
+            && has_non_pawn_material(board)
+            && static_eval - (improving ? 74 : 98) * depth >= beta
         ) {
-            return static_eval;
+            // A forward-pruning bound is less certain than a searched score.
+            return beta + (static_eval-beta)/2;
         }
         if (
             !in_check
