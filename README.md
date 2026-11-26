@@ -1,5 +1,9 @@
 # Mero Chess Engine
 
+Development gates, the latest validated revision, and the SPRT ledger are in
+[PROGRESS.md](PROGRESS.md). For local setup and reproducing the perft, search
+bench and match gates, see [engine testing](docs/ENGINE_TESTING.md).
+
 A self-contained original chess engine written in Python, C, and C++.
 
 Mero plays using its own search and embedded weights. No Stockfish, PyTorch,

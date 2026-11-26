@@ -1,6 +1,8 @@
 #include <algorithm>
 #include "neural.h"
 #include <array>
+#include "magic_sliders.h"
+#include "bench_positions.h"
 #include <atomic>
 #include <bit>
 #include <chrono>
@@ -498,11 +500,11 @@ struct Board {
     }
 
     uint64_t bishop_attacks(int from) const {
-        return sliding_attacks(from, 0, 4);
+        return mero_sliders::magic.attacks(0, from, occupied);
     }
 
     uint64_t rook_attacks(int from) const {
-        return sliding_attacks(from, 4, 8);
+        return mero_sliders::magic.attacks(1, from, occupied);
     }
 
     uint64_t pawn_attacks(bool by_white) const {
@@ -831,13 +833,27 @@ struct Board {
         }
     }
 
+    uint64_t absolute_pins(int king, bool white) const {
+        int enemy = white ? 6 : 0;
+        auto queens = piece_boards[enemy+4];
+        // On an empty board, collect only enemy sliders aligned with the king.
+        auto sliders = (mero_sliders::magic.attacks(0, king, 0) & (queens | piece_boards[enemy+2]))
+                     | (mero_sliders::magic.attacks(1, king, 0) & (queens | piece_boards[enemy+3]));
+        uint64_t pinned = 0;
+        while (sliders) {
+            auto blockers = occupied & mero_sliders::between[king][std::countr_zero(sliders)];
+            if (std::has_single_bit(blockers)) pinned |= blockers;
+            sliders &= sliders-1;
+        }
+        return pinned & color_boards[color_index(white)];
+    }
+
     MoveList legal_moves_in_place(bool captures_only = false) {
         MoveList legal;
         bool moving_white = white_to_move;
         int king = king_square(moving_white);
         bool checked = in_check(moving_white);
-        uint64_t possible_pins = (bishop_attacks(king) | rook_attacks(king))
-            & color_boards[color_index(moving_white)];
+        uint64_t possible_pins = checked ? 0 : absolute_pins(king, moving_white);
         for (const Move& move : pseudo_moves(captures_only)) {
             if (!checked && move.from != king && !(move.flags & EN_PASSANT)
                 && !(possible_pins & square_bit(move.from))) {
@@ -859,7 +875,7 @@ struct Board {
         int king = king_square(moving_white);
         if (!in_check(moving_white)) {
             uint64_t own = color_boards[color_index(moving_white)];
-            uint64_t possible_pins = bishop_attacks(king) | rook_attacks(king);
+            uint64_t possible_pins = absolute_pins(king, moving_white);
             uint64_t free = own & ~possible_pins & ~square_bit(king);
             int offset = moving_white ? 0 : 6;
             uint64_t pawns = free & piece_boards[offset];
@@ -2395,6 +2411,8 @@ uint64_t perft_in_place(Board& board, int depth) {
     if (depth == 0) {
         return 1;
     }
+    // A legal move list already enumerates every leaf at depth one.
+    if (depth == 1) return board.legal_moves_in_place().size();
     uint64_t nodes = 0;
     for (const Move& move : board.legal_moves_in_place()) {
         Board::UndoState undo = board.make_move(move);
@@ -2516,6 +2534,26 @@ int option_value(const std::vector<std::string>& tokens, const std::string& name
     return std::stoi(*(found + 1));
 }
 
+int run_bench(int depth) {
+    Engine engine(16);
+    uint64_t nodes = 0;
+    auto start = std::chrono::steady_clock::now();
+    for (const char* fen : mero_bench_fens) {
+        Board board = Board::from_fen(fen);
+        engine.clear();
+        auto result = engine.search(board,depth,3'600'000);
+        if (!result.nodes || (result.depth != depth && std::abs(result.score) <= MATE-MAX_PLY))
+            throw std::runtime_error(std::string("incomplete bench: ")+fen);
+        board.find_move(result.move.uci()); // Fail if the reported bestmove is illegal.
+        nodes += result.nodes;
+    }
+    auto seconds = std::chrono::duration<double>(std::chrono::steady_clock::now()-start).count();
+    std::cout << "bench " << mero_bench_fens.size() << " positions depth " << depth
+              << ": " << nodes << " nodes " << static_cast<uint64_t>(nodes/seconds)
+              << " nps\n" << std::flush;
+    return 0;
+}
+
 int uci_loop() {
     Board board = Board::starting();
     EnginePool engine;
@@ -2532,6 +2570,8 @@ int uci_loop() {
                 std::cout << "option name NeuralBlend type spin default 50 min 0 max 100\n";
                 std::cout << "option name Move Overhead type spin default 10 min 0 max 5000\n";
                 std::cout << "uciok\n" << std::flush;
+            } else if (line == "bench") {
+                run_bench(12);
             } else if (line == "isready") {
                 std::cout << "readyok\n" << std::flush;
             } else if (line == "ucinewgame") {
@@ -2621,6 +2661,16 @@ int uci_loop() {
 }  // namespace
 
 int main(int argc, char** argv) {
+    if ((argc == 2 || argc == 3) && std::string(argv[1]) == "bench") {
+        try {
+            int depth = argc == 3 ? std::stoi(argv[2]) : 12;
+            if (depth < 1 || depth > 12) return 2;
+            return run_bench(depth);
+        } catch (const std::exception& e) {
+            std::cerr << e.what() << '\n';
+            return 1;
+        }
+    }
     if (argc == 2 && std::string(argv[1]) == "--neural-scores") {
         mero_neural::Evaluator evaluator;
         std::string fen;

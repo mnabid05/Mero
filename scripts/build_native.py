@@ -25,6 +25,7 @@ def build(
     compiler: str | None = None,
     cxx_compiler: str | None = None,
     sanitize: bool = False,
+    native_arch: bool = False,
 ) -> tuple[Path, Path]:
     root = Path(__file__).resolve().parents[1]
     source = root / "native" / "evaluation.c"
@@ -63,6 +64,8 @@ def build(
         compile_c[compile_c.index("-O3")] = "-O1"
         compile_c.remove("-DNDEBUG")
     compile_c.extend(sanitizer_flags)
+    if native_arch:
+        compile_c.append("-march=native")
     subprocess.run(compile_c, check=True)
 
     link_library = [
@@ -96,6 +99,8 @@ def build(
         compile_engine[compile_engine.index("-O3")] = "-O1"
         compile_engine.remove("-DNDEBUG")
     compile_engine.extend(sanitizer_flags)
+    if native_arch:
+        compile_engine.append("-march=native")
     subprocess.run(compile_engine, check=True)
     return output, engine_output
 
@@ -108,6 +113,7 @@ def main() -> int:
         default=Path(__file__).resolve().parents[1] / "build" / "native",
     )
     parser.add_argument("--compiler")
+    parser.add_argument("--native-arch", action="store_true", help="tune both compilers for this CPU")
     parser.add_argument("--cxx-compiler")
     parser.add_argument("--sanitize", action="store_true", help="enable address and undefined-behavior checks")
     args = parser.parse_args()
@@ -116,6 +122,7 @@ def main() -> int:
         args.compiler,
         args.cxx_compiler,
         args.sanitize,
+        args.native_arch,
     )
     print(library)
     print(engine)

@@ -5,6 +5,21 @@
 #include <cassert>
 
 int main() {
+    // Independent oracle: the old nearest-blocker ray scan. Exercise every
+    // occupied subset plus irrelevant edge bits on every square.
+    for (int k=0;k<2;++k) for (int sq=0;sq<64;++sq) {
+        Board b;
+        auto mask = mero_sliders::magic.entries[k][sq].mask;
+        uint64_t subset = 0;
+        do {
+            for (uint64_t extra : {uint64_t{0}, ~mask}) {
+                b.occupied = subset | extra;
+                assert(mero_sliders::magic.attacks(k,sq,b.occupied)
+                       == b.sliding_attacks(sq,k*4,k*4+4));
+            }
+            subset = (subset-mask)&mask;
+        } while (subset);
+    }
     const std::string pieces = "PNBRQKpnbrqk";
     for (int i = 0; i < 12; ++i) assert(Zobrist::piece_index(pieces[i]) == i);
     Board start = Board::starting();
