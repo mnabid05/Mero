@@ -56,3 +56,12 @@ reproduced every byte. The 206-game training / 50-game validation split
 contains 16,143 / 3,374 rows after removing cross-split feature duplicates.
 This is a pipeline pilot, **not** the proposed 50M positions or evidence of
 rating gain. See [commands and fingerprints](docs/SELFPLAY.md).
+
+## Phase 5: first real Bullet/Metal training run
+
+`feat/bullet-metal-pilot`: 40 superbatches on the Apple M4 GPU; validated
+integer checkpoint 35 selected. Confirmed Bullet float graph conversion across
+all 8 heads (<0.001 cp maximum error) and exact C++ integer inference parity.
+The network lost 0W/0D/64L at equal nodes (32 pairs, seed 33097, 20,000
+nodes/move, no clock/engine faults). **Do not release it.** No accepted
+promotion SPRT, no new absolute Elo estimate. [Reproduction and data](docs/BULLET.md).

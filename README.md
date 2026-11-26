@@ -7,6 +7,10 @@ demonstrated strength increase. [Build and training instructions](docs/SCRELU512
 and the [promotion ledger](PROGRESS.md) describe its status. The Mero 7 rating
 below is for the released predecessor, not this candidate.
 
+On this research branch you can also [generate and replay self-play data](docs/SELFPLAY.md)
+and [reproduce the 40-superbatch Bullet/Metal experiment](docs/BULLET.md). The
+standalone Bullet model is opt-in: it lost its 64-game test against the release.
+
 A self-contained original chess engine written in Python, C, and C++.
 
 Mero plays using its own search and embedded weights. No Stockfish, PyTorch,
