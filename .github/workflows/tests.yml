@@ -2,7 +2,7 @@ name: Tests
 
 on:
   push:
-    branches: [main, codex/mero-2300]
+    branches: [main, codex/mero-2300, feat/torch-screlu-512]
   pull_request:
 
 permissions:
@@ -21,7 +21,12 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Build native C evaluator
-        run: python scripts/build_native.py
+        run: python scripts/build_native.py --native-arch
+      - name: Validate native-architecture and portable neural kernels
+        run: |
+          python -m scripts.check_screlu_fixtures build/native/mwahaha-engine
+          python scripts/build_native.py --scalar-only --output-dir build/scalar
+          python -m scripts.check_screlu_fixtures build/scalar/mwahaha-engine
       - name: Run unit tests
         run: python -m unittest discover -v
       - name: Compile package
