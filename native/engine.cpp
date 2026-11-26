@@ -8,12 +8,16 @@
 #include <atomic>
 #include <bit>
 #include <chrono>
+#include <charconv>
 #include <cctype>
 #include <cstddef>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
+#include <filesystem>
+#include <fstream>
+#include <future>
 #include <limits>
 #include <memory>
 #include <mutex>
@@ -2727,9 +2731,18 @@ void trace_network(const std::string& line) {
 }
 #endif
 
+#include "datagen.inc"
+
 }  // namespace
 
 int main(int argc, char** argv) {
+    if (argc >= 2 && std::string(argv[1]) == "datagen") {
+        try { return datagen_main(argc, argv); }
+        catch (const std::exception& e) {
+            std::cerr << "datagen: " << e.what() << '\n';
+            return 1;
+        }
+    }
     if (argc==2 && std::string(argv[1])=="--quiet-prior-scores") {
         Engine engine(1);
         std::string fen;
