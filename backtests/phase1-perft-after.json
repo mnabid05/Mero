@@ -1,0 +1,49 @@
+{
+  "engine_sha256": "c2fc9d7370c4815a239031fbcf7455293da2925b7fb32af3e6fd4612a84cbc2b",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "cases": [
+    {
+      "name": "start",
+      "depth": 6,
+      "nodes": 119060324,
+      "wall_seconds": 0.785602582996944,
+      "nps": 151552867
+    },
+    {
+      "name": "kiwipete",
+      "depth": 5,
+      "nodes": 193690690,
+      "wall_seconds": 1.2047315840027295,
+      "nps": 160774975
+    },
+    {
+      "name": "rook-ending",
+      "depth": 7,
+      "nodes": 178633661,
+      "wall_seconds": 2.7780990839819424,
+      "nps": 64300680
+    },
+    {
+      "name": "castling-promotions",
+      "depth": 5,
+      "nodes": 15833292,
+      "wall_seconds": 0.14800270900013857,
+      "nps": 106979745
+    },
+    {
+      "name": "underpromotion",
+      "depth": 5,
+      "nodes": 89941194,
+      "wall_seconds": 0.8283845419937279,
+      "nps": 108574206
+    },
+    {
+      "name": "middlegame",
+      "depth": 5,
+      "nodes": 164075551,
+      "wall_seconds": 0.8974327080068178,
+      "nps": 182827692
+    }
+  ],
+  "weighted_nps": 114604892
+}
