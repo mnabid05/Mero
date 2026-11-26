@@ -62,3 +62,21 @@ The network sees piece placement, not castling rights, en passant, repetition
 history or a move clock. Search handles those rules. Validation error measures
 agreement with a bounded-search teacher, not Elo. Evaluate playing strength
 against a full-search Mero control and a separately configured opponent.
+
+## What the release learned
+
+On the 19,844 held-out positions, mean absolute error relative to the teacher
+fell from 387.6 cp (C prior) to 268.2 cp (prior plus the full floating-point
+correction). The improvement was smaller with most pieces still on the board:
+
+| Pieces remaining | Held-out positions | C prior MAE | With network |
+| --- | ---: | ---: | ---: |
+| 2–10 | 3,661 | 413.0 cp | 247.3 cp |
+| 11–22 | 8,745 | 461.4 cp | 290.7 cp |
+| 23–32 | 7,438 | 288.4 cp | 252.0 cp |
+
+These are pre-search predictions at full network weight, not the native
+half-blended scores or game results. A useful next experiment is to train on
+more quiet middlegames and compare a king-conditioned network at equal move
+time. The smaller gain with 23–32 pieces motivates that experiment; it does
+not establish that a larger model will win more games.

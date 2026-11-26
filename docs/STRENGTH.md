@@ -14,6 +14,57 @@ Every match:
 - limits runaway games by maximum plies;
 - records final FEN positions in JSON.
 
+### Mero 7.0 neural release
+
+The 64-unit network and native search were frozen at `bc47e91` before rating
+games. Against Stockfish 18 set to 2300, Mero 7 scored **37 wins, 4 draws, and
+23 losses (39/64, 60.94%)**, or **2377 setting-relative Elo**. White and Black
+each scored 19.5/32. All 60 decisive games ended in checkmate; no games were
+forfeited or adjudicated at the ply cap. The logistic 95% interval is 2290–2464;
+the more conservative pair-effective approximation gives **2256–2498**. Neither
+accounts for systematic differences from human or unrestricted engine pools.
+
+Conditions: Apple M4, 100 ms/move, 64 MiB hash per engine, Mero four threads,
+Stockfish one. Sixteen new opening endpoints, different from the archival
+starting endpoints, were played twice with both colors. Some opening families
+and later positions can overlap across chess games. The 61-point difference
+from Mero 6's 2316 estimate is descriptive, not a measured 61-Elo gain: opening
+suites differed and Mero 6 ignored the zero-overhead UCI option. This is not a
+test against unrestricted Stockfish.
+
+```sh
+python3 -m chess_ai.gauntlet --candidate build/native/mwahaha-engine \
+  --opponent /path/to/stockfish18 --opponent-elo 2300 --games-per-level 64 \
+  --move-time 100 --candidate-threads 4 --opponent-threads 1 --max-plies 400 \
+  --opening-book training/calibration.openings --json-out build/retest.json
+```
+
+The [raw rating report](../backtests/mero-7-stockfish18-2300.json) identifies
+both executables; the [training audit](../backtests/mero-7-training.json)
+identifies the teacher, source data, checkpoint and integer header. On 512
+positions, native quantization changed the learned residual by 1.61 centipawns
+on average (maximum 7.50 before the default half blend).
+
+The [bootstrap candidate](../backtests/mero-7-bootstrap-vs-6.json) used a
+35,158-label, 2,048-node teacher corpus. At 30 ms/move on one thread, it scored
+12 wins, 7 draws and 13 losses against frozen Mero 6.0 (48.44%, or −11 Elo;
+paired interval −175 to +153). Both binaries reported version 6.0 at this
+stage; the report identifies the different executables by hash. The larger
+release corpus was generated before evaluating the frozen release build.
+
+To isolate the trained evaluator, run the same release executable on both
+sides with the control's network disabled. In the [64-game ablation](../backtests/mero-7-neural-ablation.json),
+neural-on won 30, drew 13 and lost 21 at 40 ms/move, one thread each (57.03%,
+estimated +49 Elo; paired 95% approximation −70 to +168). The point estimate
+favors the network, but the sample does not establish a gain. The full move
+lists and totals in all three reports were independently replayed.
+
+```sh
+python3 -m chess_ai.match --candidate build/native/mwahaha-engine \
+  --baseline build/native/mwahaha-engine --baseline-neural-blend 0 \
+  --games 64 --move-time 40 --max-plies 400 --json-out build/ablation.json
+```
+
 ### Mero 6.0 final calibration
 
 The frozen final search implementation (`54ea3fd`) completed 64 paired games
