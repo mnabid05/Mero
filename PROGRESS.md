@@ -88,3 +88,11 @@ sides, 32 paired fixed-node openings split **21W/22D/21L**; no clocks or
 engines failed. Fastchess emitted 64 PV warnings from the frozen main engine
 and **none** from the patched one. [Fixed-node report](backtests/uci-control-fixednodes.json).
 This fixes protocol behavior; it is not a strength promotion.
+
+Latest local bench/test-passing UCI feature code: `a9b7298`; 110 tests and
+[Linux CI](https://github.com/mnabid05/Mero/actions/runs/45890155028) passed.
+40 positions, depth 12: 117,479,365 nodes at 1,057,385 nodes/s on the M4
+using the default Mero 7 evaluator. The opt-in standalone Bullet pilot's
+separate benchmark was interrupted after 19m23s CPU with no final node count
+(it had already lost all 64 match games); **it did not pass the bench gate**.
+No strength promotion; GitHub main remains `d74a206`.
