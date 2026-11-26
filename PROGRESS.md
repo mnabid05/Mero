@@ -45,3 +45,14 @@ new seed 1919, no clock or engine faults). **Not an improvement claim.** The
 SPRT power preflight required sustained, non-discharging AC; no valid timed
 result for this model. Latest passing strength commit remains the Mero 7
 release; neither experimental checkpoint is promoted.
+
+## Phase 5: self-play data pilot (no gameplay change)
+
+`feat/bullet-selfplay` adds an offline command without changing UCI search.
+256 complete classical-bootstrap games at 5,000 nodes/move yielded 19,521
+quiet labeled positions: 125 White wins, 39 draws and 92 Black wins. The
+independent board replayed every game and upstream bulletformat 1.8.0
+reproduced every byte. The 206-game training / 50-game validation split
+contains 16,143 / 3,374 rows after removing cross-split feature duplicates.
+This is a pipeline pilot, **not** the proposed 50M positions or evidence of
+rating gain. See [commands and fingerprints](docs/SELFPLAY.md).
