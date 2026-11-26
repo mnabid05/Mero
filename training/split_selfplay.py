@@ -8,9 +8,10 @@ from pathlib import Path
 
 def split_shard(src,dest,seed):
     meta=json.loads((src/"COMPLETE.json").read_text())
-    data=(src/"positions.bullet").read_bytes()
-    if len(data)!=32*meta["positions"] or meta["positions"]>1_000_000:
+    path=src/"positions.bullet"
+    if not 0<meta["positions"]<=1_000_000 or path.stat().st_size!=32*meta["positions"]:
         raise ValueError("incomplete or oversized pilot shard")
+    data=path.read_bytes()
     groups=[[],[]]
     cursor=0
     n_games=[0,0]
