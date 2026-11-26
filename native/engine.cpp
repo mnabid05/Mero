@@ -1678,6 +1678,9 @@ private:
         TTEntry* entry = probe(key);
         // Recursive searches may overwrite this cluster; keep move metadata by value.
         Move tt_move = entry == nullptr ? Move{} : entry->move;
+        const bool singular_seed=depth>=7 && ply<2*root_depth_ && !in_check && entry &&
+            tt_move.valid() && entry->depth>=depth-3 && entry->bound!=Bound::Upper;
+        const int singular_score=singular_seed ? score_from_table(entry->score,ply) : 0;
         if (entry != nullptr && entry->depth >= depth) {
             int table_score = score_from_table(entry->score, ply);
             if (entry->bound == Bound::Exact) return table_score;
@@ -1777,6 +1780,21 @@ private:
         if (moves.empty()) {
             return in_check ? -MATE + ply : 0;
         }
+        bool extend_tt=false;
+        if (singular_seed && std::abs(singular_score)<MATE-MAX_PLY && moves.size()>1 &&
+            std::find(moves.begin(),moves.end(),tt_move)!=moves.end()) {
+            const int threshold=singular_score-3*depth;
+            // Search legal alternatives as children: the current position's
+            // normal TT cutoff can never "prove" the excluded move singular.
+            extend_tt=true;
+            for (const Move& alt:moves) {
+                if (alt==tt_move) continue;
+                ScopedMove applied(board,alt);
+                if (-negamax(board,(depth-1)/2-1,-threshold,-threshold+1,ply+1,false,alt)>=threshold) {
+                    extend_tt=false; break;
+                }
+            }
+        }
         Move counter_move{};
         if (previous_move.valid()) {
             char previous_piece = board.squares[previous_move.to];
@@ -1832,8 +1850,8 @@ private:
                 if (!pruned) {
                     int next_depth = depth - 1;
                     // One extension per move avoids growth on checking recaptures.
-                    if (depth <= 3 && ply < 2 * root_depth_
-                        && (gives_check || recapture || advanced_pawn)) {
+                    if ((extend_tt && move==tt_move) || (depth <= 3 && ply < 2 * root_depth_
+                        && (gives_check || recapture || advanced_pawn))) {
                         ++next_depth;
                     }
                     int reduction = 0;
