@@ -76,6 +76,22 @@ summarize W/D/L, warnings, faults and the latest printed LLR. The summarizer
 does not edit branches. It requires an explicit test decision and matching
 boundary; a capped or incomplete result never authorizes promotion.
 
+## Power-aware match runner
+
+For a fresh match use the guarded launcher rather than resuming an interrupted
+configuration. Substitute the appropriate frozen executable paths:
+
+```sh
+python3 -m scripts.run_sprt build/tools/fastchess/fastchess \
+  build/phase1/mwahaha-engine build/phase1-baseline/mwahaha-engine \
+  build/books/8moves_v3.pgn build/sprt-phase1-retry --jobs 4
+```
+
+It requires a new output directory, checks the pinned book and both executable
+hashes, and stops on a clock fault. On a Mac it requires AC power with at least
+20% battery and no discharge before starting or continuing. Keep the lid open;
+the runner does not change system sleep settings.
+
 ## Later: Bullet
 
 Pinned [Bullet](https://github.com/jw1912/bullet) source: `5d70177680437b7c0ddf958bd4722d95afa78b0c`.

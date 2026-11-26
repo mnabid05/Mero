@@ -44,7 +44,7 @@ def summarize(lines, candidate="New", rounds=2000):
                              (n < 2*rounds and llr[0] == llr[2]))) or
                           (decision == "H0" and (llr[0] < llr[1] or
                              (n < 2*rounds and llr[0] == llr[1]))))
-        outcome = decision if beyond else "inconclusive"
+        outcome = decision if beyond and n >= 2 else "inconclusive"
         if faults:
             outcome = "invalid: engine fault"
     wdl = collections.Counter(games.values())

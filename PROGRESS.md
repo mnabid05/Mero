@@ -1,6 +1,6 @@
 # Mero engine development log
 
-Current phase: 1 correctness and throughput gates passed; candidate undergoing its separate promotion SPRT. Apply the guide to the existing Mero engine without resetting the trained evaluator or the project history.
+Current phase: 1 correctness and throughput gates passed. The first promotion SPRT was invalidated by host sleep and stopped. A **fresh** four-lane retry is required on sustained power (see [runner](docs/ENGINE_TESTING.md#power-aware-match-runner)); do not resume the interrupted statistics.
 
 Latest passing perft / search-bench code commit: `d0a8ca7e573b34ec0f897efe51ee07d4c1635c90`. See [reproduction instructions](docs/ENGINE_TESTING.md).
 
@@ -11,7 +11,7 @@ Last measured setting-relative Elo: **2377** (paired range **2256–2498**), 64 
 
 | Candidate vs baseline | Conditions | Result |
 | --- | --- | --- |
-| `d0a8ca7` vs `d74a206` | Fastchess `07fc150`, normalized [0,10], α=β=.05, 8+0.08, 1 thread/16 MiB each; 8 concurrent, random 8-ply PGN prefixes, seed 1701, paired colors, up to 2,000 pairs | Started; no decision at launch. See local `build/sprt-phase1-d0a8ca7/match.log`. |
+| `d0a8ca7` vs `d74a206` | Fastchess `07fc150`, normalized [0,10], α=β=.05, 8+0.08, 1 thread/16 MiB each; 8 concurrent, random 8-ply PGN prefixes, seed 1701, up to 2,000 pairs | **INVALID — interrupted, not H0/H1.** 380 completed games: 153 W / 115 D / 112 L. Last printed LLR +1.42 at 370 scored games. Host sleep caused clock forfeits (6 candidate, 10 baseline), no crashes. Do not infer Elo or promote. [Fault summary](backtests/phase1-sprt-invalid.json). |
 
 Earlier 64-game Mero calibration and ablation runs were fixed-length, not SPRTs.
 
@@ -22,3 +22,5 @@ Earlier 64-game Mero calibration and ablation runs were fixed-length, not SPRTs.
 * Forty fixed positions at depth 12: **117,479,365 search nodes, 1,212,332 search nodes/s**, legal bestmove for every position; 93 unit tests passed including all 107,648 blocker subsets checked against the old independent ray scan.
 * Two-game Fastchess infrastructure smoke at 8+0.08: two checkmates, no forfeits. Baseline emitted a PV/bestmove disagreement once; this is a protocol diagnostic for the next phase, not an illegal move. No strength inference from this match.
 * Fastchess installed in `build/tools`, opening book verified, Bullet source pinned. New NNUE datagen/training is **not** part of these results. No new absolute Elo estimate.
+* Frozen candidate and release matched best moves, scores, depths and node counts at depth seven on all 40 fixed positions (2,304,794 nodes each). ASan/UBSan quick six-position perft and a 40-position depth-three bench passed.
+* Built the pinned upstream Bullet `test1` release example with the Metal backend and the project-local Rust toolchain. This is a build check; no GPU training result is claimed.
