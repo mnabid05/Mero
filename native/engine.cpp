@@ -1291,7 +1291,8 @@ private:
         if (cached.valid && cached.key == board.key) return cached.score;
         int score = mwahaha_evaluate(board.squares.data()) + king_pressure(board)
             + passed_pawn_activity(board);
-        if (neural_blend_)
+        // A lone extra piece has no multi-piece interactions for the net to model.
+        if (neural_blend_ && std::popcount(board.occupied) > 3)
             score += neural_.evaluate(board.piece_boards) * neural_blend_ / 100;
         score = board.white_to_move ? score : -score;
         cached = {board.key, score, true};
