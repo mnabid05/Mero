@@ -48,3 +48,12 @@ for play. [Validation curve and hashes](../backtests/bullet-metal-pilot.json),
 [deployed bytes](../training/checkpoints/mero-bullet-pilot.bin).
 The [upstream graph example](https://github.com/jw1912/bullet/blob/5d70177680437b7c0ddf958bd4722d95afa78b0c/examples/progression/2_output_buckets.rs)
 documents the trainer's two-perspective and bucket conventions.
+
+**Why the game test matters.** Across 256 sampled boards, removing a queen
+without crossing a material bucket changed Mero 7's evaluation by a median
+927.5 cp. The standalone Bullet pilot changed by only 125.5 cp on the same
+296 queen-removal probes. This synthetic test is not Elo or proof of a single
+cause. It does identify a concrete next experiment: provide an explicit
+material term and train a bounded positional correction instead of expecting
+a small game-outcome corpus to learn material from scratch.
+[Full sensitivity report](../backtests/bullet-material-sensitivity.json).

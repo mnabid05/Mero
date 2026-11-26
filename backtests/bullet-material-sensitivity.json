@@ -1,0 +1,128 @@
+{
+  "positions": 256,
+  "removals": 1927,
+  "dataset_sha256": "2e2a7a2d208eddb1a89d0c5f7ca34022a39795b5d696b86bdd319bc6cc6e9d8e",
+  "method": "median sign-adjusted cp loss on removing one piece, normalized White to move; same material bucket; synthetic diagnostic only",
+  "engines": {
+    "release": {
+      "sha256": "3b1f225063882749a57b9fb3e669011e1a8dcb7bfe928bfaa5c2ec29ca7ad711",
+      "by_piece": {
+        "P": {
+          "n": 505,
+          "median_cp": 94,
+          "nonpositive": 1
+        },
+        "N": {
+          "n": 322,
+          "median_cp": 338.0,
+          "nonpositive": 0
+        },
+        "B": {
+          "n": 355,
+          "median_cp": 352,
+          "nonpositive": 0
+        },
+        "R": {
+          "n": 449,
+          "median_cp": 469,
+          "nonpositive": 0
+        },
+        "Q": {
+          "n": 296,
+          "median_cp": 927.5,
+          "nonpositive": 0
+        }
+      }
+    },
+    "teacher_standalone": {
+      "sha256": "050413c4bc0b5f6e330f8876fb27b9593c22ac2e65f0186be8b6a56c23d40bf0",
+      "by_piece": {
+        "P": {
+          "n": 505,
+          "median_cp": 50,
+          "nonpositive": 43
+        },
+        "N": {
+          "n": 322,
+          "median_cp": 267.0,
+          "nonpositive": 0
+        },
+        "B": {
+          "n": 355,
+          "median_cp": 284,
+          "nonpositive": 0
+        },
+        "R": {
+          "n": 449,
+          "median_cp": 399,
+          "nonpositive": 0
+        },
+        "Q": {
+          "n": 296,
+          "median_cp": 830.0,
+          "nonpositive": 0
+        }
+      }
+    },
+    "bounded": {
+      "sha256": "5d3a96a154aef959acb3f73c269ce99d958b54f0a3602dc421c0c87ca3f0b6d8",
+      "by_piece": {
+        "P": {
+          "n": 505,
+          "median_cp": 88,
+          "nonpositive": 5
+        },
+        "N": {
+          "n": 322,
+          "median_cp": 334.5,
+          "nonpositive": 0
+        },
+        "B": {
+          "n": 355,
+          "median_cp": 350,
+          "nonpositive": 0
+        },
+        "R": {
+          "n": 449,
+          "median_cp": 464,
+          "nonpositive": 0
+        },
+        "Q": {
+          "n": 296,
+          "median_cp": 919.5,
+          "nonpositive": 0
+        }
+      }
+    },
+    "bullet_standalone": {
+      "sha256": "ee9361039c822423aeb7293c636983cb42e6895e8473d5556b6b38f624706968",
+      "by_piece": {
+        "P": {
+          "n": 505,
+          "median_cp": 45,
+          "nonpositive": 129
+        },
+        "N": {
+          "n": 322,
+          "median_cp": 58.5,
+          "nonpositive": 48
+        },
+        "B": {
+          "n": 355,
+          "median_cp": 56,
+          "nonpositive": 59
+        },
+        "R": {
+          "n": 449,
+          "median_cp": 81,
+          "nonpositive": 19
+        },
+        "Q": {
+          "n": 296,
+          "median_cp": 125.5,
+          "nonpositive": 9
+        }
+      }
+    }
+  }
+}

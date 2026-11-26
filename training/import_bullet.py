@@ -44,14 +44,15 @@ def prepare(data):
     x,y,cp,wdl=[],[],[],[]
     if len(data)%32 or not data: raise ValueError("expected nonempty whole Bullet records")
     for occ,pcs,score,result in struct.iter_unpack("<Q16shB5x",data):
+        if not 2<=occ.bit_count()<=32 or result>2: raise ValueError("bad board or WDL")
         stm=[]
         while occ:
             sq=(occ&-occ).bit_length()-1
             n=len(stm)
             pc=(pcs[n//2]>>(4*(n%2)))&15
+            if (pc&7)>5: raise ValueError("unknown Bullet piece")
             stm.append(((pc&7)+(6 if pc&8 else 0))*64+(sq^56))
             occ&=occ-1
-        if not 2<=len(stm)<=32 or result>2: raise ValueError("bad record")
         other=list(map(flip,stm))
         pad=[PADDING]*(32-len(stm))
         x.append(stm+pad); y.append(other+pad)
