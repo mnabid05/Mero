@@ -1,0 +1,31 @@
+{
+  "status": "invalid: interrupted or failed",
+  "games": 11,
+  "wins": 1,
+  "draws": 1,
+  "losses": 9,
+  "reported_llr": null,
+  "faults": [
+    {
+      "game": 9,
+      "reason": "Black loses on time (24492ms overrun)"
+    },
+    {
+      "game": 10,
+      "reason": "Black loses on time (23942ms overrun)"
+    },
+    {
+      "game": 8,
+      "reason": "Black loses on time (26744ms overrun)"
+    },
+    {
+      "game": 11,
+      "reason": "White loses on time (22518ms overrun)"
+    }
+  ],
+  "warnings": {
+    "Bestmove does not match beginning of last PV": 41
+  },
+  "returncode": 1,
+  "interrupted": "clock or engine fault: Finished game 9 (New vs Main): 1-0 {Black loses on time (24492ms overrun)}"
+}
