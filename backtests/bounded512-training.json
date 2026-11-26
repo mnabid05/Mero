@@ -1,0 +1,53 @@
+{
+  "seed": 1701,
+  "threads": 2,
+  "torch": "2.15.0",
+  "quiet_only": true,
+  "train_rows": 96784,
+  "train_quiet": 41518,
+  "valid_rows": 19844,
+  "valid_quiet": 7810,
+  "held_openings": [
+    "Caro-Kann",
+    "King's Indian Attack",
+    "King's Indian Defense"
+  ],
+  "valid_fens_sha256": "475a6a94dcab7c116e6271098d79f69c80cf7ea127802fe7e744d7b28b556256",
+  "control_sha256": "3b1f225063882749a57b9fb3e669011e1a8dcb7bfe928bfaa5c2ec29ca7ad711",
+  "transformer_sha256": "8eb47b1235061d796ff9cd239acca6658398cc636b27b0cc65717691c3a7618b",
+  "history": [
+    {
+      "epoch": 0,
+      "bounded_target_loss": 0.8971284031867981,
+      "teacher_mae_cp": 298.9927978515625,
+      "mean_abs_delta_cp": 0.0
+    },
+    {
+      "epoch": 1,
+      "bounded_target_loss": 0.649086594581604,
+      "teacher_mae_cp": 289.2090759277344,
+      "mean_abs_delta_cp": 22.217294692993164
+    },
+    {
+      "epoch": 2,
+      "bounded_target_loss": 0.6572729349136353,
+      "teacher_mae_cp": 289.171142578125,
+      "mean_abs_delta_cp": 23.741029739379883
+    },
+    {
+      "epoch": 3,
+      "bounded_target_loss": 0.6589372754096985,
+      "teacher_mae_cp": 289.0738220214844,
+      "mean_abs_delta_cp": 24.190183639526367
+    },
+    {
+      "epoch": 4,
+      "bounded_target_loss": 0.6631224751472473,
+      "teacher_mae_cp": 289.17694091796875,
+      "mean_abs_delta_cp": 24.841665267944336
+    }
+  ],
+  "best_loss": 0.649086594581604,
+  "best_epoch": 1,
+  "net_sha256": "c6e06cebd3685299c3a85f5d7d31742980db0e54a37a44528340738ec44d797d"
+}

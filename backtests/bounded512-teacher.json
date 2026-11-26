@@ -1,0 +1,112 @@
+{
+  "positions": 19844,
+  "held_out": [
+    "Caro-Kann",
+    "King's Indian Attack",
+    "King's Indian Defense"
+  ],
+  "teacher": {
+    "nodes": 4096,
+    "variants": 9,
+    "seed": 1702,
+    "teacher": "bc0cac905ecdf2147fe22055c733bcd999b1e3f7c399fbaf7fb9055786563590",
+    "reports": [
+      "5c958e7aee59905e102d8288978bff899f1230f9f5e8c66b110603f30c1a224d",
+      "efcc8796c763f97d9a44d37018d44cb4aecd037232991320eb18233d10389414",
+      "d273ba9d6f92910b8fbc73041d3870e9008522cb3397e20ab311b33d445087ef",
+      "2c5420c9aed303fb6b9032005f87ce06fa1ed07bce0b7cc63c4846d77a5edb43"
+    ]
+  },
+  "release": {
+    "mae_cp": 298.9927978515625,
+    "by_bucket": [
+      {
+        "bucket": 0,
+        "n": 1208,
+        "mae_cp": 220.0364227294922
+      },
+      {
+        "bucket": 1,
+        "n": 1936,
+        "mae_cp": 282.6968078613281
+      },
+      {
+        "bucket": 2,
+        "n": 2685,
+        "mae_cp": 338.3478698730469
+      },
+      {
+        "bucket": 3,
+        "n": 2889,
+        "mae_cp": 363.73486328125
+      },
+      {
+        "bucket": 4,
+        "n": 2928,
+        "mae_cp": 341.8941345214844
+      },
+      {
+        "bucket": 5,
+        "n": 2671,
+        "mae_cp": 296.1830749511719
+      },
+      {
+        "bucket": 6,
+        "n": 3594,
+        "mae_cp": 255.5294952392578
+      },
+      {
+        "bucket": 7,
+        "n": 1933,
+        "mae_cp": 232.9384307861328
+      }
+    ]
+  },
+  "candidate": {
+    "mae_cp": 289.2090759277344,
+    "by_bucket": [
+      {
+        "bucket": 0,
+        "n": 1208,
+        "mae_cp": 224.7259979248047
+      },
+      {
+        "bucket": 1,
+        "n": 1936,
+        "mae_cp": 265.82232666015625
+      },
+      {
+        "bucket": 2,
+        "n": 2685,
+        "mae_cp": 319.7981262207031
+      },
+      {
+        "bucket": 3,
+        "n": 2889,
+        "mae_cp": 347.197998046875
+      },
+      {
+        "bucket": 4,
+        "n": 2928,
+        "mae_cp": 328.2113952636719
+      },
+      {
+        "bucket": 5,
+        "n": 2671,
+        "mae_cp": 288.3451843261719
+      },
+      {
+        "bucket": 6,
+        "n": 3594,
+        "mae_cp": 253.75514221191406
+      },
+      {
+        "bucket": 7,
+        "n": 1933,
+        "mae_cp": 231.8065185546875
+      }
+    ]
+  },
+  "release_binary_sha256": "3b1f225063882749a57b9fb3e669011e1a8dcb7bfe928bfaa5c2ec29ca7ad711",
+  "candidate_binary_sha256": "5d3a96a154aef959acb3f73c269ce99d958b54f0a3602dc421c0c87ca3f0b6d8"
+}

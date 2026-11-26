@@ -12,8 +12,8 @@ of scores for the existing corpus, never a runtime dependency.
   perspectives ordered as side-to-move and opponent. SCReLU squares the
   clipped activations; one of eight independent readouts is selected by
   `min(7, (piece_count - 2) / 4)` using integer division.
-* The output is a **standalone**, side-to-move centipawn score. The C++ engine
-  uses it at full weight by default except in positions with three or fewer
+* In the first experiment the output was a **standalone**, side-to-move centipawn score. That engine
+  used it at full weight by default except in positions with three or fewer
   pieces, which keep the established classical conversion evaluation. Search
   rules, draws and mates are still handled by search. The original Mero 7
   scored a hand-tuned prior plus a 64-wide half-strength learned correction.
@@ -45,8 +45,11 @@ python3 -m scripts.check_screlu_fixtures build/scalar512/mwahaha-engine
 Use the executable as a UCI engine; the existing web app also finds it in
 `build/native/`. To build the old evaluator from this checkout use
 `--release-control --output-dir build/control`. For a promotion match use the
-frozen main binary (see the ledger). Setting `NeuralBlend` to zero on the new
-binary gives classical evaluation, **not** the Mero 7 neural release.
+frozen main binary (see the ledger). The default checkpoint on this branch is
+`mero-bounded512.bin`: the two halves of each bucket head are exact negatives,
+and the output bias is zero. Its correction is clamped to ±64 cp and added to
+the unmodified Mero 7 evaluation. For this checkpoint `NeuralBlend=0` restores
+the release's static scores. With the earlier standalone checkpoint it does not.
 
 ## Reproduce training
 
@@ -68,3 +71,17 @@ checked in. Train and validation opening families are disjoint; held-out rows
 that duplicate the training feature layout under color reversal are excluded.
 The validation set selects a checkpoint. Its error is neither an untouched
 strength test nor a rating. See [PROGRESS.md](../PROGRESS.md) for game results.
+
+To reproduce the bounded model, compile the quiet-position labeling control,
+then fit from the standalone feature transformer (no paid compute is needed):
+
+```sh
+python3 scripts/build_native.py --native-arch --release-control --output-dir build/control
+python -m training.train_residual build/torch-expanded.db build/control/mwahaha-engine \
+  training/checkpoints/mero-screlu512.pt build/bounded-fit --epochs 10 --threads 2 --quiet-only
+```
+
+This run used 41,518 quiet training rows, selecting an epoch against 7,810 quiet
+validation rows. [Training](../backtests/bounded512-training.json), [integer
+checkpoint](../training/checkpoints/mero-bounded512.bin), [float checkpoint](../training/checkpoints/mero-bounded512.pt),
+[native comparison](../backtests/bounded512-teacher.json) and [games](../backtests/bounded512-fixednodes.json).

@@ -13,7 +13,7 @@ epoch-two model scored 229.35 cp native MAE vs 298.99 for the Mero 7
 evaluation on identical rows. Exact scalar and NEON parity on 555 FENs and
 1,001 scores across 17 reversible traces. Native depth-12 bench: 40 positions,
 78,269,553 nodes, 999,150 search nodes/s on this M4. All 103 local tests passed.
-The frozen baseline and candidate executable hashes start with `c8aa94fc`
+The frozen baseline and candidate executable hashes start with `c8aa94fe`
 and `050413c4`, respectively.
 
 | Candidate | SPRT vs main | Latest passing strength commit |
@@ -27,3 +27,21 @@ averaging its scores for opposite sides to move gave a median +141.5 cp for
 the mover; the Mero 7 score was antisymmetric (median 0). This is a plausible
 search-calibration problem, not proof of a single cause. Test a bounded,
 antisymmetric correction to the proven evaluator on a separate branch.
+
+## Bounded correction (Phase 4 follow-up)
+
+On `feat/torch-bounded-residual`, keep Mero 7's evaluation and add an
+antisymmetric correction capped at ±64 cp. The first fit anchored nonquiet
+positions to zero; [validation selected the unchanged starting model](backtests/bounded512-anchor-null.json).
+Training on quiet positions alone selected epoch 1, averaging a 22.2 cp
+absolute correction. Native held-out error: 289.21 vs 298.99 cp on 19,844
+positions. Scalar and NEON exactly matched the exported integer reference
+on 555 FENs and 1,001 path scores; all eight heads were covered. Native bench:
+40 positions, depth 12, 105,369,914 nodes, 711,963 nodes/s on this M4.
+
+[Equal-node diagnostic](backtests/bounded512-fixednodes.json): 21 wins, 18
+draws, 25 losses vs the frozen main release (32 color pairs, 20,000 nodes/move,
+new seed 1919, no clock or engine faults). **Not an improvement claim.** The
+SPRT power preflight required sustained, non-discharging AC; no valid timed
+result for this model. Latest passing strength commit remains the Mero 7
+release; neither experimental checkpoint is promoted.

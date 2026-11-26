@@ -1,7 +1,9 @@
 # Mero Chess Engine
 
 **Experimental SCReLU branch:** the default build on this branch uses the new
-512-unit, eight-bucket evaluator. [Build and training instructions](docs/SCRELU512.md)
+512-unit, eight-bucket network as a bounded correction to Mero 7. It scored
+21 wins, 18 draws and 25 losses in a 64-game equal-node diagnostic, not a
+demonstrated strength increase. [Build and training instructions](docs/SCRELU512.md)
 and the [promotion ledger](PROGRESS.md) describe its status. The Mero 7 rating
 below is for the released predecessor, not this candidate.
 
