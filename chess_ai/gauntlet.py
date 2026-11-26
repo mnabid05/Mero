@@ -21,6 +21,7 @@ from .backtest import OPENINGS, opening_board, repetition_key
 from .board import Board
 from .model import BLACK, GameStatus, WHITE, opponent as opposite_color
 from .provenance import engine_metadata
+from .opening_book import load_book
 from .statistics import paired_interval
 
 
@@ -366,7 +367,10 @@ def run_gauntlet(
     candidate_threads: int = 1,
     opponent_threads: int = 1,
     show_progress: bool = False,
+    openings: Sequence[tuple[str, Sequence[str]]] = OPENINGS,
 ) -> GauntletReport:
+    if not openings:
+        raise ValueError("empty opening suite")
     if games_per_level < 2 or games_per_level % 2:
         raise ValueError("Games per level must be a positive even number")
     if not opponent_elos:
@@ -406,8 +410,8 @@ def run_gauntlet(
             opponent.set_option("UCI_Elo", elo)
             for index in range(games_per_level):
                 game_number += 1
-                opening_name, opening_moves = OPENINGS[
-                    (index // 2) % len(OPENINGS)
+                opening_name, opening_moves = openings[
+                    (index // 2) % len(openings)
                 ]
                 candidate_color = WHITE if index % 2 == 0 else BLACK
                 record = _play_game(
@@ -467,7 +471,7 @@ def run_gauntlet(
             tuple(games),
             {"candidate": engine_metadata(candidate_command),
              "opponent": engine_metadata(opponent_command), "hash_mb_per_engine": 64,
-             "opening_count": len(OPENINGS),
+             "opening_count": len(openings),
              "rating_scope": "opponent UCI setting at recorded time control; not a human rating"},
         )
 
@@ -494,6 +498,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--candidate-threads", type=int, default=1)
     parser.add_argument("--opponent-threads", type=int, default=1)
     parser.add_argument("--json-out", type=Path)
+    parser.add_argument("--opening-book", type=Path, help="named UCI lines, one name | moves per line")
     args = parser.parse_args(argv)
 
     report = run_gauntlet(
@@ -506,6 +511,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         candidate_threads=args.candidate_threads,
         opponent_threads=args.opponent_threads,
         show_progress=True,
+        openings=load_book(args.opening_book) if args.opening_book else OPENINGS,
     )
     print(
         f"\nResult: {report.wins} wins, {report.draws} draws, "
