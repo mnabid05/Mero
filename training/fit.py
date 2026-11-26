@@ -11,6 +11,7 @@ def fit(train, valid, width, epochs, seed, batch=256):
     schedule = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, epochs, eta_min=0.00015)
     best_loss = math.inf
     best_state = None
+    best_epoch = 0
     history = []
     for epoch in range(epochs):
         model.train()
@@ -31,7 +32,10 @@ def fit(train, valid, width, epochs, seed, batch=256):
                                 mae_cp=(preds-valid[3]).abs().mean().item()))
         if valid_loss < best_loss:
             best_loss = valid_loss
+            best_epoch = epoch
             best_state = copy.deepcopy(model.state_dict())
+        elif epoch - best_epoch >= 8:
+            break
         if (epoch + 1) % 10 == 0:
             print(width, history[-1], flush=True)
     if best_state is None:
