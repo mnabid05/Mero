@@ -1070,6 +1070,7 @@ public:
         std::fill(table_.begin(), table_.end(), TTCluster{});
         history_ = {};
         capture_history_ = {};
+        pawn_correction_ = {};
         killers_ = {};
         countermoves_ = {};
         continuation_history_ = {};
@@ -1244,6 +1245,17 @@ private:
     std::array<std::array<Move, 64>, 128> countermoves_{};
     std::array<std::array<int, 64>, 64> continuation_history_{};
     std::array<int, MAX_PLY> static_evals_{};
+    std::array<std::array<int16_t,16384>,2> pawn_correction_{};
+
+    static unsigned pawn_index(const Board& board) {
+        uint64_t h=board.piece_boards[0] ^ std::rotl(board.piece_boards[6],29);
+        h^=h>>31; h*=0x9e3779b97f4a7c15ULL;
+        return static_cast<unsigned>(h>>50);
+    }
+
+    int16_t& correction(const Board& board) {
+        return pawn_correction_[Board::color_index(board.white_to_move)][pawn_index(board)];
+    }
     std::vector<uint64_t> search_history_;
     uint64_t nodes_ = 0;
     uint64_t node_limit_ = 0;
@@ -1688,11 +1700,12 @@ private:
                 return table_score;
             }
         }
-        int static_eval = in_check
+        const int raw_static = in_check
             ? -INF
             : (entry != nullptr && entry->static_eval != INF
                 ? entry->static_eval
                 : evaluate(board));
+        int static_eval = in_check ? -INF : raw_static + correction(board)/128;
         static_evals_[ply] = static_eval;
         bool improving = !in_check
             && ply >= 2
@@ -1986,7 +1999,17 @@ private:
         Bound bound = best_score <= original_alpha
             ? Bound::Upper
             : (best_score >= beta ? Bound::Lower : Bound::Exact);
-        store(key, depth, best_score, bound, best, ply, static_eval);
+        // Only learn from quiet evidence whose search bound actually points
+        // past the current estimate. Store raw static eval in the TT: the
+        // worker's correction may change before this position is probed again.
+        if (!in_check && best.valid() && quiet(board,best) && std::abs(best_score)<MATE-MAX_PLY &&
+            (bound!=Bound::Lower || best_score>static_eval) &&
+            (bound!=Bound::Upper || best_score<static_eval)) {
+            auto& value=correction(board);
+            const int target=128*std::clamp(best_score-raw_static,-128,128);
+            value+=static_cast<int16_t>((target-value)*std::min(16,depth+1)/128);
+        }
+        store(key, depth, best_score, bound, best, ply, in_check ? INF : raw_static);
         return best_score;
     }
 
@@ -2024,11 +2047,12 @@ private:
             }
         }
         int original_alpha = alpha;
-        int stand_pat = in_check
+        const int raw_stand_pat = in_check
             ? -INF
             : (entry != nullptr && entry->static_eval != INF
                 ? entry->static_eval
                 : evaluate(board));
+        int stand_pat=in_check ? -INF : raw_stand_pat+correction(board)/128;
         if (!in_check) {
             if (stand_pat >= beta) {
                 store(
@@ -2038,7 +2062,7 @@ private:
                     Bound::Lower,
                     Move{},
                     ply,
-                    stand_pat
+                    raw_stand_pat
                 );
                 return stand_pat;
             }
@@ -2071,7 +2095,7 @@ private:
                     Bound::Lower,
                     move,
                     ply,
-                    in_check ? INF : stand_pat
+                    in_check ? INF : raw_stand_pat
                 );
                 return score;
             }
@@ -2088,7 +2112,7 @@ private:
             bound,
             best,
             ply,
-            in_check ? INF : stand_pat
+            in_check ? INF : raw_stand_pat
         );
         return alpha;
     }
