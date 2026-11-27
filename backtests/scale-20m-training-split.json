@@ -1,0 +1,120 @@
+{
+  "scope": "Counts of observed training records with exactly one queen difference and equal counts of each other piece type; not independent games, counterfactual evaluations, proof of causality, or Elo.",
+  "pilot_train": {
+    "rows": 16143,
+    "sha256": "8a10f7c8d4941feb471140472456b792663da367d153ba3560b6fd179b1685d4",
+    "one_queen_difference": 1693,
+    "otherwise_equal": 180,
+    "mover_ahead": 92,
+    "mover_behind": 88,
+    "otherwise_equal_by_output_bucket": [
+      55,
+      34,
+      3,
+      6,
+      0,
+      5,
+      48,
+      29
+    ]
+  },
+  "production_train": {
+    "rows": 19626685,
+    "sha256": "45408fcaeedff7cb798f2cdac6d6c27b1ec912b28cc24a426d10d419dc704c74",
+    "one_queen_difference": 2039586,
+    "otherwise_equal": 208157,
+    "mover_ahead": 107832,
+    "mover_behind": 100325,
+    "otherwise_equal_by_output_bucket": [
+      110221,
+      17162,
+      6166,
+      4196,
+      5909,
+      11742,
+      26042,
+      26719
+    ]
+  },
+  "production_split": {
+    "schema": 2,
+    "panel_sha256": "2e2a7a2d208eddb1a89d0c5f7ca34022a39795b5d696b86bdd319bc6cc6e9d8e",
+    "excluded_panel_layouts": 4146,
+    "opening_holdout": {
+      "policy": "canonical-eight-ply-v1",
+      "book_sha256": {
+        "confirmation": "4390ee3050bb718b30cc3645ec2b61cd0889cff81505f5de7fe48eb3b321f65d",
+        "continuation": "bca5301e837a387401991284ef435cd98d876f6b6ad3811dd5ca379984d13518",
+        "correction": "ddc8eda832b0fb0213feaf072e89a4e1e105f6adb22ef6a5f13b76fa6223ac60",
+        "lmp": "dafbb27052cfb8b0659408a504410e0c62e3a80ead051528cf81528bf0eb0f35",
+        "lmr": "1f37b8ee7087eec3cafbea17c196f86bb3ec20747a3f7f540bebe2168c4f8aca",
+        "net256": "debdc8d65ee62471519abfabc8fc93bc2be1348b64cd0fd966da7fbeb6d1ee66",
+        "net384": "04fd63e7f4ee1e9d81656e4e4ad9a94eb939340ca89a0e1249cb2753b2373002",
+        "rfp": "7a0698355c59f59574e1fdc8a7efa3f815effa411750287359d182161ee1ec1e",
+        "singular": "3a896b53e45ecb8918fa30da86db7abf6fce6e40af3479faf29f6eb2f16eb26e"
+      },
+      "canonical_positions": 18000,
+      "excluded_games": {
+        "continuation": 2,
+        "lmr": 4,
+        "singular": 3,
+        "net256": 3,
+        "rfp": 3,
+        "net384": 7,
+        "lmp": 2,
+        "correction": 1,
+        "confirmation": 1
+      },
+      "excluded_records": {
+        "continuation": 161,
+        "lmr": 534,
+        "singular": 199,
+        "net256": 168,
+        "rfp": 223,
+        "net384": 793,
+        "lmp": 63,
+        "correction": 132,
+        "confirmation": 103
+      },
+      "terminated_before_ply8": 72,
+      "membership_sha256": "77571988007314d02c7b64104afa85a27942e01fe6b6fd9d74cc404aedb98c44"
+    },
+    "seed": 831908,
+    "source_config": {
+      "schema": 1,
+      "producer": "d3731fd9860c5479944da87c830a703c0cf18f478144a6800b1c746efaef63dc",
+      "seed": 2026112601,
+      "games_per_shard": 256,
+      "nodes": 5000,
+      "source": "Mero 7"
+    },
+    "sealed_shards": 925,
+    "source_positions": 20005910,
+    "holdout_seen": 312845,
+    "removed_train_collisions": 64004,
+    "groups": {
+      "train": {
+        "positions": 19626685,
+        "games": 233006,
+        "sha256": "45408fcaeedff7cb798f2cdac6d6c27b1ec912b28cc24a426d10d419dc704c74"
+      },
+      "valid": {
+        "positions": 16318,
+        "games": 3696,
+        "sha256": "339e241519b0d96d4e474902143ce9481ddddb5893664bc623fc9ae5848b3400"
+      }
+    }
+  },
+  "unchanged_binary_control": {
+    "binary_sha256": {
+      "baseline": "c8aa94febb60d23ba0697ebfd40c02cda9598656d742928e59f3ee1ee643a796",
+      "candidate": "d3731fd9860c5479944da87c830a703c0cf18f478144a6800b1c746efaef63dc"
+    },
+    "aggregate_nps": {
+      "baseline": 796350,
+      "candidate": 783673
+    },
+    "median_paired_ratio": 0.9841503014583827,
+    "conditions": "Interleaved control on unchanged binaries during the tail of production data generation; no strength inference."
+  }
+}

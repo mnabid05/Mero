@@ -20,6 +20,14 @@ against upstream Rust; the release reproduced all 973 searches and 691
 quiet scores in the last eight games. [Frozen corpus report](backtests/scale-20m-corpus.json).
 This is a dataset milestone, not a strength result.
 
+The final split has **19,626,685 training rows and 16,318 validation rows**;
+26 whole games started in reserved match positions and were excluded. In
+the production training set, 208,157 rows have a one-queen difference with
+identical counts of every other piece type, versus just 180 in the pilot's
+16,143 training rows. These are observed positions, not independent games or
+a learned queen value. The teacher also changed from HCE to Mero 7.
+[Split hashes and bucket counts](backtests/scale-20m-training-split.json).
+
 Checkpoint: 63 sealed shards, 1,365,596 quiet records, 16,125 completed
 games and three capped games excluded. Mero 7 UCI independently reproduced
 all 762 searched moves and all 488 saved cp scores in an eight-game sample.
