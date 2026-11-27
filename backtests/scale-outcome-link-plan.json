@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "hypothesis": "Use the outcome link fitted solely to training search scores and WDL. Optimize both sides of the mixed loss in consistent cp units; unchanged integer export and runtime cp convention. Never fit to piece removals.",
+  "name": "calibrated256",
+  "width": 256,
+  "wdl_weight": 0.625,
+  "superbatches": 12,
+  "trainer_sha256": "ca9d88d329019d4770d149a5d1f246a808619d4aecc30b5c808cbb9eea9dbd71",
+  "calibration": {
+    "method": "zero-intercept, fractional-outcome logistic maximum likelihood on training cp/WDL only",
+    "temperature_cp": 204.1159224622891,
+    "split": {
+      "train": {
+        "positions": 19626685,
+        "games": 233006,
+        "sha256": "45408fcaeedff7cb798f2cdac6d6c27b1ec912b28cc24a426d10d419dc704c74"
+      },
+      "valid": {
+        "positions": 16318,
+        "games": 3696,
+        "sha256": "339e241519b0d96d4e474902143ce9481ddddb5893664bc623fc9ae5848b3400"
+      }
+    },
+    "logloss": {
+      "train": {
+        "T400": 0.4935542700050276,
+        "train_fit": 0.46297906440587927
+      },
+      "valid": {
+        "T400": 0.4868326538879475,
+        "train_fit": 0.45317819008509513
+      }
+    }
+  },
+  "conditions": "Only after both original fits miss their frozen queen gates. Require native parity and the exact same queen gate. Reassign the protected, unplayed net256 EPD; the separately protected confirmation EPD is also never reused. No overlapping official test, no transformed cp outputs, no result-dependent seed selection.",
+  "first_book": "net256",
+  "confirmation_book": "confirmation"
+}

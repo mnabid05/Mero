@@ -88,20 +88,34 @@ def artifact(command, final_file):
         raise RuntimeError(f"stage did not produce {final_file}")
 
 
-def fit(build,name):
+def fit(build,name,*,calibrated=None):
     run_sprt.check_power()
     data=prepare(build)
-    width,wdl=RECIPES[name]
-    trainer=expect(build/"bullet-scale-fit/release/mero-bullet-fit",PINS["metal_trainer_sha256"])
+    if calibrated is None:
+        width,wdl=RECIPES[name]
+        trainer=expect(build/"bullet-scale-fit/release/mero-bullet-fit",PINS["metal_trainer_sha256"])
+        extra=[]
+    else:
+        from training.outcome_temperature import measure
+        computed=measure(data)
+        if (computed["split"]!=calibrated["calibration"]["split"] or
+                abs(computed["temperature_cp"]-calibrated["calibration"]["temperature_cp"])>1e-6 or
+                name!=calibrated["name"] or calibrated["superbatches"]!=12):
+            raise ValueError("different corpus, calibration, or registered recipe")
+        width,wdl=calibrated["width"],calibrated["wdl_weight"]
+        trainer=expect(build/"bullet-calibrated-fit/release/mero-bullet-fit",calibrated["trainer_sha256"])
+        extra=[computed["temperature_cp"]]
     work=build/("campaign-"+name)
     work.mkdir(exist_ok=True)
     checkpoints,selected=work/"fit",work/"selected"
     # Specify the recipe explicitly: the historical pilot mode is not used.
-    artifact([trainer,data/"train.bullet",checkpoints,"12",REPO/"training/bullet-probes.fen",width,wdl],
+    artifact([trainer,data/"train.bullet",checkpoints,"12",REPO/"training/bullet-probes.fen",width,wdl,*extra],
              checkpoints/"final-float-parity.tsv")
     recipe=json.loads((checkpoints/"recipe.json").read_text())
     if (recipe["width"],recipe["wdl_weight"],recipe["superbatches"])!=(width,wdl,12):
         raise ValueError("existing fit is a different experiment")
+    if abs(recipe.get("wdl_temperature_cp",400)-(extra[0] if extra else 400))>1e-4:
+        raise ValueError("existing fit used a different probability link")
     artifact([sys.executable,"-m","training.import_bullet",checkpoints,data,selected,"--backend","Metal"],selected/"report.json")
     binaries=[]
     for directory,flag in (("native","--native-arch"),("scalar","--scalar-only")):
@@ -128,10 +142,20 @@ def inputs(build,name):
     return harness,control,book
 
 
-def match(build,name,binary,gate=None):
+def ensure_exclusive_book(work,book):
+    # Assigning an unused protected book is safe; old games are never fresh.
+    fingerprint=sha(book)
+    for other in work.parent.glob("*/sprt"):
+        if other.parent==work: continue
+        inp=json.loads((other/"inputs.json").read_text())
+        if inp["sha256"]["book"]==fingerprint: raise ValueError("opening set has already been played")
+
+
+def match(build,name,binary,gate=None,*,book_name=None):
     run_sprt.check_power()
-    harness,baseline,book=inputs(build,name)
+    harness,baseline,book=inputs(build,book_name or name)
     work=build/"scale-results"/name
+    ensure_exclusive_book(work,book)
     work.mkdir(parents=True,exist_ok=True)
     if gate is not None:
         data=json.loads(gate.read_text())
@@ -195,9 +219,36 @@ def networks(build):
     return False
 
 
+def calibrated_round(build):
+    plan=json.loads((REPO/"backtests/scale-outcome-link-plan.json").read_text())
+    reference=expect(build/"phase1-baseline/mwahaha-engine",PINS["release_sha256"])
+    original=json.loads((REPO/"backtests/scale-first-two-fits.json").read_text())
+    for old in RECIPES:
+        work=build/("campaign-"+old)
+        gate=json.loads((work/"queen.json").read_text())
+        exe=expect(work/"native/mwahaha-engine",original["networks"][old]["qualification"]["binary_sha256"])
+        if (gate["passed"] is not False or gate["binary_sha256"]!=sha(exe)
+                or gate!=original["networks"][old]["qualification"]
+                or (build/"scale-results"/old/"sprt").exists()):
+            raise ValueError("registered handoff requires both old candidates to have failed before playing")
+        if not (work/"rejected-speed.json").exists():
+            atomic(work/"rejected-speed.json",speed(reference,exe))
+    name=plan["name"]
+    try:
+        binary,gate=fit(build,name,calibrated=plan)
+    except subprocess.CalledProcessError as e:
+        q=build/("campaign-"+name)/"queen.json"
+        if (e.returncode!=3 or "training.qualify_standalone" not in list(map(str,e.cmd))
+                or not q.exists() or json.loads(q.read_text())["passed"] is not False): raise
+        print(f"{name}: failed queen gate; no games",flush=True)
+        return False
+    if match(build,name,binary,gate,book_name=plan["first_book"])!="H1": return False
+    return match(build,name+"-confirm",binary,gate,book_name=plan["confirmation_book"])=="H1"
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
-    p.add_argument("stage",choices=["prepare","networks","search","follow","run"],
+    p.add_argument("stage",choices=["prepare","networks","search","follow","run","calibrated-follow"],
                    help="run resumes datagen, networks, and search; follow attaches to an existing generator")
     p.add_argument("--build",type=Path,default=REPO/"build")
     args=p.parse_args()
@@ -206,9 +257,9 @@ def main():
         producer=expect(b/"producer-v2/mwahaha-engine",PINS["teacher_sha256"])
         generate(producer,b/"mero20m-01",target=TARGET,games_per_shard=256,
                  workers=os.cpu_count() or 1,seed=2026112601,wait_power=True)
-    if args.stage=="follow":
-        print("Waiting for the generator to release its exclusive machine slot.",flush=True)
-    with machine_slot(b/"mero20m-01",wait=args.stage=="follow"):
+    if args.stage in ("follow","calibrated-follow"):
+        print("Waiting for the exclusive campaign slot; no training or matches while queued.",flush=True)
+    with machine_slot(b/"mero20m-01",wait=args.stage in ("follow","calibrated-follow")):
         if args.stage=="prepare":
             print(prepare(b))
         elif args.stage in ("run","follow"):
@@ -216,6 +267,11 @@ def main():
             await_power(b/"mero20m-01",wait=True,clocked=True)
             won=networks(b)
             search(b)
+            return 0 if won else 1
+        elif args.stage=="calibrated-follow":
+            await_power(b/"mero20m-01",wait=True,clocked=True)
+            won=calibrated_round(b)
+            search(b)  # resumable; no completed or interrupted SPRT is replayed
             return 0 if won else 1
         elif args.stage=="networks":
             return 0 if networks(b) else 1

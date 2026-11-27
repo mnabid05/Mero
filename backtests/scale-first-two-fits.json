@@ -1,0 +1,220 @@
+{
+  "scope": "Both 20M-source M4/Metal fits below were rejected before playing. No Elo, no search strength decision.",
+  "split": "backtests/scale-20m-training-split.json",
+  "networks": {
+    "net256": {
+      "selection": {
+        "recipe": {
+          "width": 256,
+          "wdl_weight": 0.625,
+          "train_rows": 19626685,
+          "batch_size": 2048,
+          "superbatches": 12
+        },
+        "backend": "Bullet/Metal",
+        "bullet_revision": "5d70177680437b7c0ddf958bd4722d95afa78b0c",
+        "evaluation": "minimum deployed mixed-target MSE on whole-game validation split; not Elo",
+        "float_probe_max_error_cp": 0.0007226562502182787,
+        "float_probes": 16,
+        "checkpoints": [
+          {
+            "superbatch": 5,
+            "mixed_mse": 0.04568156227469444,
+            "outcome_brier": 0.10752078890800476,
+            "mae_search_cp": 312.7480163574219
+          },
+          {
+            "superbatch": 10,
+            "mixed_mse": 0.044391971081495285,
+            "outcome_brier": 0.1061636433005333,
+            "mae_search_cp": 303.01409912109375
+          },
+          {
+            "superbatch": 12,
+            "mixed_mse": 0.04366181418299675,
+            "outcome_brier": 0.105405293405056,
+            "mae_search_cp": 294.0843811035156
+          }
+        ],
+        "selected": "mero-bullet-12",
+        "net_sha256": "22a16ed4fcb41d405769f94d73d52d686200d66fb1b863905a95718a978fb08b",
+        "upstream_quantised_sha256": "00a73e9f189e6eabb3ae22b0364fd897ab7639579bd7801f4919e9fa72e6f9ee"
+      },
+      "parity": {
+        "kernels": 2,
+        "binary_sha256": "39118b9fe57a5364233cf61b5cc5b8c72ac08245b32200d7024547b546b81ccc",
+        "kernel_sha256": [
+          "39118b9fe57a5364233cf61b5cc5b8c72ac08245b32200d7024547b546b81ccc",
+          "e6fa80fe80e4c843df85ce6cb2beaf4e96c6d451bc5d4599ca4fdae8e9788275"
+        ],
+        "weights_sha256": "22a16ed4fcb41d405769f94d73d52d686200d66fb1b863905a95718a978fb08b",
+        "unique_fens": 555,
+        "material_buckets": 8,
+        "trace_paths": 17,
+        "trace_scores": 1001,
+        "integer_mismatches": 0
+      },
+      "qualification": {
+        "passed": false,
+        "queen": {
+          "n": 248,
+          "median_cp": 1620,
+          "nonpositive": 0
+        },
+        "weights_sha256": "22a16ed4fcb41d405769f94d73d52d686200d66fb1b863905a95718a978fb08b",
+        "binary_sha256": "39118b9fe57a5364233cf61b5cc5b8c72ac08245b32200d7024547b546b81ccc",
+        "diagnostics": {
+          "positions": 256,
+          "removals": 1817,
+          "dataset_sha256": "2e2a7a2d208eddb1a89d0c5f7ca34022a39795b5d696b86bdd319bc6cc6e9d8e",
+          "method": "median sign-adjusted cp loss on removing one piece, normalized White to move; same material bucket; synthetic diagnostic only",
+          "engines": {
+            "candidate": {
+              "sha256": "39118b9fe57a5364233cf61b5cc5b8c72ac08245b32200d7024547b546b81ccc",
+              "by_piece": {
+                "P": {
+                  "n": 512,
+                  "median_cp": 178.5,
+                  "nonpositive": 20
+                },
+                "N": {
+                  "n": 294,
+                  "median_cp": 584,
+                  "nonpositive": 0
+                },
+                "B": {
+                  "n": 326,
+                  "median_cp": 623,
+                  "nonpositive": 0
+                },
+                "R": {
+                  "n": 437,
+                  "median_cp": 912,
+                  "nonpositive": 0
+                },
+                "Q": {
+                  "n": 248,
+                  "median_cp": 1620,
+                  "nonpositive": 0
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "net384": {
+      "selection": {
+        "recipe": {
+          "width": 384,
+          "wdl_weight": 0.5,
+          "train_rows": 19626685,
+          "batch_size": 2048,
+          "superbatches": 12
+        },
+        "backend": "Bullet/Metal",
+        "bullet_revision": "5d70177680437b7c0ddf958bd4722d95afa78b0c",
+        "evaluation": "minimum deployed mixed-target MSE on whole-game validation split; not Elo",
+        "float_probe_max_error_cp": 0.0005363281247809937,
+        "float_probes": 16,
+        "checkpoints": [
+          {
+            "superbatch": 5,
+            "mixed_mse": 0.031210895627737045,
+            "outcome_brier": 0.10882285982370377,
+            "mae_search_cp": 241.013427734375
+          },
+          {
+            "superbatch": 10,
+            "mixed_mse": 0.029860595241189003,
+            "outcome_brier": 0.10718604922294617,
+            "mae_search_cp": 230.18373107910156
+          },
+          {
+            "superbatch": 12,
+            "mixed_mse": 0.029416536912322044,
+            "outcome_brier": 0.10677878558635712,
+            "mae_search_cp": 224.3457489013672
+          }
+        ],
+        "selected": "mero-bullet-12",
+        "net_sha256": "b42efba1613d6902055212f583d2b64a81b25ab521f2910fdca1f2b0a3c9ab3d",
+        "upstream_quantised_sha256": "f55312e21d8a1926d5e603ae87adba69147304c74b2d648a4827c7b4bfc3935d"
+      },
+      "parity": {
+        "kernels": 2,
+        "binary_sha256": "dfcbfe11960055099f1a452e725ad11aef139fbe8f76a0207c1ab4d0d83f3c08",
+        "kernel_sha256": [
+          "dfcbfe11960055099f1a452e725ad11aef139fbe8f76a0207c1ab4d0d83f3c08",
+          "f268b23eb63765bf7583a8422ab3968901aad233ee24be31499272422ed3d9fd"
+        ],
+        "weights_sha256": "b42efba1613d6902055212f583d2b64a81b25ab521f2910fdca1f2b0a3c9ab3d",
+        "unique_fens": 555,
+        "material_buckets": 8,
+        "trace_paths": 17,
+        "trace_scores": 1001,
+        "integer_mismatches": 0
+      },
+      "qualification": {
+        "passed": false,
+        "queen": {
+          "n": 248,
+          "median_cp": 1423.5,
+          "nonpositive": 0
+        },
+        "weights_sha256": "b42efba1613d6902055212f583d2b64a81b25ab521f2910fdca1f2b0a3c9ab3d",
+        "binary_sha256": "dfcbfe11960055099f1a452e725ad11aef139fbe8f76a0207c1ab4d0d83f3c08",
+        "diagnostics": {
+          "positions": 256,
+          "removals": 1817,
+          "dataset_sha256": "2e2a7a2d208eddb1a89d0c5f7ca34022a39795b5d696b86bdd319bc6cc6e9d8e",
+          "method": "median sign-adjusted cp loss on removing one piece, normalized White to move; same material bucket; synthetic diagnostic only",
+          "engines": {
+            "candidate": {
+              "sha256": "dfcbfe11960055099f1a452e725ad11aef139fbe8f76a0207c1ab4d0d83f3c08",
+              "by_piece": {
+                "P": {
+                  "n": 512,
+                  "median_cp": 160,
+                  "nonpositive": 17
+                },
+                "N": {
+                  "n": 294,
+                  "median_cp": 531,
+                  "nonpositive": 0
+                },
+                "B": {
+                  "n": 326,
+                  "median_cp": 552.5,
+                  "nonpositive": 0
+                },
+                "R": {
+                  "n": 437,
+                  "median_cp": 801,
+                  "nonpositive": 0
+                },
+                "Q": {
+                  "n": 248,
+                  "median_cp": 1423.5,
+                  "nonpositive": 0
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "first_search_gate_pre_match_nps": {
+    "purpose": "Original search binary and release control; recorded before timed play, not a speed result for the rejected networks.",
+    "binary_sha256": {
+      "baseline": "c8aa94febb60d23ba0697ebfd40c02cda9598656d742928e59f3ee1ee643a796",
+      "candidate": "04aa078b33591f524bd73a126f8917606a69fd15b46d6c76b9e7c8effc7d5bde"
+    },
+    "aggregate_nps": {
+      "baseline": 1250814,
+      "candidate": 1243523
+    },
+    "median_paired_ratio": 1.000007717887943
+  }
+}

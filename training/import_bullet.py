@@ -77,7 +77,9 @@ def _select(directory,split,out,backend):
     width,weight=recipe["width"],recipe["wdl_weight"]
     if "train_rows" in recipe and recipe["train_rows"]!=meta["groups"]["train"]["positions"]:
         raise ValueError("trainer and split record counts disagree")
-    mixed=weight*wdl+(1-weight)*torch.sigmoid(cp/400)
+    temp=float(recipe.get("wdl_temperature_cp",400))
+    if not np.isfinite(temp) or temp<=0: raise ValueError("invalid training outcome link")
+    mixed=weight*wdl+(1-weight)*torch.sigmoid(cp/temp)
     checkpoints=sorted(directory.glob("mero-bullet-*"),key=lambda p:int(p.name.split("-")[-1]))
     if not checkpoints: raise ValueError("no saved checkpoints")
     net=float_model((checkpoints[-1]/"raw.bin").read_bytes(),width)
@@ -97,7 +99,7 @@ def _select(directory,split,out,backend):
         blob=convert((path/"quantised.bin").read_bytes(),width)
         ref=Reference(blob)
         scores=torch.cat([ref(x[i:i+32],y[i:i+32]) for i in range(0,len(x),32)])
-        prob=torch.sigmoid(scores/400)
+        prob=torch.sigmoid(scores/temp)
         loss=(prob-mixed).square().mean().item()
         row=dict(superbatch=int(path.name.split("-")[-1]),mixed_mse=loss,
                  outcome_brier=(prob-wdl).square().mean().item(),mae_search_cp=(scores-cp).abs().float().mean().item())

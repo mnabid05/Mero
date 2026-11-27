@@ -8,7 +8,8 @@ to the previous generator on all 48 sampled games. Its first sealed
 256-game production shard has 21,541 records: independent legal replay and
 upstream Rust format verification both passed. Strict 256/384-wide inference
 includes all endgames; no hardcoded material is mixed into these networks.
-No scaled training, queen-gate pass, SPRT pass or new rating is claimed here.
+Two scaled networks have now been trained. No scaled network has passed
+the queen gate or a strength SPRT at this checkpoint; no new rating.
 See [protocol and commands](docs/SCALE-CAMPAIGN.md).
 
 **20M source target reached:** 20,005,910 quiet rows, 925 verified shards,
@@ -27,6 +28,16 @@ identical counts of every other piece type, versus just 180 in the pilot's
 16,143 training rows. These are observed positions, not independent games or
 a learned queen value. The teacher also changed from HCE to Mero 7.
 [Split hashes and bucket counts](backtests/scale-20m-training-split.json).
+
+Both scaled Metal trials selected superbatch 12 and passed independent
+integer, scalar and native parity. Queen medians (248 held-out removals):
+**1,620 cp for width 256, 1,423.5 cp for 384**, both above the registered
+850–1,000 range. Neither binary played a strength match or replaced Mero 7.
+[Full results](backtests/scale-first-two-fits.json). A separately registered
+training-only probability link fits all training cp/WDL labels without
+consulting board layouts or changing inference. Its held-out outcome log
+loss was 0.45318 vs 0.48683 with the original temperature.
+[Follow-up protocol](backtests/scale-outcome-link-plan.json).
 
 Checkpoint: 63 sealed shards, 1,365,596 quiet records, 16,125 completed
 games and three capped games excluded. Mero 7 UCI independently reproduced

@@ -6,16 +6,23 @@ use bullet_lib::{
     trainer::{save::SavedFormat, schedule::{TrainingSchedule, TrainingSteps, lr, wdl}, settings::LocalSettings},
     value::{ValueTrainerBuilder, loader::DirectSequentialDataLoader},
 };
-use std::{env, fs, io::Write, path::Path};
+use std::{env, fs, io::Write, path::Path, sync::OnceLock};
+
+// Training-only link between search cp and game outcome. Never serialized
+// into the engine or used to rescale an exported network.
+static WDL_TEMPERATURE: OnceLock<f32> = OnceLock::new();
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<_> = env::args().collect();
-    if args.len()!=5 && args.len()!=7 {
-        return Err("arguments: TRAIN.bullet NEW_CHECKPOINT_DIR SUPERBATCHES PARITY_FENS [WIDTH WDL_WEIGHT]".into());
+    if !matches!(args.len(),5|7|8) {
+        return Err("arguments: TRAIN.bullet NEW_CHECKPOINT_DIR SUPERBATCHES PARITY_FENS [WIDTH WDL_WEIGHT [TRAIN_FIT_TEMPERATURE]]".into());
     }
+    let temperature: f32 = if args.len()==8 {args[7].parse()?} else {400.0};
+    if !temperature.is_finite() || temperature<=0.0 {return Err("invalid outcome temperature".into());}
+    WDL_TEMPERATURE.set(temperature).unwrap();
     let rows=fs::metadata(&args[1])?.len();
     let rounds: usize=args[3].parse()?;
-    let (width,wdl_weight,batch_size) = if args.len()==7 {
+    let (width,wdl_weight,batch_size) = if args.len()>=7 {
         let width:usize=args[5].parse()?;
         let wdl:f32=args[6].parse()?;
         if !matches!(width,256|384|512) || !(0.5..=0.75).contains(&wdl) ||
@@ -30,7 +37,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let fens=fs::read_to_string(&args[4])?;
     fs::create_dir(&args[2])?; // never silently resume or clobber an experiment
     fs::write(Path::new(&args[2]).join("recipe.json"),format!(
-        "{{\"width\":{width},\"wdl_weight\":{wdl_weight},\"train_rows\":{},\"batch_size\":{batch_size},\"superbatches\":{rounds}}}\n",rows/32))?;
+        "{{\"width\":{width},\"wdl_weight\":{wdl_weight},\"train_rows\":{},\"batch_size\":{batch_size},\"superbatches\":{rounds},\"wdl_temperature_cp\":{temperature}}}\n",rows/32))?;
     let backend=ValueTrainerBuilder::default()
         .inputs(Chess768).dual_perspective().output_buckets(MaterialCount::<8>)
         .optimiser(AdamW)
@@ -40,14 +47,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             SavedFormat::id("readw").round().quantise::<i16>(64).transpose(),
             SavedFormat::id("readb").round().quantise::<i16>(255*64),
         ])
-        .loss_fn(|out,y| out.sigmoid().squared_error(y));
+        .loss_fn(|out,y| {
+            let t=*WDL_TEMPERATURE.get().unwrap();
+            let logits=if t==400.0 {out} else {out*(400.0/t)};
+            logits.sigmoid().squared_error(y)
+        });
     let mut trainer=backend.build(|g,us,them,bucket| {
         let ft=g.new_affine("ft",768,width);
         let read=g.new_affine("read",2*width,8);
         read.forward(ft.forward(us).screlu().concat(ft.forward(them).screlu())).select(bucket)
     });
     let schedule=TrainingSchedule {
-        net_id: "mero-bullet".into(), eval_scale: 400.0,
+        net_id: "mero-bullet".into(), eval_scale: temperature,
         steps: TrainingSteps { batch_size,batches_per_superbatch:(rows/32) as usize/batch_size,
             start_superbatch:1,end_superbatch:rounds },
         wdl_scheduler:wdl::ConstantWDL { value:wdl_weight },

@@ -102,6 +102,33 @@ A second, never-before-used book confirms a standalone H1 before release review.
 Faulted and inconclusive runs never qualify; do not keep replaying the same
 opening set until it wins. No branch is merged or pushed by the runner.
 
+### Scaled results and the next loss experiment
+
+The 256/.625 and 384/.5 fits both completed on Metal. Both passed native
+integer parity, but median queen removal on the original 248-case panel
+was 1,620 and 1,423.5 cp respectively, above the 850–1,000 band. Neither
+played a strength game. Extra data fixed the pilot's *undervaluation*, not
+its cp accuracy. More positions alone are not evidence of more Elo.
+
+The [next registered recipe](../backtests/scale-outcome-link-plan.json)
+fits a single logistic temperature to **training** cp/WDL, never boards or
+piece probes. Mero 7's self-play gives T=204.116 cp instead of 400. Held-out
+outcome log loss drops from 0.48683 to 0.45318. With a fresh 256-unit net,
+the target is `.625 × outcome + .375 × sigmoid(teacher_cp / T)`; the prediction
+in that loss is `sigmoid(network_cp / T)`. Engine output is still the original
+integer cp representation, with no post-fit scalar or hardcoded material.
+Use a separate trainer target directory to preserve the original binary pin:
+
+```sh
+cargo build --locked --release --features metal --manifest-path training/bullet-fit/Cargo.toml --target-dir build/bullet-calibrated-fit
+build/torch-env/bin/python -m scripts.scale_campaign calibrated-follow
+```
+
+This follow-up takes the same machine lock as the original experiment. If
+qualified, it uses the pre-excluded, **never played** net256 book and then
+the original untouched confirmation book. Each book is refused if any other
+run already started a match on it. Search SPRTs can resume in the same slot.
+
 Dataset diagnostics (no model training):
 
 ```sh
