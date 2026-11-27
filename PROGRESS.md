@@ -24,6 +24,13 @@ games attempted). The runner rechecks the battery controller when the OS
 labels a draining battery as AC, and can idle until a usable supply returns.
 This checkpoint is below the training floor; no new weights or Elo result.
 
+On restoring AC power the same runner sealed shard 330. The frozen release
+reproduced all 1,040 searched moves and all 698 saved scores in an eight-game
+sample of that shard. On the exact held-out qualification panel (248 queen
+removals), Mero 7 measured 924 cp and the rejected 512-wide pilot measured
+131 cp. These are controls, not results for a new network. [Audit and paired
+NPS measurements](backtests/scale-resume-checks.json).
+
 Branch `feat/torch-screlu-512` starts from the released Mero 7 (`d74a206`).
 It does not include the unpromoted magic-slider change. Its separate [Phase 1
 ledger](https://github.com/mnabid05/Mero/blob/feat/phase-1-perft/PROGRESS.md)

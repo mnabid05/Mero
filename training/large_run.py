@@ -73,9 +73,10 @@ def generate(binary,root,*,target,games_per_shard,workers,seed,wait_power=False)
             if path.name!=f"shard-{i:06d}": raise ValueError("non-contiguous sealed shards")
             total+=check_shard(path,cfg,i,hashes=True)
         i=len(shards)
-        start=time.monotonic(); initial=total
+        active_seconds=0.; initial=total
         while total<target:
             await_power(root,wait_power)
+            start=time.monotonic()
             if shutil.disk_usage(root).free < 2*1024**3: raise RuntimeError("less than 2 GiB free")
             # A killed writer can leave a private attempt behind; never overwrite or count it.
             attempt=Path(tempfile.mkdtemp(prefix=f".attempt-{i:06d}-",dir=root))
@@ -86,8 +87,10 @@ def generate(binary,root,*,target,games_per_shard,workers,seed,wait_power=False)
             atomic(path/"verified.json",{p:sha(path/p) for p in ("positions.bullet","games.tsv","COMPLETE.json")})
             path.rename(root/f"shard-{i:06d}"); attempt.rmdir()
             total+=count; i+=1
-            rate=(total-initial)/max(time.monotonic()-start,0.001)
+            active_seconds+=time.monotonic()-start
+            rate=(total-initial)/max(active_seconds,0.001)
             progress=dict(quiet_positions=total,sealed_shards=i,target=target,
+                rate_basis="generation time (excludes waiting for power)",
                 positions_per_second=round(rate,1),eta_hours=round(max(0,target-total)/rate/3600,2))
             atomic(root/"progress.json",progress)
             print(json.dumps(progress),flush=True)
