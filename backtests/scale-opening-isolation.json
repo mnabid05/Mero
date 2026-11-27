@@ -1,0 +1,293 @@
+{
+  "initial_audit": {
+    "shards": 330,
+    "games_with_eight_opening_plies": 84448,
+    "distinct_test_positions": 18000,
+    "canonical_opening_overlaps": {
+      "continuation": 1,
+      "lmr": 1,
+      "singular": 2,
+      "net256": 1,
+      "rfp": 1
+    }
+  },
+  "verified_split": {
+    "schema": 2,
+    "panel_sha256": "2e2a7a2d208eddb1a89d0c5f7ca34022a39795b5d696b86bdd319bc6cc6e9d8e",
+    "excluded_panel_layouts": 4146,
+    "opening_holdout": {
+      "policy": "canonical-eight-ply-v1",
+      "book_sha256": {
+        "confirmation": "4390ee3050bb718b30cc3645ec2b61cd0889cff81505f5de7fe48eb3b321f65d",
+        "continuation": "bca5301e837a387401991284ef435cd98d876f6b6ad3811dd5ca379984d13518",
+        "correction": "ddc8eda832b0fb0213feaf072e89a4e1e105f6adb22ef6a5f13b76fa6223ac60",
+        "lmp": "dafbb27052cfb8b0659408a504410e0c62e3a80ead051528cf81528bf0eb0f35",
+        "lmr": "1f37b8ee7087eec3cafbea17c196f86bb3ec20747a3f7f540bebe2168c4f8aca",
+        "net256": "debdc8d65ee62471519abfabc8fc93bc2be1348b64cd0fd966da7fbeb6d1ee66",
+        "net384": "04fd63e7f4ee1e9d81656e4e4ad9a94eb939340ca89a0e1249cb2753b2373002",
+        "rfp": "7a0698355c59f59574e1fdc8a7efa3f815effa411750287359d182161ee1ec1e",
+        "singular": "3a896b53e45ecb8918fa30da86db7abf6fce6e40af3479faf29f6eb2f16eb26e"
+      },
+      "canonical_positions": 18000,
+      "excluded_games": {
+        "continuation": 1,
+        "lmr": 1,
+        "singular": 2,
+        "net256": 1,
+        "rfp": 1,
+        "net384": 1
+      },
+      "excluded_records": {
+        "continuation": 66,
+        "lmr": 131,
+        "singular": 121,
+        "net256": 86,
+        "rfp": 54,
+        "net384": 87
+      },
+      "terminated_before_ply8": 33,
+      "membership_sha256": "384a915376155fac519576993b8c8c1643c43df0bfa2f55c0da4954d0aaf56c5"
+    },
+    "seed": 831908,
+    "source_config": {
+      "schema": 1,
+      "producer": "d3731fd9860c5479944da87c830a703c0cf18f478144a6800b1c746efaef63dc",
+      "seed": 2026112601,
+      "games_per_shard": 256,
+      "nodes": 5000,
+      "source": "Mero 7"
+    },
+    "sealed_shards": 375,
+    "source_positions": 8090922,
+    "holdout_seen": 122213,
+    "removed_train_collisions": 25393,
+    "groups": {
+      "train": {
+        "positions": 7942771,
+        "games": 94500,
+        "sha256": "2939d1084b23660f0d7aa2f2db7987a129ac163f95f39f7b18be7ada44e42d79"
+      },
+      "valid": {
+        "positions": 16276,
+        "games": 1460,
+        "sha256": "807ac2e14099f3c199a03c3455d44fcf0e585d5f897211a5210f8d81a088d804"
+      }
+    },
+    "purpose": "split integration test only; neither a production dataset nor a training run",
+    "independently_scanned_train": 7942771,
+    "observed_test_or_validation_layouts_in_training": 0
+  },
+  "paired_nps": {
+    "binary_sha256": {
+      "baseline": "c8aa94febb60d23ba0697ebfd40c02cda9598656d742928e59f3ee1ee643a796",
+      "candidate": "d3731fd9860c5479944da87c830a703c0cf18f478144a6800b1c746efaef63dc"
+    },
+    "aggregate_nps": {
+      "baseline": 708487,
+      "candidate": 655513
+    },
+    "median_paired_ratio": 0.9746795309910068,
+    "samples": [
+      {
+        "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "baseline": {
+          "depth": 9,
+          "score": [
+            "cp",
+            25
+          ],
+          "bestmove": "d2d4",
+          "nodes": 240000,
+          "ms": 288,
+          "nps": 833333
+        },
+        "candidate": {
+          "depth": 9,
+          "score": [
+            "cp",
+            25
+          ],
+          "bestmove": "d2d4",
+          "nodes": 240000,
+          "ms": 294,
+          "nps": 816326
+        }
+      },
+      {
+        "fen": "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+        "candidate": {
+          "depth": 6,
+          "score": [
+            "cp",
+            -77
+          ],
+          "bestmove": "d5e6",
+          "nodes": 240000,
+          "ms": 455,
+          "nps": 527472
+        },
+        "baseline": {
+          "depth": 6,
+          "score": [
+            "cp",
+            -77
+          ],
+          "bestmove": "d5e6",
+          "nodes": 240000,
+          "ms": 476,
+          "nps": 504201
+        }
+      },
+      {
+        "fen": "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1",
+        "baseline": {
+          "depth": 12,
+          "score": [
+            "cp",
+            33
+          ],
+          "bestmove": "b4f4",
+          "nodes": 240000,
+          "ms": 186,
+          "nps": 1290322
+        },
+        "candidate": {
+          "depth": 12,
+          "score": [
+            "cp",
+            33
+          ],
+          "bestmove": "b4f4",
+          "nodes": 240000,
+          "ms": 189,
+          "nps": 1269841
+        }
+      },
+      {
+        "fen": "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10",
+        "candidate": {
+          "depth": 8,
+          "score": [
+            "cp",
+            71
+          ],
+          "bestmove": "c3d5",
+          "nodes": 240000,
+          "ms": 430,
+          "nps": 558139
+        },
+        "baseline": {
+          "depth": 8,
+          "score": [
+            "cp",
+            71
+          ],
+          "bestmove": "c3d5",
+          "nodes": 240000,
+          "ms": 417,
+          "nps": 575539
+        }
+      },
+      {
+        "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "candidate": {
+          "depth": 9,
+          "score": [
+            "cp",
+            25
+          ],
+          "bestmove": "d2d4",
+          "nodes": 240000,
+          "ms": 453,
+          "nps": 529801
+        },
+        "baseline": {
+          "depth": 9,
+          "score": [
+            "cp",
+            25
+          ],
+          "bestmove": "d2d4",
+          "nodes": 240000,
+          "ms": 295,
+          "nps": 813559
+        }
+      },
+      {
+        "fen": "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+        "baseline": {
+          "depth": 6,
+          "score": [
+            "cp",
+            -77
+          ],
+          "bestmove": "d5e6",
+          "nodes": 240000,
+          "ms": 421,
+          "nps": 570071
+        },
+        "candidate": {
+          "depth": 6,
+          "score": [
+            "cp",
+            -77
+          ],
+          "bestmove": "d5e6",
+          "nodes": 240000,
+          "ms": 438,
+          "nps": 547945
+        }
+      },
+      {
+        "fen": "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1",
+        "candidate": {
+          "depth": 12,
+          "score": [
+            "cp",
+            33
+          ],
+          "bestmove": "b4f4",
+          "nodes": 240000,
+          "ms": 264,
+          "nps": 909090
+        },
+        "baseline": {
+          "depth": 12,
+          "score": [
+            "cp",
+            33
+          ],
+          "bestmove": "b4f4",
+          "nodes": 240000,
+          "ms": 187,
+          "nps": 1283422
+        }
+      },
+      {
+        "fen": "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10",
+        "baseline": {
+          "depth": 8,
+          "score": [
+            "cp",
+            71
+          ],
+          "bestmove": "c3d5",
+          "nodes": 240000,
+          "ms": 440,
+          "nps": 545454
+        },
+        "candidate": {
+          "depth": 8,
+          "score": [
+            "cp",
+            71
+          ],
+          "bestmove": "c3d5",
+          "nodes": 240000,
+          "ms": 406,
+          "nps": 591133
+        }
+      }
+    ]
+  }
+}

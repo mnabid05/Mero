@@ -16,6 +16,7 @@ from scripts.scale_bench import bench
 from scripts.sprt_status import summarize
 from training.large_run import atomic, sha, await_power, generate
 from training.probe_material import PANEL_HASH
+from training.opening_holdout import POLICY,book_hashes
 
 REPO = Path(__file__).resolve().parents[1]
 PINS = json.loads((REPO/"backtests/scale-campaign-inputs.json").read_text())
@@ -59,6 +60,9 @@ def prepare(build):
     if not dest.exists():
         split(corpus,dest)
     info=json.loads((dest/"split.json").read_text())
+    holdout=info.get("opening_holdout",{})
+    if holdout.get("policy")!=POLICY or holdout.get("book_sha256")!=book_hashes():
+        raise ValueError("missing frozen match-opening holdouts")
     if (info.get("schema")!=2 or info.get("panel_sha256")!=PANEL_HASH or
             info["source_config"]!=json.loads((corpus/"campaign.json").read_text()) or
             info["source_positions"]<TARGET or info["groups"]["train"]["positions"]<10_000_000):

@@ -26,7 +26,12 @@ and temporary split/shuffle files; disk headroom is checked.
 
 Split all complete shards by opening and shuffle to disk with bounded memory.
 Reserve held-out whole games; keep at most 16,384 validation positions and
-exclude their observed layouts (both orientations) from training. The production
+exclude their observed layouts (both orientations) from training. Group games by
+the board after eight plies (including castling rights and a legally usable
+en-passant target), not by move string. Drop entire games starting in any of
+the nine reserved SPRT books, plus occurrences of their root feature layouts
+from training and validation. The split requires the pinned EPD files in
+`build/scale-openings` (or pass `--books`). The production
 split refuses fewer than **10,000,000 usable training rows**.
 
 ```sh

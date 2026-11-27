@@ -31,6 +31,13 @@ removals), Mero 7 measured 924 cp and the rejected 512-wide pilot measured
 131 cp. These are controls, not results for a new network. [Audit and paired
 NPS measurements](backtests/scale-resume-checks.json).
 
+Fresh-opening isolation: seven data games among the next audited 375-shard
+snapshot (8,090,922 records) transposed into reserved SPRT opening positions.
+The split now excludes those entire games and protects the root features in
+both orientations. An independent scan of the 7,942,771 training records in
+the split-only rehearsal found zero reserved root or validation layouts. No
+model was trained in that rehearsal. [Evidence](backtests/scale-opening-isolation.json).
+
 Branch `feat/torch-screlu-512` starts from the released Mero 7 (`d74a206`).
 It does not include the unpromoted magic-slider change. Its separate [Phase 1
 ledger](https://github.com/mnabid05/Mero/blob/feat/phase-1-perft/PROGRESS.md)

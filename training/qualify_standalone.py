@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from .large_run import sha,atomic
 from .probe_material import probe,PANEL_HASH
+from .opening_holdout import book_hashes,POLICY
 from .screlu_wire import STANDALONE_MAGIC,width_of,unpack
 
 class QueenGateFailed(ValueError):
@@ -16,6 +17,9 @@ def gate(selected,split,engine,audit,panel,report):
     unpack(blob)
     fit=json.loads((selected/"report.json").read_text())
     meta=json.loads((split/"split.json").read_text())
+    holdout=meta.get("opening_holdout",{})
+    if holdout.get("policy")!=POLICY or holdout.get("book_sha256")!=book_hashes():
+        raise ValueError("training did not exclude the pre-registered match openings")
     width=width_of(blob)
     if (fit["net_sha256"]!=sha(weights) or fit["split"]!=meta or fit["recipe"]["width"]!=width
             or not 0.5<=fit["recipe"]["wdl_weight"]<=0.75 or width not in (256,384) or
