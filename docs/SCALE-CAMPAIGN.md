@@ -92,4 +92,11 @@ Dataset diagnostics (no model training):
 ```sh
 python3 -m training.label_profile build/mero20m-01 build/label-profile.json --first 63
 python3 -m training.replay_teacher build/mero20m-01/shard-000046 build/phase1-baseline/mwahaha-engine build/teacher-replay.json --first 17 --games 8
+build/torch-env/bin/python -m training.layout_diversity build/mero20m-01 build/distinct-layouts.json --first 330
 ```
+
+The last command counts distinct inputs exactly by externally sorting the
+24 normalized piece-layout bytes, not by comparing labels or full game
+states. Its temporary sorted runs use at most 24 bytes per record and
+are removed after counting. The [first 330 shards](../backtests/scale-layout-diversity.json)
+contained 6,770,829 distinct inputs among 7,117,907 records (95.12%).
