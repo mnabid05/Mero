@@ -124,6 +124,12 @@ constexpr std::array<std::array<uint64_t, 64>, 8> build_rays() {
 constexpr auto KNIGHT_ATTACKS = build_knight_attacks();
 constexpr auto KING_ATTACKS = build_king_attacks();
 constexpr auto RAYS = build_rays();
+constexpr auto KING_AXES = [] {
+    std::array<uint64_t,64> masks{};
+    for (int sq=0;sq<64;++sq)
+        for (const auto& ray:RAYS) masks[sq]|=ray[sq];
+    return masks;
+}();
 
 constexpr std::array<int, 128> PIECE_VALUES = [] {
     std::array<int, 128> values{};
@@ -884,14 +890,23 @@ struct Board {
     }
 
     bool has_legal_move() {
+        return has_legal_move_from_check_state(in_check());
+    }
+
+    bool has_legal_move_from_check_state(bool checked) {
         bool moving_white = white_to_move;
         // A safe unpinned move proves non-stalemate without allocating a move list.
         int king = king_square(moving_white);
-        if (!in_check(moving_white)) {
+        if (!checked && king>=0) {
+            int offset = moving_white ? 0 : 6;
+            // With our king safe, an ordinary push from a square on NO king
+            // ray cannot uncover a slider. This is only a sufficient witness:
+            // never declare stalemate merely because there is no such pawn.
+            uint64_t off_axis = piece_boards[offset] & ~KING_AXES[king];
+            if ((moving_white ? off_axis>>8 : off_axis<<8) & ~occupied) return true;
             uint64_t own = color_boards[color_index(moving_white)];
             uint64_t possible_pins = bishop_attacks(king) | rook_attacks(king);
             uint64_t free = own & ~possible_pins & ~square_bit(king);
-            int offset = moving_white ? 0 : 6;
             uint64_t pawns = free & piece_boards[offset];
             if (((moving_white ? pawns >> 8 : pawns << 8) & ~occupied) != 0)
                 return true;
@@ -1752,7 +1767,7 @@ private:
         }
         HistoryGuard history_guard(search_history_, key);
 
-        if (!in_check && !board.has_legal_move()) return 0;
+        if (!in_check && !board.has_legal_move_from_check_state(in_check)) return 0;
         key = board.search_key();
         TTEntry* entry = probe(key);
         // Recursive searches may overwrite this cluster; keep move metadata by value.
@@ -2089,7 +2104,7 @@ private:
             return in_check && board.legal_moves_in_place().empty() ? -MATE + ply : 0;
         }
         HistoryGuard history_guard(search_history_, key);
-        if (!in_check && !board.has_legal_move()) return 0;
+        if (!in_check && !board.has_legal_move_from_check_state(in_check)) return 0;
         key = board.search_key();
         TTEntry* entry = probe(key);
         if (entry != nullptr && entry->depth >= 0) {

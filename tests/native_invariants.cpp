@@ -4,6 +4,29 @@
 #undef main
 #include <cassert>
 
+// Exhaustively enumerate pseudo moves, including checked nodes, without the
+// optimized pin/mobility witnesses. A false positive here would hide a mate
+// or stalemate; a false negative would make the search invent a draw.
+static unsigned verify_mobility(Board& b,unsigned depth) {
+    const bool side=b.white_to_move, checked=b.in_check();
+    const auto key=b.key;
+    unsigned n=1;
+    bool found=false;
+    for (const auto& move:b.pseudo_moves()) {
+        auto undo=b.make_move(move);
+        if (!b.in_check(side)) {
+            found=true;
+            if (depth) n+=verify_mobility(b,depth-1);
+        }
+        b.unmake_move(move,undo);
+        if (!depth && found) break;
+    }
+    assert(b.has_legal_move()==found);
+    assert(b.has_legal_move_from_check_state(checked)==found);
+    assert(b.key==key);
+    return n;
+}
+
 int main() {
     const std::string pieces = "PNBRQKpnbrqk";
     for (int i = 0; i < 12; ++i) assert(Zobrist::piece_index(pieces[i]) == i);
@@ -16,6 +39,9 @@ int main() {
     Board ep_pin = Board::from_fen("8/6bb/8/8/R1pP2k1/4P3/P7/K7 b - d3 0 1");
     // Independently reproduced by both frozen native and Python generators.
     assert(perft(ep_pin, 3) == 4135);
+    assert(verify_mobility(start,3)==1+20+400+8902);
+    assert(verify_mobility(kiwi,2)==1+48+2039);
+    assert(verify_mobility(ep_pin,2)>1);
     for (const Move& move : ep_pin.legal_moves()) assert(move.uci() != "c4d3");
     Board no_ep = Board::from_fen("8/6bb/8/8/R1pP2k1/4P3/P7/K7 b - - 0 1");
     assert(ep_pin.key == no_ep.key);
@@ -39,6 +65,7 @@ int main() {
     assert(Engine::passed_pawn_activity(passer) > 0);
     assert(Engine::passed_pawn_activity(passer) == -Engine::passed_pawn_activity(passer_reflected));
     Board mate = Board::from_fen("7k/6Q1/5K2/8/8/8/8/8 b - - 100 1");
+    assert(verify_mobility(mate,2)==1 && verify_mobility(stale,2)==1);
     auto mate_result = engine.search(mate, 4, 100);
     assert(mate_result.score == -MATE && !mate_result.move.valid());
     assert(engine.search(stale, 4, 100).score == 0);
