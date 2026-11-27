@@ -11,6 +11,15 @@ includes all endgames; no hardcoded material is mixed into these networks.
 No scaled training, queen-gate pass, SPRT pass or new rating is claimed here.
 See [protocol and commands](docs/SCALE-CAMPAIGN.md).
 
+**20M source target reached:** 20,005,910 quiet rows, 925 verified shards,
+236,778 completed games, and 22 capped games excluded (640,189,120 bytes of
+Bullet records). A missing shard was regenerated against its surviving
+original hashes, without replacing its seal or changing the dataset. On the
+last shard, all 21,760 positions passed legal replay and byte comparison
+against upstream Rust; the release reproduced all 973 searches and 691
+quiet scores in the last eight games. [Frozen corpus report](backtests/scale-20m-corpus.json).
+This is a dataset milestone, not a strength result.
+
 Checkpoint: 63 sealed shards, 1,365,596 quiet records, 16,125 completed
 games and three capped games excluded. Mero 7 UCI independently reproduced
 all 762 searched moves and all 488 saved cp scores in an eight-game sample.

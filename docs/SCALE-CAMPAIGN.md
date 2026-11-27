@@ -24,6 +24,12 @@ resumes automatically when usable power returns. No system sleep or
 power settings are changed. Storage: 640 MB binary for 20M rows, plus ledgers
 and temporary split/shuffle files; disk headroom is checked.
 
+If a sealed shard later loses files but its original `verified.json` survives,
+use `python3 -m training.recover_sealed ROOT PRODUCER INDEX ORIGINAL_WORKERS`.
+It takes the same exclusive lock, regenerates the deterministic shard, checks
+every byte against the old hashes, and installs only missing files. It refuses
+to create a new seal or overwrite conflicting existing data.
+
 Split all complete shards by opening and shuffle to disk with bounded memory.
 Reserve held-out whole games; keep at most 16,384 validation positions and
 exclude their observed layouts (both orientations) from training. Group games by

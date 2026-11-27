@@ -1,0 +1,72 @@
+{
+  "scope": "Frozen dataset only, not a trained network or an Elo measurement.",
+  "config": {
+    "schema": 1,
+    "producer": "d3731fd9860c5479944da87c830a703c0cf18f478144a6800b1c746efaef63dc",
+    "seed": 2026112601,
+    "games_per_shard": 256,
+    "nodes": 5000,
+    "source": "Mero 7"
+  },
+  "hash_verified_shards": 925,
+  "games_attempted": 236800,
+  "games_completed": 236778,
+  "capped_games": 22,
+  "quiet_rows": 20005910,
+  "binary_bytes": 640189120,
+  "sha256_of_ordered_binary_shard_seal_digests": "68eeaae58383022d00b15a0e63ae4d60b01faea9ab1f2d865da402ad1dc32942",
+  "missing_file_recovery": {
+    "shard": 906,
+    "positions": 22738,
+    "original_workers": 10,
+    "original_seal_sha256": "9baf1a1dfccf11ef43b52c5e763b28a0d6213d19dbfc61ea1be03edc2e16bf9c",
+    "reconstructed_files_matching_original": {
+      "positions.bullet": "e66c05ad8d2c388107ddf0fbdb5f539b38d684546a2f2afb6751004c822ee3e2",
+      "games.tsv": "f32cf3c44bea5fe788091241a7ff2d4f5c6ba7bb230a5aa5f60b42b4a07f21e3",
+      "COMPLETE.json": "5f137fa330ea29a2edd6859e467a63479b35bee09c10b08c5bd2205fabd385a3"
+    }
+  },
+  "last_shard_full_legal_replay_and_upstream_rust_encoding": {
+    "format": "bulletformat-chessboard-v1",
+    "games": 256,
+    "completed": 256,
+    "positions": 21760,
+    "seed": 9588892850097260000,
+    "workers": 10,
+    "nodes": 5000,
+    "opening_plies": 8,
+    "mode": "mero7",
+    "positions_sha256": "e6b34aec1e13ca547e9e69ffd2557648966a8e8ccb3ec97893c858b726168c33",
+    "upstream_byte_parity": true,
+    "white_wins": 149,
+    "draws": 33,
+    "black_wins": 74,
+    "terminal_reasons": {
+      "threefold": 19,
+      "checkmate": 223,
+      "material": 8,
+      "rule50": 6
+    }
+  },
+  "last_eight_games_release_teacher_replay": {
+    "games": 8,
+    "first": 248,
+    "searches": 973,
+    "quiet_labels": 691,
+    "ledger_sha256": "fe59a41176a4b2e1e88474bddd4fabf8243ac00a51a8dd45174787c9e28a347c",
+    "records_sha256": "e6b34aec1e13ca547e9e69ffd2557648966a8e8ccb3ec97893c858b726168c33",
+    "release_sha256": "c8aa94febb60d23ba0697ebfd40c02cda9598656d742928e59f3ee1ee643a796",
+    "all_moves_and_scores_equal": true
+  },
+  "unchanged_binary_control": {
+    "binary_sha256": {
+      "baseline": "c8aa94febb60d23ba0697ebfd40c02cda9598656d742928e59f3ee1ee643a796",
+      "candidate": "d3731fd9860c5479944da87c830a703c0cf18f478144a6800b1c746efaef63dc"
+    },
+    "aggregate_nps": {
+      "baseline": 1186650,
+      "candidate": 1166464
+    },
+    "median_paired_ratio": 0.983866858928624
+  }
+}
