@@ -1,0 +1,188 @@
+{
+  "purpose": "fixed-node integration only; no Elo or SPRT decision",
+  "fastchess_sha256": "0baffd067ee2df163c18b3b6707decf8feb50e1767d540f13cf5c1a9fd5304dd",
+  "total_games": 96,
+  "results": {
+    "lmr": {
+      "status": "fixed-length diagnostic (not SPRT)",
+      "games": 16,
+      "wins": 7,
+      "draws": 2,
+      "losses": 7,
+      "reported_llr": null,
+      "faults": [],
+      "warnings": {
+        "Bestmove does not match beginning of last PV": 21,
+        "PV continues after threefold repetition": 2
+      },
+      "verified_color_pairs": 8,
+      "games_sha256": "da0db6ead840834e863c1f3a6a329ab6ece9ddcbc2b9b5a01b9d36e83af9b740",
+      "nodes": 5000,
+      "seed": 915401,
+      "blend": null,
+      "candidate_sha256": "04aa078b33591f524bd73a126f8917606a69fd15b46d6c76b9e7c8effc7d5bde",
+      "baseline_sha256": "c8aa94febb60d23ba0697ebfd40c02cda9598656d742928e59f3ee1ee643a796",
+      "book_sha256": "1031dc82cfe1e4d8912955a89dcd782318d49d8bc81f91ecc0614dc91c907460",
+      "replay": {
+        "games": 16,
+        "legal_plies": 2636,
+        "endings": {
+          "checkmate": 14,
+          "draw by fifty-move rule": 1,
+          "threefold repetition": 1
+        }
+      }
+    },
+    "rfp": {
+      "status": "fixed-length diagnostic (not SPRT)",
+      "games": 16,
+      "wins": 5,
+      "draws": 2,
+      "losses": 9,
+      "reported_llr": null,
+      "faults": [],
+      "warnings": {
+        "Bestmove does not match beginning of last PV": 21
+      },
+      "verified_color_pairs": 8,
+      "games_sha256": "f2eb776734da2a2331ca3d10a956e72ba6520c40bea7319e1bceeb22c29be123",
+      "nodes": 5000,
+      "seed": 915402,
+      "blend": null,
+      "candidate_sha256": "ee5ecc27335880396cc186a397d08df6851ae49db8a7b591085dce2fd5858553",
+      "baseline_sha256": "c8aa94febb60d23ba0697ebfd40c02cda9598656d742928e59f3ee1ee643a796",
+      "book_sha256": "6cc8f10f963ae09ea12fac5000be76cc6711d520f9f36b00085f53e055c80b9a",
+      "replay": {
+        "games": 16,
+        "legal_plies": 2112,
+        "endings": {
+          "checkmate": 14,
+          "threefold repetition": 1,
+          "draw by insufficient material": 1
+        }
+      }
+    },
+    "lmp": {
+      "status": "fixed-length diagnostic (not SPRT)",
+      "games": 16,
+      "wins": 5,
+      "draws": 3,
+      "losses": 8,
+      "reported_llr": null,
+      "faults": [],
+      "warnings": {
+        "Bestmove does not match beginning of last PV": 18,
+        "PV continues after threefold repetition": 6
+      },
+      "verified_color_pairs": 8,
+      "games_sha256": "4162a0e048b3625bf4c3fde3211f01ca7f75d1b2e1bb69117ec5f9f330d2f943",
+      "nodes": 5000,
+      "seed": 915403,
+      "blend": null,
+      "candidate_sha256": "854f86e620636b6ef8ce8a29b0dd2814113b48443c9773fed341a22c8c3757e0",
+      "baseline_sha256": "c8aa94febb60d23ba0697ebfd40c02cda9598656d742928e59f3ee1ee643a796",
+      "book_sha256": "e24d7822e9d06018d4b53d817393ac28482c15a37146da7bbf098a70c130326f",
+      "replay": {
+        "games": 16,
+        "legal_plies": 1675,
+        "endings": {
+          "checkmate": 13,
+          "draw by insufficient material": 2,
+          "threefold repetition": 1
+        }
+      }
+    },
+    "singular": {
+      "status": "fixed-length diagnostic (not SPRT)",
+      "games": 16,
+      "wins": 9,
+      "draws": 0,
+      "losses": 7,
+      "reported_llr": null,
+      "faults": [],
+      "warnings": {
+        "Bestmove does not match beginning of last PV": 18
+      },
+      "verified_color_pairs": 8,
+      "games_sha256": "0270f93d1e4708b3ee97664acf30e33f05b669fcfa80e9cea50911f375b71d27",
+      "nodes": 5000,
+      "seed": 915404,
+      "blend": null,
+      "candidate_sha256": "7d0c8b62225b490022d09feabe3fb84ea4e9dff5467ddbc3ccd25ccd062175a2",
+      "baseline_sha256": "c8aa94febb60d23ba0697ebfd40c02cda9598656d742928e59f3ee1ee643a796",
+      "book_sha256": "d6ba9d4126926c59fd69e3ab83b819109f71cc8704954042d9d8346f6a0d3ba0",
+      "replay": {
+        "games": 16,
+        "legal_plies": 1581,
+        "endings": {
+          "checkmate": 16
+        }
+      }
+    },
+    "continuation": {
+      "status": "fixed-length diagnostic (not SPRT)",
+      "games": 16,
+      "wins": 7,
+      "draws": 0,
+      "losses": 9,
+      "reported_llr": null,
+      "faults": [],
+      "warnings": {
+        "Bestmove does not match beginning of last PV": 17
+      },
+      "verified_color_pairs": 8,
+      "games_sha256": "71f8ba59501877cbc8139b24786769c3b8f67b3fc88e54a833255ff0c160d5df",
+      "nodes": 5000,
+      "seed": 915405,
+      "blend": null,
+      "candidate_sha256": "d708026a31bd8a13357302f77a89661a37053ce79f4ce1dfa6a5a5b5a38c75f6",
+      "baseline_sha256": "c8aa94febb60d23ba0697ebfd40c02cda9598656d742928e59f3ee1ee643a796",
+      "book_sha256": "b09bba6723c006d81e69d081c1a7f6c1f56a008e305ed7fff3b4dcfa13ae58a3",
+      "replay": {
+        "games": 16,
+        "legal_plies": 1837,
+        "endings": {
+          "checkmate": 16
+        }
+      }
+    },
+    "correction": {
+      "status": "fixed-length diagnostic (not SPRT)",
+      "games": 16,
+      "wins": 5,
+      "draws": 2,
+      "losses": 9,
+      "reported_llr": null,
+      "faults": [],
+      "warnings": {
+        "Bestmove does not match beginning of last PV": 8,
+        "PV continues after threefold repetition": 4
+      },
+      "verified_color_pairs": 8,
+      "games_sha256": "e100b0c13cb7f5eb232232349ee74d531c9468279adeba5c897f234b3f756090",
+      "nodes": 5000,
+      "seed": 915406,
+      "blend": null,
+      "candidate_sha256": "6642498a48dfcf219d9bc15e7e25d7a87eac2f844bf33a2726e75dea02eb99ef",
+      "baseline_sha256": "c8aa94febb60d23ba0697ebfd40c02cda9598656d742928e59f3ee1ee643a796",
+      "book_sha256": "c4f560bbc02cea49ed4692721fba661a1eda4762475ed149efafa9f1c8266e60",
+      "replay": {
+        "games": 16,
+        "legal_plies": 1874,
+        "endings": {
+          "checkmate": 14,
+          "threefold repetition": 1,
+          "draw by insufficient material": 1
+        }
+      }
+    }
+  },
+  "control_nps": {
+    "aggregate_nps": {
+      "baseline": 647336,
+      "candidate": 630956
+    },
+    "median_paired_ratio": 0.9838743573959754,
+    "scope": "Infrastructure commit: unchanged binaries, alternating samples concurrent with datagen; not a promotion benchmark."
+  }
+}

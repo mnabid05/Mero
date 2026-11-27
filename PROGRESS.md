@@ -45,6 +45,12 @@ scheduled first fit still uses the full 20M run. Split and network export
 publish on completion only; an interrupted shuffle cannot appear as a
 finished training directory.
 
+Search diagnostics: six frozen binaries completed 96 fixed-node games on 48
+additional, disjoint eight-ply openings. Independent replay validated 11,715
+legal plies, all 87 checkmates and all nine draws. Fastchess logged PV display
+warnings but no forfeits. These were single-lane, **not** timed strength tests;
+no search feature is promoted. [Per-candidate records](backtests/scale-search-canaries.json).
+
 Branch `feat/torch-screlu-512` starts from the released Mero 7 (`d74a206`).
 It does not include the unpromoted magic-slider change. Its separate [Phase 1
 ledger](https://github.com/mnabid05/Mero/blob/feat/phase-1-perft/PROGRESS.md)
