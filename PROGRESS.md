@@ -19,6 +19,11 @@ higher, counting draws as half. This is a label audit, not an engine rating.
 All six isolated search hypotheses have frozen binaries, NPS samples and
 reserved books; none has a passing SPRT. Release remains `d74a206`.
 
+Power handoff: 330 shards sealed (7,117,907 quiet positions from 84,480
+games attempted). The runner rechecks the battery controller when the OS
+labels a draining battery as AC, and can idle until a usable supply returns.
+This checkpoint is below the training floor; no new weights or Elo result.
+
 Branch `feat/torch-screlu-512` starts from the released Mero 7 (`d74a206`).
 It does not include the unpromoted magic-slider change. Its separate [Phase 1
 ledger](https://github.com/mnabid05/Mero/blob/feat/phase-1-perft/PROGRESS.md)

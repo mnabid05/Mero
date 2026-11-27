@@ -11,13 +11,16 @@ reordering buffer write the same records regardless of thread scheduling.
 
 ```sh
 python3 scripts/build_native.py --native-arch --release-control --output-dir build/producer-v2
-python3 -m training.large_run build/producer-v2/mwahaha-engine build/mero20m-01 --target 20000000
+python3 -m training.large_run build/producer-v2/mwahaha-engine build/mero20m-01 --target 20000000 --wait-power
 ```
 
 Use the identical frozen binary and arguments to resume. The generator
 verifies SHA-256 fingerprints before accepting sealed shards, refuses a second
 writer, and ignores partial attempts. On macOS it stops at a shard boundary
-if unplugged, or when discharging at or below 25% on AC. No system sleep or
+if unplugged, or when discharging at or below 25% on AC. If the battery
+controller reports no charge-capable adapter while the battery is draining,
+that overrides a stale AC source label. With `--wait-power` it idles, then
+resumes automatically when usable power returns. No system sleep or
 power settings are changed. Storage: 640 MB binary for 20M rows, plus ledgers
 and temporary split/shuffle files; disk headroom is checked.
 
@@ -62,6 +65,9 @@ byte hashes for compiled programs refer to this particular M4 build.
 
 ```sh
 # Use the project's Python environment with NumPy and PyTorch.
+# Start/resume the complete local pipeline (including datagen):
+build/torch-env/bin/python -m scripts.scale_campaign run
+# Or attach to an already running large_run process:
 build/torch-env/bin/python -m scripts.scale_campaign follow
 # Or isolate/resume just one stage after datagen:
 build/torch-env/bin/python -m scripts.scale_campaign prepare

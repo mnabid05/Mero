@@ -3,6 +3,7 @@ import argparse
 from contextlib import contextmanager
 import fcntl
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -13,7 +14,7 @@ from scripts.fresh_openings import verify
 from scripts.paired_speed import run as speed
 from scripts.scale_bench import bench
 from scripts.sprt_status import summarize
-from training.large_run import atomic, sha
+from training.large_run import atomic, sha, await_power, generate
 from training.probe_material import PANEL_HASH
 
 REPO = Path(__file__).resolve().parents[1]
@@ -192,19 +193,23 @@ def networks(build):
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)
-    p.add_argument("stage",choices=["prepare","networks","search","follow"],
-                   help="follow waits for the running generator, then runs networks and search; never merges")
+    p.add_argument("stage",choices=["prepare","networks","search","follow","run"],
+                   help="run resumes datagen, networks, and search; follow attaches to an existing generator")
     p.add_argument("--build",type=Path,default=REPO/"build")
     args=p.parse_args()
     b=args.build.resolve()
+    if args.stage=="run":
+        producer=expect(b/"producer-v2/mwahaha-engine",PINS["teacher_sha256"])
+        generate(producer,b/"mero20m-01",target=TARGET,games_per_shard=256,
+                 workers=os.cpu_count() or 1,seed=2026112601,wait_power=True)
     if args.stage=="follow":
         print("Waiting for the generator to release its exclusive machine slot.",flush=True)
     with machine_slot(b/"mero20m-01",wait=args.stage=="follow"):
         if args.stage=="prepare":
             print(prepare(b))
-        elif args.stage=="follow":
+        elif args.stage in ("run","follow"):
             load_data(b)  # A power stop or incomplete generator is not a finished corpus.
-            run_sprt.check_power()
+            await_power(b/"mero20m-01",wait=True,clocked=True)
             won=networks(b)
             search(b)
             return 0 if won else 1

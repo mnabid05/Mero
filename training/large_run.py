@@ -4,13 +4,12 @@ import fcntl
 import hashlib
 import json
 import os
-import platform
-import re
 import shutil
 import subprocess
 import tempfile
 import time
 from pathlib import Path
+from .power_source import check as power, PowerUnavailable
 
 def sha(path):
     with path.open("rb") as f:
@@ -25,12 +24,25 @@ def atomic(path, data):
 def shard_seed(seed,i):
     return int.from_bytes(hashlib.sha256(f"mero7-corpus-v2:{seed}:{i}".encode()).digest()[:8],"little")
 
-def power():
-    if platform.system()!="Darwin": return
-    status=subprocess.check_output(["pmset","-g","batt"],text=True)
-    pct=re.search(r"(\d+)%",status)
-    if "'AC Power'" not in status or (pct and int(pct[1])<=25 and "discharging" in status):
-        raise RuntimeError("power guard: use sustained AC; sealed shards are safe to resume")
+def await_power(root,wait,clocked=False):
+    message=None
+    while True:
+        try:
+            power(clocked=clocked)
+            if message is not None or (root/"power-state.json").exists():
+                if message is not None:
+                    print("Power restored; continuing.",flush=True)
+                state=root/"power-state.json"
+                if not state.is_file() or json.loads(state.read_text()).get("state")!="available":
+                    atomic(state,dict(state="available"))
+            return
+        except PowerUnavailable as error:
+            if not wait: raise
+            if str(error)!=message:
+                message=str(error)
+                atomic(root/"power-state.json",dict(state="waiting_for_power",reason=message))
+                print(f"Waiting for usable AC: {message}. No self-play or training is running.",flush=True)
+            time.sleep(30)
 
 def check_shard(path,config,i,hashes=False):
     manifest=json.loads((path/"COMPLETE.json").read_text())
@@ -46,7 +58,7 @@ def check_shard(path,config,i,hashes=False):
             raise ValueError(f"checksum mismatch: {path}")
     return count
 
-def generate(binary,root,*,target,games_per_shard,workers,seed):
+def generate(binary,root,*,target,games_per_shard,workers,seed,wait_power=False):
     binary=binary.resolve(strict=True); root.mkdir(parents=True,exist_ok=True)
     with (root/".generator.lock").open("a") as lock:
         fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
@@ -63,7 +75,7 @@ def generate(binary,root,*,target,games_per_shard,workers,seed):
         i=len(shards)
         start=time.monotonic(); initial=total
         while total<target:
-            power()
+            await_power(root,wait_power)
             if shutil.disk_usage(root).free < 2*1024**3: raise RuntimeError("less than 2 GiB free")
             # A killed writer can leave a private attempt behind; never overwrite or count it.
             attempt=Path(tempfile.mkdtemp(prefix=f".attempt-{i:06d}-",dir=root))
@@ -88,6 +100,7 @@ if __name__=="__main__":
     p.add_argument("--games-per-shard",type=int,default=256)
     p.add_argument("--workers",type=int,default=os.cpu_count() or 1)
     p.add_argument("--seed",type=int,default=2026112601)
+    p.add_argument("--wait-power",action="store_true",help="idle until usable AC returns")
     a=p.parse_args()
     if min(a.target,a.games_per_shard,a.workers)<1: p.error("positive limits required")
     generate(**vars(a))

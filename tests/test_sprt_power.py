@@ -5,8 +5,27 @@ from pathlib import Path
 from unittest.mock import patch
 from scripts.run_sprt import run
 from scripts.run_sprt import require_mac_power
+from training.large_run import await_power
+from training.power_source import PowerUnavailable,require_power
 
 class PowerGateTests(unittest.TestCase):
+    def test_stale_ac_label_does_not_override_battery_controller(self):
+        status="Now drawing from 'AC Power'\n-InternalBattery-0 44%; discharging"
+        with self.assertRaisesRegex(PowerUnavailable,"adapter"):
+            require_power(status,'  "ExternalConnected" = No')
+        require_power(status,'  "ExternalConnected" = Yes\n  "ExternalChargeCapable" = Yes')
+        with self.assertRaises(PowerUnavailable):
+            require_power(status,clocked=True)
+
+    def test_power_wait_clears_after_a_real_transition(self):
+        with tempfile.TemporaryDirectory() as d, patch("training.large_run.time.sleep") as idle:
+            root=Path(d)
+            with patch("training.large_run.power",side_effect=[PowerUnavailable("unplugged"),None]):
+                with patch("builtins.print"):
+                    await_power(root,True)
+            idle.assert_called_once_with(30)
+            self.assertIn('"available"',(root/"power-state.json").read_text())
+
     def test_child_failure_is_recorded_not_a_pass(self):
         # An actual child process and files, but no chess games or wall clock.
         with tempfile.TemporaryDirectory() as temp:

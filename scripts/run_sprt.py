@@ -3,25 +3,19 @@ import argparse
 import hashlib
 import json
 import platform
-import re
 import signal
 import subprocess
 import time
 from pathlib import Path
 
 from .sprt_status import FAULT, GAME, summarize
+from training.power_source import check as power_check, require_power
 
 def require_mac_power(status):
-    if "drawing from 'AC Power'" not in status:
-        raise RuntimeError("SPRT needs a sustained AC power source")
-    if "InternalBattery" in status:
-        percent = re.search(r"(\d+)%", status)
-        if not percent or int(percent[1]) < 20 or "discharging" in status.lower():
-            raise RuntimeError("wait for at least 20% battery and an AC source that is not discharging")
+    require_power(status,clocked=True)
 
 def check_power():
-    if platform.system() == "Darwin":
-        require_mac_power(subprocess.check_output(["pmset", "-g", "batt"], text=True, timeout=5))
+    power_check(clocked=True)
 
 def digest(path):
     with path.open("rb") as stream:
