@@ -11,6 +11,7 @@ import numpy as np
 from .large_run import atomic, check_shard, sha
 from .probe_material import inputs, PANEL, PANEL_HASH
 from .opening_holdout import TRAIN,VALID,partition,reserved_books
+from .publish import unpublished
 from chess_ai.board import Board
 
 def flipped_layout(layout):
@@ -63,6 +64,10 @@ def games(shard,membership):
         if stream.read(1): raise ValueError("unclaimed records")
 
 def split(root,dest,minimum=10_000_000,seed=831908,valid_limit=16384,books=None):
+    with unpublished(dest,"split.json") as staging:
+        return _split(root,staging,minimum,seed,valid_limit,books)
+
+def _split(root,dest,minimum,seed,valid_limit,books):
     shards=sorted(root.glob("shard-[0-9][0-9][0-9][0-9][0-9][0-9]"))
     cfg=json.loads((root/"campaign.json").read_text())
     n=0

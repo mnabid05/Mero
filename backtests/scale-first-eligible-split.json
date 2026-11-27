@@ -1,0 +1,280 @@
+{
+  "scope": "Frozen recovery split, not a fitted model, Elo claim or substitution for the scheduled 20M source snapshot.",
+  "split": {
+    "schema": 2,
+    "panel_sha256": "2e2a7a2d208eddb1a89d0c5f7ca34022a39795b5d696b86bdd319bc6cc6e9d8e",
+    "excluded_panel_layouts": 4146,
+    "opening_holdout": {
+      "policy": "canonical-eight-ply-v1",
+      "book_sha256": {
+        "confirmation": "4390ee3050bb718b30cc3645ec2b61cd0889cff81505f5de7fe48eb3b321f65d",
+        "continuation": "bca5301e837a387401991284ef435cd98d876f6b6ad3811dd5ca379984d13518",
+        "correction": "ddc8eda832b0fb0213feaf072e89a4e1e105f6adb22ef6a5f13b76fa6223ac60",
+        "lmp": "dafbb27052cfb8b0659408a504410e0c62e3a80ead051528cf81528bf0eb0f35",
+        "lmr": "1f37b8ee7087eec3cafbea17c196f86bb3ec20747a3f7f540bebe2168c4f8aca",
+        "net256": "debdc8d65ee62471519abfabc8fc93bc2be1348b64cd0fd966da7fbeb6d1ee66",
+        "net384": "04fd63e7f4ee1e9d81656e4e4ad9a94eb939340ca89a0e1249cb2753b2373002",
+        "rfp": "7a0698355c59f59574e1fdc8a7efa3f815effa411750287359d182161ee1ec1e",
+        "singular": "3a896b53e45ecb8918fa30da86db7abf6fce6e40af3479faf29f6eb2f16eb26e"
+      },
+      "canonical_positions": 18000,
+      "excluded_games": {
+        "continuation": 2,
+        "lmr": 2,
+        "singular": 2,
+        "net256": 1,
+        "rfp": 1,
+        "net384": 5
+      },
+      "excluded_records": {
+        "continuation": 161,
+        "lmr": 310,
+        "singular": 121,
+        "net256": 86,
+        "rfp": 54,
+        "net384": 553
+      },
+      "terminated_before_ply8": 39,
+      "membership_sha256": "f3aa500c2f74cb30d8ae58dbe1341aa99bd798c7f4f9e7815c25c38e21d7ad19"
+    },
+    "seed": 831908,
+    "source_config": {
+      "schema": 1,
+      "producer": "d3731fd9860c5479944da87c830a703c0cf18f478144a6800b1c746efaef63dc",
+      "seed": 2026112601,
+      "games_per_shard": 256,
+      "nodes": 5000,
+      "source": "Mero 7"
+    },
+    "sealed_shards": 495,
+    "source_positions": 10686063,
+    "holdout_seen": 165315,
+    "removed_train_collisions": 34980,
+    "groups": {
+      "train": {
+        "positions": 10484483,
+        "games": 124715,
+        "sha256": "553882fcd1b1e4a927f8b710f178f550b0fb924bfd1529c324e12f12cbf7bfaf"
+      },
+      "valid": {
+        "positions": 16285,
+        "games": 1953,
+        "sha256": "64615e2f9d49ef39029c4b96009b2e6b0af4f546ee3e0060188322005c0fddf0"
+      }
+    }
+  },
+  "pilot_export_replay_sha256": "56a817d41f91761a5b30702028cc48cfa395f10e47c302f484c1519b81b52653",
+  "paired_nps": {
+    "binary_sha256": {
+      "baseline": "c8aa94febb60d23ba0697ebfd40c02cda9598656d742928e59f3ee1ee643a796",
+      "candidate": "d3731fd9860c5479944da87c830a703c0cf18f478144a6800b1c746efaef63dc"
+    },
+    "aggregate_nps": {
+      "baseline": 416485,
+      "candidate": 432627
+    },
+    "median_paired_ratio": 0.997912379724287,
+    "samples": [
+      {
+        "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "baseline": {
+          "depth": 9,
+          "score": [
+            "cp",
+            25
+          ],
+          "bestmove": "d2d4",
+          "nodes": 240000,
+          "ms": 820,
+          "nps": 292682
+        },
+        "candidate": {
+          "depth": 9,
+          "score": [
+            "cp",
+            25
+          ],
+          "bestmove": "d2d4",
+          "nodes": 240000,
+          "ms": 678,
+          "nps": 353982
+        }
+      },
+      {
+        "fen": "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+        "candidate": {
+          "depth": 6,
+          "score": [
+            "cp",
+            -77
+          ],
+          "bestmove": "d5e6",
+          "nodes": 240000,
+          "ms": 825,
+          "nps": 290909
+        },
+        "baseline": {
+          "depth": 6,
+          "score": [
+            "cp",
+            -77
+          ],
+          "bestmove": "d5e6",
+          "nodes": 240000,
+          "ms": 831,
+          "nps": 288808
+        }
+      },
+      {
+        "fen": "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1",
+        "baseline": {
+          "depth": 12,
+          "score": [
+            "cp",
+            33
+          ],
+          "bestmove": "b4f4",
+          "nodes": 240000,
+          "ms": 287,
+          "nps": 836236
+        },
+        "candidate": {
+          "depth": 12,
+          "score": [
+            "cp",
+            33
+          ],
+          "bestmove": "b4f4",
+          "nodes": 240000,
+          "ms": 262,
+          "nps": 916030
+        }
+      },
+      {
+        "fen": "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10",
+        "candidate": {
+          "depth": 8,
+          "score": [
+            "cp",
+            71
+          ],
+          "bestmove": "c3d5",
+          "nodes": 240000,
+          "ms": 604,
+          "nps": 397350
+        },
+        "baseline": {
+          "depth": 8,
+          "score": [
+            "cp",
+            71
+          ],
+          "bestmove": "c3d5",
+          "nodes": 240000,
+          "ms": 673,
+          "nps": 356612
+        }
+      },
+      {
+        "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "candidate": {
+          "depth": 9,
+          "score": [
+            "cp",
+            25
+          ],
+          "bestmove": "d2d4",
+          "nodes": 240000,
+          "ms": 505,
+          "nps": 475247
+        },
+        "baseline": {
+          "depth": 9,
+          "score": [
+            "cp",
+            25
+          ],
+          "bestmove": "d2d4",
+          "nodes": 240000,
+          "ms": 488,
+          "nps": 491803
+        }
+      },
+      {
+        "fen": "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+        "baseline": {
+          "depth": 6,
+          "score": [
+            "cp",
+            -77
+          ],
+          "bestmove": "d5e6",
+          "nodes": 240000,
+          "ms": 693,
+          "nps": 346320
+        },
+        "candidate": {
+          "depth": 6,
+          "score": [
+            "cp",
+            -77
+          ],
+          "bestmove": "d5e6",
+          "nodes": 240000,
+          "ms": 733,
+          "nps": 327421
+        }
+      },
+      {
+        "fen": "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1",
+        "candidate": {
+          "depth": 12,
+          "score": [
+            "cp",
+            33
+          ],
+          "bestmove": "b4f4",
+          "nodes": 240000,
+          "ms": 262,
+          "nps": 916030
+        },
+        "baseline": {
+          "depth": 12,
+          "score": [
+            "cp",
+            33
+          ],
+          "bestmove": "b4f4",
+          "nodes": 240000,
+          "ms": 259,
+          "nps": 926640
+        }
+      },
+      {
+        "fen": "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10",
+        "baseline": {
+          "depth": 8,
+          "score": [
+            "cp",
+            71
+          ],
+          "bestmove": "c3d5",
+          "nodes": 240000,
+          "ms": 559,
+          "nps": 429338
+        },
+        "candidate": {
+          "depth": 8,
+          "score": [
+            "cp",
+            71
+          ],
+          "bestmove": "c3d5",
+          "nodes": 240000,
+          "ms": 569,
+          "nps": 421792
+        }
+      }
+    ]
+  }
+}

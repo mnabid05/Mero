@@ -34,6 +34,10 @@ from training and validation. The split requires the pinned EPD files in
 `build/scale-openings` (or pass `--books`). The production
 split refuses fewer than **10,000,000 usable training rows**.
 
+Splits and exported checkpoints are written to private sibling directories,
+then published by rename once the completion manifest has been written.
+A failed or interrupted attempt cannot replace an existing final directory.
+
 ```sh
 python -m training.large_split build/mero20m-01 build/mero20m-split
 cargo build --locked --release --features metal --manifest-path training/bullet-fit/Cargo.toml --target-dir build/bullet-scale-fit

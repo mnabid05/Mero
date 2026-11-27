@@ -11,6 +11,7 @@ from .screlu_integer import Reference
 from .screlu_wire import counts, pack, unpack
 from .screlu_data import encode
 from .features import flip, PADDING
+from .publish import unpublished
 
 def file_hash(p):
     with p.open("rb") as stream: return hashlib.file_digest(stream,"sha256").hexdigest()
@@ -62,6 +63,10 @@ def prepare(data):
     return torch.tensor(x),torch.tensor(y),torch.tensor(cp),torch.tensor(wdl)
 
 def select(directory,split,out,backend):
+    with unpublished(out,"report.json") as staging:
+        return _select(directory,split,staging,backend)
+
+def _select(directory,split,out,backend):
     meta=json.loads((split/"split.json").read_text())
     for name in ("train","valid"):
         if file_hash(split/(name+".bullet"))!=meta["groups"][name]["sha256"]:

@@ -38,6 +38,13 @@ both orientations. An independent scan of the 7,942,771 training records in
 the split-only rehearsal found zero reserved root or validation layouts. No
 model was trained in that rehearsal. [Evidence](backtests/scale-opening-isolation.json).
 
+First independently hash-verified training-eligible snapshot: 10,484,483
+usable training records and 16,285 held-out records from 10,686,063 sealed
+positions. [Split manifest](backtests/scale-first-eligible-split.json). The
+scheduled first fit still uses the full 20M run. Split and network export
+publish on completion only; an interrupted shuffle cannot appear as a
+finished training directory.
+
 Branch `feat/torch-screlu-512` starts from the released Mero 7 (`d74a206`).
 It does not include the unpromoted magic-slider change. Its separate [Phase 1
 ledger](https://github.com/mnabid05/Mero/blob/feat/phase-1-perft/PROGRESS.md)
