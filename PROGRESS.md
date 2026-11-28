@@ -8,8 +8,9 @@ to the previous generator on all 48 sampled games. Its first sealed
 256-game production shard has 21,541 records: independent legal replay and
 upstream Rust format verification both passed. Strict 256/384-wide inference
 includes all endgames; no hardcoded material is mixed into these networks.
-Two scaled networks have now been trained. No scaled network has passed
-the queen gate or a strength SPRT at this checkpoint; no new rating.
+Four scaled networks have now been trained. The 384-unit candidate with the
+learned outcome link passed both queen gates. No strength SPRT or new rating
+is claimed at this checkpoint.
 See [protocol and commands](docs/SCALE-CAMPAIGN.md).
 
 **20M source target reached:** 20,005,910 quiet rows, 925 verified shards,
@@ -51,6 +52,18 @@ The original LMR SPRT lost stable AC and suffered four simultaneous clock
 forfeits after 910 games. **Invalid, not H0.** No game carries forward.
 [Fault report](backtests/scale-lmr-power-invalid.json);
 [new unplayed retry opening reservation](backtests/scale-lmr-fresh-retry.json).
+
+The calibrated 384-unit standalone model passed the original gate at
+**982.5 cp** (248 cases) and the second at **994 cp** (274 cases). No piece
+values or post-fit cp rescaling were used. Both kernels exactly matched the
+integer reference on 555 FENs and 1,001 trace scores. Held-out search MAE was
+116.6 cp. The 40-position depth-12 benchmark passed at 1,043,948 nodes/s.
+Alternating fixed-node throughput was 1,178,637 vs 1,200,000 for Mero 7.
+The exact trained binary entered the reserved `net384` 8+0.08 SPRT;
+the benchmark and material checks are **not Elo**.
+[Qualification and speed evidence](backtests/scale-calibrated384-qualified.json).
+The research-only [checkpoint](training/checkpoints/mero-20m-calibrated384-candidate.bin)
+can be tested with `scripts/build_native.py --screlu`; the default is still Mero 7.
 
 Checkpoint: 63 sealed shards, 1,365,596 quiet records, 16,125 completed
 games and three capped games excluded. Mero 7 UCI independently reproduced
