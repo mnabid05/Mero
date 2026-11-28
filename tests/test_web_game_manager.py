@@ -1,6 +1,7 @@
 import unittest
 
 from chess_ai.board import Board
+from webapp.engine_client import NativeEngineClient, best_available_engine, default_native_executable
 from webapp.game_manager import GameManager
 
 
@@ -37,6 +38,21 @@ class WebGameManagerTests(unittest.TestCase):
         resigned = self.manager.resign(game["id"])
         self.assertEqual(resigned["status"], "resigned")
         self.assertEqual(resigned["result"], "0-1")
+
+    @unittest.skipUnless(default_native_executable().is_file(), "native release not built")
+    def test_default_web_backend_answers_a_real_player_move(self):
+        engine = best_available_engine()
+        self.addCleanup(engine.close)
+        self.assertIsInstance(engine, NativeEngineClient)
+        manager = GameManager(engine)
+        game = manager.new_game("w", "quick")
+        state = manager.play(game["id"], "e2e4")
+        self.assertTrue(state["humanTurn"])
+        self.assertEqual(len(state["moves"]), 2)
+        board = Board.starting()
+        for row in state["moves"]:
+            board.play_uci(row["uci"])
+        self.assertEqual(board.to_fen(), state["fen"])
 
 
 if __name__ == "__main__":

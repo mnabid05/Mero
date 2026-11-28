@@ -20,8 +20,10 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Build native C evaluator
+      - name: Build default standalone engine
         run: python scripts/build_native.py
+      - name: Verify release weights and native integer outputs
+        run: python scripts/check_screlu_fixtures.py build/native/mwahaha-engine
       - name: Run unit tests
         run: python -m unittest discover -v
       - name: Compile package
@@ -32,7 +34,7 @@ jobs:
         run: build/native/mwahaha-engine --perft 4
       - name: Smoke-test native UCI
         run: |
-          printf 'uci\nisready\nposition startpos\ngo movetime 50\nquit\n' |
+          printf 'uci\nisready\nposition startpos\ngo movetime 50\n' |
             build/native/mwahaha-engine
 
   sanitizers:
@@ -53,5 +55,5 @@ jobs:
           build/sanitized/mwahaha-engine --perft-fen 3 'r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1'
       - name: Exercise bounded search under sanitizers
         run: |
-          printf 'uci\nposition startpos\ngo nodes 100000\nquit\n' |
+          printf 'uci\nposition startpos\ngo nodes 100000\n' |
             build/sanitized/mwahaha-engine

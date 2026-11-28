@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 
 from chess_ai.board import Board
+from chess_ai.model import GameStatus
 from chess_ai.perft import perft
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -28,7 +29,7 @@ class NativeEngineTests(unittest.TestCase):
             capture_output=True,
             text=True,
         )
-        self.assertIn("id name Mero Native Engine 7.0", result.stdout)
+        self.assertIn("id name Mero SCReLU 384", result.stdout)
 
     def native_perft(self, fen: str, depth: int) -> int:
         result = subprocess.run(
@@ -91,7 +92,7 @@ class NativeEngineTests(unittest.TestCase):
         self.assertLess(self.native_see(poisoned_pawn, "d1d5"), -700)
 
     def test_native_uci_returns_legal_move(self):
-        commands = "uci\nisready\nposition startpos\ngo movetime 50\nquit\n"
+        commands = "uci\nisready\nposition startpos\ngo movetime 50\n"
         result = subprocess.run(
             [NATIVE_ENGINE],
             input=commands,
@@ -124,7 +125,6 @@ class NativeEngineTests(unittest.TestCase):
             "setoption name Threads value 4\n"
             "position startpos moves e2e4 e7e5\n"
             "go movetime 100\n"
-            "quit\n"
         )
         result = subprocess.run(
             [NATIVE_ENGINE],
@@ -148,7 +148,6 @@ class NativeEngineTests(unittest.TestCase):
             "uci\n"
             "position fen 4k3/7r/8/8/8/8/p6Q/6K1 w - - 0 1\n"
             "go depth 1\n"
-            "quit\n"
         )
         result = subprocess.run(
             [NATIVE_ENGINE],
@@ -159,12 +158,20 @@ class NativeEngineTests(unittest.TestCase):
         )
         self.assertIn("bestmove h2a2", result.stdout)
 
-    def test_native_depth_one_finds_quiet_check(self):
+    def test_native_depth_one_finds_only_non_capture_mate(self):
+        fen = "7k/5K2/8/8/8/8/4R3/8 w - - 0 1"
+        board = Board.from_fen(fen)
+        mates = []
+        for move in board.legal_moves():
+            after = board.copy()
+            after.play_uci(move.uci)
+            if after.status() == GameStatus.CHECKMATE:
+                mates.append(move.uci)
+        self.assertEqual(mates, ["e2h2"])
         commands = (
             "uci\n"
-            "position fen 7k/8/8/8/8/8/4R3/4K3 w - - 0 1\n"
+            f"position fen {fen}\n"
             "go depth 1\n"
-            "quit\n"
         )
         result = subprocess.run(
             [NATIVE_ENGINE],
@@ -173,10 +180,11 @@ class NativeEngineTests(unittest.TestCase):
             capture_output=True,
             text=True,
         )
-        self.assertIn("bestmove e2e7", result.stdout)
+        self.assertIn("score mate 1", result.stdout)
+        self.assertIn("bestmove e2h2", result.stdout.splitlines())
 
     def test_native_uci_honors_node_limit_and_reports_hashfull(self):
-        commands = "uci\nposition startpos\ngo nodes 10000\nquit\n"
+        commands = "uci\nposition startpos\ngo nodes 10000\n"
         result = subprocess.run(
             [NATIVE_ENGINE],
             input=commands,
@@ -204,7 +212,6 @@ class NativeEngineTests(unittest.TestCase):
                         "uci\n"
                         f"position fen {fen}\n"
                         "go depth 3\n"
-                        "quit\n"
                     ),
                     check=True,
                     capture_output=True,

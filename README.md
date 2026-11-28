@@ -5,26 +5,23 @@ A self-contained original chess engine written in Python, C, and C++.
 Mero plays using its own search and embedded weights. No Stockfish, PyTorch,
 or external chess library is required at runtime.
 
-Mero 7's evaluator was trained in PyTorch on Stockfish 18 search scores from
-archived Mero games and random legal continuations. Of 116,633 labeled positions,
-96,784 trained the release network and 19,844 formed an opening-held-out
-validation set after overlap filtering. The selected 64-unit network reduced
-mean absolute teacher-score error from 388 to 268 centipawns on that set;
-the release uses a half-strength correction to the native evaluation.
+Mero 8 is the default native engine. Its C++20 search uses an incremental
+neural evaluator trained on Mero 7 self-play: 236,778 completed games produced
+20,005,910 quiet positions. The network scores the board directly. Its evaluation
+doesn't add hand-written material values or a correction from the old evaluator.
 
-**Estimated strength: 2377 Elo in the release test.** Mero scored 37 wins,
-4 draws and 23 losses against Stockfish 18 set to 2300 across 64 games at
-100 ms per move (four threads to one). The paired 95% approximation spans
-2256–2498. This is neither a human rating nor evidence of frontier strength.
-See the [match report](backtests/mero-7-stockfish18-2300.json),
-[training recipe](docs/NEURAL.md), and [training audit](backtests/mero-7-training.json).
+**Mero 8 beat Mero 7 on two separate opening books.** Both color-reversed
+Fastchess tests crossed the predeclared SPRT boundary at 8 seconds + 0.08
+seconds per move. The first scored 349 wins, 92 draws and 251 losses
+(+50 relative Elo); the confirmation scored 257 wins, 57 draws and 152 losses
+(+80). Neither had a forfeit. These are match-specific gains, not ratings on
+a human ladder. See [test conditions and rating calibration](docs/STRENGTH.md)
+and the [release evidence](backtests/mero-8-release.json).
 
-The project implements its own board representation, legal move generator,
-evaluation, search, time management, UCI protocol, terminal game, and strength
-regression harness. The strongest UCI engine runs board logic and search in
-C++20, combines synchronized piece/occupancy bitboards with a reversible square
-array, shares the portable C11 evaluation kernel, and keeps Python as a readable
-reference implementation and testing layer.
+**Rating estimate: 2477** against Stockfish 18's 2300 setting on an Apple M4
+(44 wins, 6 draws, 14 losses; 100 ms/move, four threads to one). The
+pair-effective 95% range is **2344–2610**. This is not an estimate against
+unrestricted Stockfish or a FIDE/chess.com rating.
 
 ## Native acceleration
 
@@ -41,12 +38,14 @@ build/native/mwahaha-engine
 build/native/libmwahaha_eval.so    # .dylib on macOS
 ```
 
-Use `build/native/mwahaha-engine` as the UCI executable in a chess GUI. The
-Python engine detects the native evaluator library automatically. Without it,
-the dependency-free Python evaluator is used; set `MWAHAHA_PURE_PYTHON=1` to
-force that reference path.
+Use `build/native/mwahaha-engine` as the UCI executable in a chess GUI or in
+the web app below. The build verifies and embeds the bundled Mero 8 weights.
+The UCI ID remains `Mero SCReLU 384 experimental` to preserve the exact
+tournament executable. The separate Python engine and C shared library use
+the older reference evaluation. To build a native control with Mero 7's
+evaluation, use `--release-control --output-dir build/control`.
 
-The preceding Mero 6.0 release added coordinated king-attack evaluation, passed-pawn king support,
+The earlier Mero 6.0 release added coordinated king-attack evaluation, passed-pawn king support,
 legal-attacker exchange pruning, full-key evaluation caching, and faster
 unpinned move generation. Search now handles check evasions, bounded tactical
 extensions, repetition at the frontier, and rule-fifty cache separation more
@@ -85,6 +84,14 @@ The Mero 6.0 probe against Stockfish 18's 2300 setting scored 32 wins,
 - Repetition and fifty-move detection inside search
 
 ## Evaluation
+
+The native Mero 8 network uses 384 hidden units per perspective, squared
+clipped ReLU, and eight output heads selected by piece count. Accumulators
+are updated on make/unmake. Scalar and Apple Silicon kernels matched the
+integer reference on all eight heads. The learned median cost of removing
+a queen was 982.5 cp on the original test and 994 cp on an independent panel.
+
+The earlier handcrafted/reference evaluator includes:
 
 - Tapered middlegame/endgame scoring
 - Phase-specific material values
@@ -183,6 +190,7 @@ Replay the published game reports with:
 
 ```bash
 python3 -m scripts.verify_match backtests/mero-7-stockfish18-2300.json
+python3 -m scripts.verify_match backtests/mero-8-stockfish18-2300.json
 python3 -m scripts.verify_match backtests/mero-7-neural-ablation.json
 ```
 

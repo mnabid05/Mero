@@ -14,6 +14,58 @@ Every match:
 - limits runaway games by maximum plies;
 - records final FEN positions in JSON.
 
+### Mero 8: standalone neural evaluator
+
+Two independent tests used the **same frozen Mero 8 executable** against the
+same Mero 7 executable at 8+0.08, one thread and 16 MiB hash each. Each
+eight-ply opening was played once per color. The decision rule was normalized
+SPRT [0, +10], with 5% type-I and type-II error settings and boundaries ±2.94.
+No resignation, draw adjudication or tablebases were enabled.
+
+| Paired opening book | Games | Mero 8 W–D–L | Score | Final LLR | Fastchess relative Elo |
+| --- | ---: | --- | ---: | ---: | ---: |
+| Primary | 692 | 349–92–251 | 57.08% | 2.97 (H1) | +49.54 ±22.18 |
+| Confirmation | 466 | 257–57–152 | 61.27% | 2.96 (H1) | +79.65 ±30.08 |
+
+The [release ledger](../backtests/mero-8-release.json) records binary and
+opening hashes, node speed, all 579 paired outcomes and the reconstructed
+pentanomial counts. Neither trial had a forfeit. Fastchess did log nonfatal
+principal-variation reporting warnings; the ledger retains their counts.
+Both the [primary book](../backtests/mero-8-primary.epd.gz) and
+[confirmation book](../backtests/mero-8-confirmation.epd.gz) are archived
+alongside their compressed raw logs. Run `python3 -m unittest tests.test_mero8_release`
+to check the digests and reconstruct the outcomes independently.
+The +10 upper-hypothesis setting is a decision parameter, not the estimated gain.
+
+**Where the weights came from.** Frozen Mero 7 played from random eight-ply
+openings at 5,000 nodes per move. Only quiet positions from completed games
+were kept. The final Bullet/Metal run used 19,626,685 training rows, a
+whole-game validation split, 384 hidden units per perspective and eight output
+buckets. Training gave equal weight to game outcome and search evaluation;
+AdamW used cosine learning-rate decay from 0.001 to 0.00003. The
+score-to-win-probability curve was fit to training games only. Validation
+selected the quantized checkpoint; neither queen test adjusted its output.
+Removing a queen cost a median of 982.5 cp on 248 original cases and 994 cp on
+274 additional cases. The scalar and native integer implementations agreed on
+555 positions and 1,001 move/undo scores. No material fallback was added.
+
+Frozen research artifacts: [data generation ledger](https://github.com/mnabid05/Mero/blob/5d83e6ce38e377527f618f83e391a774b8d92f45/backtests/scale-20m-corpus.json),
+[training split](https://github.com/mnabid05/Mero/blob/5d83e6ce38e377527f618f83e391a774b8d92f45/backtests/scale-20m-training-split.json),
+[selection and sanity checks](https://github.com/mnabid05/Mero/blob/5d83e6ce38e377527f618f83e391a774b8d92f45/backtests/scale-calibrated384-qualified.json).
+
+**External calibration, separate from promotion.** After the second H1, Mero 8
+played the archived Stockfish 18 binary set to 2300 on the same M4, book,
+thread allocation, hashes and move budget as the Mero 7 calibration below.
+It scored **44 wins, 6 draws, 14 losses (47/64; 73.44%)**. The estimate is
+**2477 setting-relative Elo** (logistic interval 2380–2573; pair-effective
+95% approximation **2344–2610**). The difference from Mero 7's 2377 point
+estimate is not a measured +100 head-to-head gain. A single opponent, only
+16 distinct openings, and 100 ms/move do not establish a human rating or
+frontier strength. All 64 games in the [published report](../backtests/mero-8-stockfish18-2300.json)
+can be replayed with `python3 -m scripts.verify_match backtests/mero-8-stockfish18-2300.json`.
+The only publication edit to the report is stripping the local checkout prefix
+from the two executable paths.
+
 ### Mero 7.0 neural release
 
 The 64-unit network and native search were frozen at `bc47e91` before rating

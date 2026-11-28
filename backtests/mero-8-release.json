@@ -1,0 +1,497 @@
+{
+  "release_verification": {
+    "build": "python3 scripts/build_native.py (default) on Apple M4; binary exactly matches both SPRTs",
+    "tests_passed": 97,
+    "starting_perft_depth4": 197281,
+    "parity": {
+      "kernels": 2,
+      "binary_sha256": "175f5bef17bb427bd5b9770a3bea65503d0ccc32606db6a558a736a73fb17a16",
+      "kernel_sha256": [
+        "175f5bef17bb427bd5b9770a3bea65503d0ccc32606db6a558a736a73fb17a16",
+        "6e0a52871d39ce2cc807bd20aa44176fd19abb0885512ea3ea55401fd74d9653"
+      ],
+      "weights_sha256": "2764a12afc0179e39c4292f560cb761f69f390ee99258ca76275d3c5aabb4134",
+      "unique_fens": 555,
+      "material_buckets": 8,
+      "trace_paths": 17,
+      "trace_scores": 1001,
+      "integer_mismatches": 0
+    },
+    "interleaved_speed": {
+      "binary_sha256": {
+        "baseline": "c8aa94febb60d23ba0697ebfd40c02cda9598656d742928e59f3ee1ee643a796",
+        "candidate": "175f5bef17bb427bd5b9770a3bea65503d0ccc32606db6a558a736a73fb17a16"
+      },
+      "aggregate_nps": {
+        "baseline": 1112398,
+        "candidate": 990201
+      },
+      "median_paired_ratio": 0.911001441384129,
+      "samples": [
+        {
+          "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          "baseline": {
+            "depth": 9,
+            "score": [
+              "cp",
+              25
+            ],
+            "bestmove": "d2d4",
+            "nodes": 240000,
+            "ms": 180,
+            "nps": 1333333
+          },
+          "candidate": {
+            "depth": 8,
+            "score": [
+              "cp",
+              14
+            ],
+            "bestmove": "e2e4",
+            "nodes": 240000,
+            "ms": 166,
+            "nps": 1445783
+          }
+        },
+        {
+          "fen": "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+          "candidate": {
+            "depth": 8,
+            "score": [
+              "cp",
+              -55
+            ],
+            "bestmove": "e2a6",
+            "nodes": 240000,
+            "ms": 439,
+            "nps": 546697
+          },
+          "baseline": {
+            "depth": 6,
+            "score": [
+              "cp",
+              -77
+            ],
+            "bestmove": "d5e6",
+            "nodes": 240000,
+            "ms": 280,
+            "nps": 857142
+          }
+        },
+        {
+          "fen": "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1",
+          "baseline": {
+            "depth": 12,
+            "score": [
+              "cp",
+              33
+            ],
+            "bestmove": "b4f4",
+            "nodes": 240000,
+            "ms": 121,
+            "nps": 1983471
+          },
+          "candidate": {
+            "depth": 12,
+            "score": [
+              "cp",
+              190
+            ],
+            "bestmove": "b4f4",
+            "nodes": 240000,
+            "ms": 150,
+            "nps": 1600000
+          }
+        },
+        {
+          "fen": "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10",
+          "candidate": {
+            "depth": 8,
+            "score": [
+              "cp",
+              207
+            ],
+            "bestmove": "c3d5",
+            "nodes": 240000,
+            "ms": 314,
+            "nps": 764331
+          },
+          "baseline": {
+            "depth": 8,
+            "score": [
+              "cp",
+              71
+            ],
+            "bestmove": "c3d5",
+            "nodes": 240000,
+            "ms": 249,
+            "nps": 963855
+          }
+        },
+        {
+          "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          "candidate": {
+            "depth": 8,
+            "score": [
+              "cp",
+              14
+            ],
+            "bestmove": "e2e4",
+            "nodes": 240000,
+            "ms": 180,
+            "nps": 1333333
+          },
+          "baseline": {
+            "depth": 9,
+            "score": [
+              "cp",
+              25
+            ],
+            "bestmove": "d2d4",
+            "nodes": 240000,
+            "ms": 231,
+            "nps": 1038961
+          }
+        },
+        {
+          "fen": "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+          "baseline": {
+            "depth": 6,
+            "score": [
+              "cp",
+              -77
+            ],
+            "bestmove": "d5e6",
+            "nodes": 240000,
+            "ms": 287,
+            "nps": 836236
+          },
+          "candidate": {
+            "depth": 8,
+            "score": [
+              "cp",
+              -55
+            ],
+            "bestmove": "e2a6",
+            "nodes": 240000,
+            "ms": 280,
+            "nps": 857142
+          }
+        },
+        {
+          "fen": "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1",
+          "candidate": {
+            "depth": 12,
+            "score": [
+              "cp",
+              190
+            ],
+            "bestmove": "b4f4",
+            "nodes": 240000,
+            "ms": 148,
+            "nps": 1621621
+          },
+          "baseline": {
+            "depth": 12,
+            "score": [
+              "cp",
+              33
+            ],
+            "bestmove": "b4f4",
+            "nodes": 240000,
+            "ms": 129,
+            "nps": 1860465
+          }
+        },
+        {
+          "fen": "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10",
+          "baseline": {
+            "depth": 8,
+            "score": [
+              "cp",
+              71
+            ],
+            "bestmove": "c3d5",
+            "nodes": 240000,
+            "ms": 249,
+            "nps": 963855
+          },
+          "candidate": {
+            "depth": 8,
+            "score": [
+              "cp",
+              207
+            ],
+            "bestmove": "c3d5",
+            "nodes": 240000,
+            "ms": 262,
+            "nps": 916030
+          }
+        }
+      ]
+    },
+    "external_2300_calibration": {
+      "path": "mero-8-stockfish18-2300.json",
+      "raw_sha256": "b6a9d8bf1c4ff06654d3bba4e3baa8798f3d32754b5b83e8a0abe8303179f3ba",
+      "published_sha256": "b73d6d295384a048a83fd6edc3423ea99b5d3b027382ca80d17a0a021f3533bb",
+      "opening_sha256": "e5b9b354cd9ab3c7e8002373d7a7bb5a07e71fbc93b53621a31cf960821019b8",
+      "wins": 44,
+      "draws": 6,
+      "losses": 14,
+      "independently_replayed_games": 64,
+      "setting_relative_elo": 2477,
+      "pair_effective_95_percent": [
+        2344,
+        2610
+      ]
+    }
+  },
+  "method": "Color-reversed random 8-ply EPD openings, one thread and 16 MiB hash per engine. Normalized Fastchess SPRT at 8+0.08, [0,10], alpha=beta=0.05. Positive relative Elo is not an absolute rating.",
+  "training": {
+    "selection": {
+      "recipe": {
+        "width": 384,
+        "wdl_weight": 0.5,
+        "train_rows": 19626685,
+        "batch_size": 2048,
+        "superbatches": 12,
+        "wdl_temperature_cp": 204.11592
+      },
+      "backend": "Bullet/Metal",
+      "bullet_revision": "5d70177680437b7c0ddf958bd4722d95afa78b0c",
+      "evaluation": "minimum deployed mixed-target MSE on whole-game validation split; not Elo",
+      "float_probe_max_error_cp": 0.0005273437500363798,
+      "float_probes": 16,
+      "checkpoints": [
+        {
+          "superbatch": 5,
+          "mixed_mse": 0.03309822082519531,
+          "outcome_brier": 0.10719211399555206,
+          "mae_search_cp": 125.5815658569336
+        },
+        {
+          "superbatch": 10,
+          "mixed_mse": 0.03190638870000839,
+          "outcome_brier": 0.10605954378843307,
+          "mae_search_cp": 119.7513198852539
+        },
+        {
+          "superbatch": 12,
+          "mixed_mse": 0.031297940760850906,
+          "outcome_brier": 0.10534951090812683,
+          "mae_search_cp": 116.63414764404297
+        }
+      ],
+      "selected": "mero-bullet-12",
+      "net_sha256": "2764a12afc0179e39c4292f560cb761f69f390ee99258ca76275d3c5aabb4134",
+      "upstream_quantised_sha256": "47f53fd2bc4f3db8471636efcf53b9e3c3c417fcae900ea817684da7902b3324"
+    },
+    "parity": {
+      "kernels": 2,
+      "binary_sha256": "175f5bef17bb427bd5b9770a3bea65503d0ccc32606db6a558a736a73fb17a16",
+      "kernel_sha256": [
+        "175f5bef17bb427bd5b9770a3bea65503d0ccc32606db6a558a736a73fb17a16",
+        "1de8f73a32fb8a18dcf370063b78c5c37199755f9bda5204ba10112093b6f1c2"
+      ],
+      "weights_sha256": "2764a12afc0179e39c4292f560cb761f69f390ee99258ca76275d3c5aabb4134",
+      "unique_fens": 555,
+      "material_buckets": 8,
+      "trace_paths": 17,
+      "trace_scores": 1001,
+      "integer_mismatches": 0
+    },
+    "original_queen_gate": {
+      "passed": true,
+      "queen": {
+        "n": 248,
+        "median_cp": 982.5,
+        "nonpositive": 0
+      },
+      "weights_sha256": "2764a12afc0179e39c4292f560cb761f69f390ee99258ca76275d3c5aabb4134",
+      "binary_sha256": "175f5bef17bb427bd5b9770a3bea65503d0ccc32606db6a558a736a73fb17a16",
+      "diagnostics": {
+        "positions": 256,
+        "removals": 1817,
+        "dataset_sha256": "2e2a7a2d208eddb1a89d0c5f7ca34022a39795b5d696b86bdd319bc6cc6e9d8e",
+        "method": "median sign-adjusted cp loss on removing one piece, normalized White to move; same material bucket; synthetic diagnostic only",
+        "engines": {
+          "candidate": {
+            "sha256": "175f5bef17bb427bd5b9770a3bea65503d0ccc32606db6a558a736a73fb17a16",
+            "by_piece": {
+              "P": {
+                "n": 512,
+                "median_cp": 113,
+                "nonpositive": 16
+              },
+              "N": {
+                "n": 294,
+                "median_cp": 366,
+                "nonpositive": 0
+              },
+              "B": {
+                "n": 326,
+                "median_cp": 387,
+                "nonpositive": 0
+              },
+              "R": {
+                "n": 437,
+                "median_cp": 563,
+                "nonpositive": 0
+              },
+              "Q": {
+                "n": 248,
+                "median_cp": 982.5,
+                "nonpositive": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    "supplementary_queen_gate": {
+      "n": 274,
+      "median_cp": 994,
+      "nonpositive": 0,
+      "passed": true,
+      "panel_sha256": "f0dda38ddeb8c8ce6810f60496e4dd76e3c8887f79be7fe52d5125476cab4259",
+      "binary_sha256": "175f5bef17bb427bd5b9770a3bea65503d0ccc32606db6a558a736a73fb17a16"
+    },
+    "bench": {
+      "positions": 40,
+      "depth": 12,
+      "nodes": 106294882,
+      "engine_nps": 1043948,
+      "suite_sha256": "3894af7c7678198189ecff25c72f7489b7ecbbf52ea34034b26869d13fc6862d",
+      "binary_sha256": "175f5bef17bb427bd5b9770a3bea65503d0ccc32606db6a558a736a73fb17a16"
+    },
+    "interleaved_fixed_node_speed": {
+      "binary_sha256": {
+        "baseline": "c8aa94febb60d23ba0697ebfd40c02cda9598656d742928e59f3ee1ee643a796",
+        "candidate": "175f5bef17bb427bd5b9770a3bea65503d0ccc32606db6a558a736a73fb17a16"
+      },
+      "aggregate_nps": {
+        "baseline": 1200000,
+        "candidate": 1178637
+      },
+      "median_paired_ratio": 0.9914615506283717
+    }
+  },
+  "corpus": {
+    "quiet_rows": 20005910,
+    "completed_games": 236778,
+    "shards": 925,
+    "train_rows": 19626685,
+    "validation_rows": 16318,
+    "ordered_shard_seals_sha256": "68eeaae58383022d00b15a0e63ae4d60b01faea9ab1f2d865da402ad1dc32942"
+  },
+  "trials": [
+    {
+      "name": "primary",
+      "result": {
+        "status": "H1",
+        "games": 692,
+        "wins": 349,
+        "draws": 92,
+        "losses": 251,
+        "reported_llr": 2.97,
+        "faults": [],
+        "warnings": {
+          "Bestmove does not match beginning of last PV": 303,
+          "PV continues after threefold repetition": 179
+        },
+        "returncode": 0,
+        "interrupted": null
+      },
+      "audit": {
+        "pairs": 346,
+        "pentanomial": [
+          37,
+          25,
+          159,
+          53,
+          72
+        ],
+        "candidate_loss_draw_win_by_color": {
+          "white": [
+            93,
+            44,
+            209
+          ],
+          "black": [
+            158,
+            48,
+            140
+          ]
+        },
+        "decision": "H1",
+        "games": 692,
+        "llr": 2.97,
+        "sha256": {
+          "fastchess": "0baffd067ee2df163c18b3b6707decf8feb50e1767d540f13cf5c1a9fd5304dd",
+          "candidate": "175f5bef17bb427bd5b9770a3bea65503d0ccc32606db6a558a736a73fb17a16",
+          "baseline": "c8aa94febb60d23ba0697ebfd40c02cda9598656d742928e59f3ee1ee643a796",
+          "book": "04fd63e7f4ee1e9d81656e4e4ad9a94eb939340ca89a0e1249cb2753b2373002"
+        },
+        "config_sha256": "ffc07a6c14654116d8a6eb7006236d1e6df98f1936effe7445ea10f8bf128fca",
+        "log_sha256": "d152a0f34450575bc726f6492dd4c914eb7544d12b84ccbc03d0599a4dfa18df"
+      },
+      "relative_elo": 49.54,
+      "reported_plus_minus": 22.18,
+      "candidate_result_by_pair_white_then_black": "DW LL WL LW WL WL WL WW WW DW LL WL WL LL WW WD LW WL WL WD WW LW WD WL WW WW LL WW DD WD DW DW LW WL WL WL WW WD WW WW WL LW WW WL WL WL WL LW LW WL WW DD WW WL LW WL WD WL WL WW DL LD WW WW DW WL WW WL WL LL DW WL WD WW WW LW WL WW LD WL LL WL WL DW LW WW LL LW LL WL WW WW DW LW WW LD LW WL LL DL WD DL LW WL LW WW LW WL WL WW WW DW LL WL LW WW WL WL WD WL WW LL WL WL WW LW WL DD WL WW WD LL LW WW LL LL WL WW LW WL LL LW WL WW WL LW WW LL WD LW LW DD LW WL WL LD WD LW DL WW WW WL DL WW WL WD WD DW LW WD WL WL WL DL WL WW WD WW WW WL WW WL DW WW LW WD LD WW WL WL LW LD WW LD LW LW DW DL WD WW DL LW DW WL LL WW DW WL WL DD LW LW WL DL WD WD WL WW DL WL WW LL LW WL WW LL LL WL WL DW LL WD LW LD WW LL WL LL LL DL WW LL DW DL WL WL LD WL LL DD DW WL WL WW DD WL WL LD WL LL WW WL LW WL WW WL WL WL WW WL WD WW WD WD DW WW WL WL LL LD WD LW LW WL WL DW LW WW WL WW DW LL WD WL LL WW WL LL LL WD WL WL WL LL WW WL LW WW LD WL WL WW WW WW WD LL DW WL WL LL WL LL LL WL WL WL WW DW DW DW WW LW LW WL WW WL WL LW WL WD WW DL WL WL WW WW"
+    },
+    {
+      "name": "confirmation",
+      "result": {
+        "status": "H1",
+        "games": 466,
+        "wins": 257,
+        "draws": 57,
+        "losses": 152,
+        "reported_llr": 2.96,
+        "faults": [],
+        "warnings": {
+          "Bestmove does not match beginning of last PV": 198,
+          "PV continues after threefold repetition": 107
+        },
+        "returncode": 0,
+        "interrupted": null
+      },
+      "audit": {
+        "pairs": 233,
+        "pentanomial": [
+          25,
+          17,
+          88,
+          34,
+          69
+        ],
+        "candidate_loss_draw_win_by_color": {
+          "white": [
+            64,
+            25,
+            144
+          ],
+          "black": [
+            88,
+            32,
+            113
+          ]
+        },
+        "decision": "H1",
+        "games": 466,
+        "llr": 2.96,
+        "sha256": {
+          "fastchess": "0baffd067ee2df163c18b3b6707decf8feb50e1767d540f13cf5c1a9fd5304dd",
+          "candidate": "175f5bef17bb427bd5b9770a3bea65503d0ccc32606db6a558a736a73fb17a16",
+          "baseline": "c8aa94febb60d23ba0697ebfd40c02cda9598656d742928e59f3ee1ee643a796",
+          "book": "4390ee3050bb718b30cc3645ec2b61cd0889cff81505f5de7fe48eb3b321f65d"
+        },
+        "config_sha256": "e463180f81d199de4afb60c89a2409f071e8c82a6d006c5f4913db4d5307ed3b",
+        "log_sha256": "f1e6dd8b5382b332b1193e0bebe27e2c7f929045b36c56cc5f1fda0a3c3c6a62"
+      },
+      "relative_elo": 79.65,
+      "reported_plus_minus": 30.08,
+      "candidate_result_by_pair_white_then_black": "WW WW WD WL LW LL WW WW WW WW WL WL LL LW DW LL WW WL WL WW DW LW LL LW WD WD WD WW DL WL WL WW LD LL WL WW WL WL WD WL WD LL WW LL WL DD LW WW WL LW LL LW WW WD WL LL LW WL WL WL LD WL WL LL WD WD WW LW LW WW LW DW WW LW WW WL WW WW WL LW WW DW WW WW WW DL WL WD WL LL LW DL WW WW WW WL DW LW LW WW WL DW WW WW WL WW WL WL WW WL WW DW DL WD LW DW LW WW DL LL WW WW LL WW LW DW WW WW WW LW LL LW WW WL DW WD DL WW LW LW WW LW LW WW WW LL LW WW WL DL LW WW LW WL WW LD WD WL WW WW WL LL WW DL WD LL LL LL WL LW DL LL WL WW WL WW WW WL WL WW WL LL WW WL WD WL WL WL WW LD WD DW LD WW WW WL LD WL WW WW LW WL WL LL WD WW WW WW LL WW WL WL LL DW WD WW WW WL WW LL WD DW DD WL WL LW LD WD LD WD DD WL WW"
+    }
+  ]
+}

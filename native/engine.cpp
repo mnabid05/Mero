@@ -1,15 +1,25 @@
 #include <algorithm>
 #include "neural.h"
+#ifdef MERO_SCRELU
+#include "screlu.h"
+#endif
 #include <array>
+#include "bench_positions.h"
 #include <atomic>
 #include <bit>
 #include <chrono>
+#include <charconv>
+#include <condition_variable>
+#include <optional>
 #include <cctype>
 #include <cstddef>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
+#include <filesystem>
+#include <fstream>
+#include <future>
 #include <limits>
 #include <memory>
 #include <mutex>
@@ -28,6 +38,11 @@ namespace {
 constexpr int INF = 1'000'000;
 constexpr int MATE = 100'000;
 constexpr int MAX_PLY = 96;
+#ifdef MERO_SCRELU
+constexpr int DEFAULT_BLEND = 100;
+#else
+constexpr int DEFAULT_BLEND = 50;
+#endif
 constexpr int WHITE_KING_SIDE = 1;
 constexpr int WHITE_QUEEN_SIDE = 2;
 constexpr int BLACK_KING_SIDE = 4;
@@ -290,6 +305,12 @@ struct Board {
 
     std::array<char, 64> squares{};
     std::array<uint64_t, 12> piece_boards{};
+#ifdef MERO_SCRELU
+    mutable mero_screlu::State accumulator;
+    int network_score() const {
+        return accumulator.score(piece_boards,white_to_move,std::popcount(occupied));
+    }
+#endif
     std::array<uint64_t, 2> color_boards{};
     uint64_t occupied = 0;
     bool white_to_move = true;
@@ -311,6 +332,9 @@ struct Board {
     void place_piece(char piece, int square) {
         uint64_t bit = square_bit(square);
         squares[square] = piece;
+#ifdef MERO_SCRELU
+        accumulator.toggle(Zobrist::piece_index(piece),square);
+#endif
         piece_boards[Zobrist::piece_index(piece)] |= bit;
         color_boards[color_index(is_white(piece))] |= bit;
         occupied |= bit;
@@ -323,6 +347,9 @@ struct Board {
         }
         uint64_t bit = square_bit(square);
         squares[square] = '.';
+#ifdef MERO_SCRELU
+        accumulator.toggle(Zobrist::piece_index(piece),square);
+#endif
         piece_boards[Zobrist::piece_index(piece)] &= ~bit;
         color_boards[color_index(is_white(piece))] &= ~bit;
         occupied &= ~bit;
@@ -342,6 +369,9 @@ struct Board {
                 occupied |= bit;
             }
         }
+#ifdef MERO_SCRELU
+        accumulator.reset(piece_boards);
+#endif
     }
 
     bool bitboards_valid() const {
@@ -1047,11 +1077,15 @@ public:
         return score;
     }
 
-    explicit Engine(std::size_t hash_megabytes = 64, int neural_blend = 50)
+    explicit Engine(std::size_t hash_megabytes = 64, int neural_blend = DEFAULT_BLEND)
         : neural_blend_(neural_blend) {
         search_history_.reserve(MAX_PLY * 2);
         resize_table(hash_megabytes);
     }
+
+    int static_score(const Board& board) const { return evaluate(board); }
+
+    void watch_stop(const std::atomic_bool* flag) { stop_flag_=flag; }
 
     void resize_table(std::size_t megabytes) {
         std::size_t bytes = std::max<std::size_t>(1, megabytes) * 1024 * 1024;
@@ -1068,6 +1102,7 @@ public:
 
     void clear() {
         std::fill(table_.begin(), table_.end(), TTCluster{});
+        generation_ = 0;
         history_ = {};
         capture_history_ = {};
         killers_ = {};
@@ -1148,16 +1183,27 @@ public:
     std::vector<Move> line_after_move(
         const Board& position,
         const Move& move,
-        int depth
+        int depth,
+        const std::vector<uint64_t>& game_history
     ) {
-        std::vector<Move> line{move};
-        if (depth <= 1) {
-            return line;
-        }
+        if (!move.valid()) return {};
+        std::vector<Move> line;
         Board board = position;
-        board.make_move(move);
-        auto tail = principal_variation(board, depth - 1);
-        line.insert(line.end(), tail.begin(), tail.end());
+        auto history=game_history;
+        if (history.empty() || history.back()!=board.key) history.push_back(board.key);
+        Move next=move;
+        for (;;) {
+            line.push_back(next);
+            board.make_move(next);
+            if (static_cast<int>(line.size())>=depth || board.halfmove>=100 ||
+                board.insufficient_material() || std::count(history.begin(),history.end(),board.key)>=2) break;
+            history.push_back(board.key);
+            TTEntry* entry=probe(board.search_key());
+            if (!entry || !entry->move.valid()) break;
+            auto legal=board.legal_moves_in_place();
+            if (std::find(legal.begin(),legal.end(),entry->move)==legal.end()) break;
+            next=entry->move;
+        }
         return line;
     }
 
@@ -1228,7 +1274,7 @@ public:
         result.elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::steady_clock::now() - started
         ).count();
-        result.pv = principal_variation(position, result.depth);
+        result.pv = line_after_move(position,result.move,result.depth,game_history);
         return result;
     }
 
@@ -1247,6 +1293,7 @@ private:
     std::vector<uint64_t> search_history_;
     uint64_t nodes_ = 0;
     uint64_t node_limit_ = 0;
+    const std::atomic_bool* stop_flag_ = nullptr;
     int root_depth_ = 0;
     uint16_t generation_ = 0;
     std::chrono::steady_clock::time_point deadline_{};
@@ -1266,6 +1313,8 @@ private:
     }
 
     void check_time() {
+        if ((nodes_ & 255ULL)==0 && stop_flag_ &&
+            stop_flag_->load(std::memory_order_relaxed)) throw Timeout{};
         if (node_limit_ != 0 && nodes_ >= node_limit_) throw Timeout{};
         if ((nodes_ & 2047ULL) == 0) {
             if (std::chrono::steady_clock::now() >= deadline_) {
@@ -1289,11 +1338,41 @@ private:
     int evaluate(const Board& board) const {
         EvalEntry& cached = eval_cache_[board.key & (eval_cache_.size() - 1)];
         if (cached.valid && cached.key == board.key) return cached.score;
+#ifdef MERO_SCRELU
+        if constexpr (mero_screlu_weights::standalone) {
+            // Every static score, including sparse endings, comes from the net.
+            // Draw and mate adjudication remain chess rules in the search.
+            int score=std::clamp(board.network_score(),-MATE/2,MATE/2);
+            cached={board.key,score,true};
+            return score;
+        }
+        if constexpr (mero_screlu_weights::residual) {
+            int score=mwahaha_evaluate(board.squares.data()) + king_pressure(board)
+                + passed_pawn_activity(board);
+            bool eligible=std::popcount(board.occupied)>3;
+            if (eligible) score+=neural_.evaluate(board.piece_boards)/2;
+            if (!board.white_to_move) score=-score;
+            if (neural_blend_ && eligible)
+                score+=std::clamp(board.network_score(),-64,64)*neural_blend_/100;
+            cached={board.key,score,true};
+            return score;
+        }
+        if (neural_blend_ == 100 && std::popcount(board.occupied)>3) {
+            int score=std::clamp(board.network_score(),-MATE/2,MATE/2);
+            cached={board.key,score,true};
+            return score;
+        }
+#endif
         int score = mwahaha_evaluate(board.squares.data()) + king_pressure(board)
             + passed_pawn_activity(board);
         // A lone extra piece has no multi-piece interactions for the net to model.
         if (neural_blend_ && std::popcount(board.occupied) > 3)
+#ifdef MERO_SCRELU
+            score += ((board.white_to_move?1:-1)*std::clamp(board.network_score(),-MATE/2,MATE/2)
+                       -score)*neural_blend_/100;
+#else
             score += neural_.evaluate(board.piece_boards) * neural_blend_ / 100;
+#endif
         score = board.white_to_move ? score : -score;
         cached = {board.key, score, true};
         return score;
@@ -2111,23 +2190,6 @@ private:
             && std::popcount(board.occupied) > 6;
     }
 
-    std::vector<Move> principal_variation(Board board, int depth) {
-        std::vector<Move> pv;
-        for (int index = 0; index < depth; ++index) {
-            TTEntry* entry = probe(board.search_key());
-            if (entry == nullptr || !entry->move.valid()) {
-                break;
-            }
-            auto legal = board.legal_moves();
-            auto found = std::find(legal.begin(), legal.end(), entry->move);
-            if (found == legal.end()) {
-                break;
-            }
-            pv.push_back(*found);
-            board.make_move(*found);
-        }
-        return pv;
-    }
 };
 
 class EnginePool {
@@ -2152,6 +2214,10 @@ public:
 
     int threads() const {
         return thread_count_;
+    }
+
+    void watch_stop(const std::atomic_bool* flag) {
+        for (auto& worker : workers_) worker->watch_stop(flag);
     }
 
     void set_neural_blend(int percent) {
@@ -2195,7 +2261,7 @@ public:
 private:
     std::size_t hash_megabytes_ = 64;
     int thread_count_ = 1;
-    int neural_blend_ = 50;
+    int neural_blend_ = DEFAULT_BLEND;
     std::vector<std::unique_ptr<Engine>> workers_;
 
     void rebuild() {
@@ -2362,7 +2428,8 @@ private:
             result.pv = workers_[best_worker]->line_after_move(
                 position,
                 result.move,
-                depth
+                depth,
+                game_history
             );
             FixedList<std::pair<int, Move>, 256> ranked_moves;
             for (std::size_t index = 0; index < moves.size(); ++index) {
@@ -2516,24 +2583,96 @@ int option_value(const std::vector<std::string>& tokens, const std::string& name
     return std::stoi(*(found + 1));
 }
 
+int run_bench(int depth) {
+    Engine engine(16);
+    uint64_t nodes = 0;
+    auto start = std::chrono::steady_clock::now();
+    for (const char* fen : mero_bench_fens) {
+        Board board = Board::from_fen(fen);
+        engine.clear();
+        auto result = engine.search(board,depth,3'600'000);
+        if (!result.nodes || (result.depth != depth && std::abs(result.score) <= MATE-MAX_PLY))
+            throw std::runtime_error(std::string("incomplete bench: ")+fen);
+        board.find_move(result.move.uci()); // Fail if the reported bestmove is illegal.
+        nodes += result.nodes;
+    }
+    auto seconds = std::chrono::duration<double>(std::chrono::steady_clock::now()-start).count();
+    std::cout << "bench " << mero_bench_fens.size() << " positions depth " << depth
+              << ": " << nodes << " nodes " << static_cast<uint64_t>(nodes/seconds)
+              << " nps\n" << std::flush;
+    return 0;
+}
+
+std::string uci_result(const Engine::Result& result) {
+    std::ostringstream out;
+    uint64_t nps = result.nodes * 1000
+        / static_cast<uint64_t>(std::max<long long>(1, result.elapsed_ms));
+    out << "info depth " << result.depth;
+    if (std::abs(result.score) >= MATE - MAX_PLY) {
+        int distance = (MATE - std::abs(result.score) + 1) / 2;
+        out << " score mate " << (result.score < 0 ? -distance : distance);
+    } else {
+        out << " score cp " << result.score;
+    }
+    out << " nodes " << result.nodes
+        << " nps " << nps
+        << " hashfull " << result.hashfull
+        << " time " << result.elapsed_ms
+        << " pv";
+    for (const Move& move : result.pv) {
+        out << ' ' << move.uci();
+    }
+    if (result.pv.empty() && result.move.valid()) out << ' ' << result.move.uci();
+    out << "\nbestmove " << result.move.uci()
+        << '\n';
+    return out.str();
+}
+
 int uci_loop() {
     Board board = Board::starting();
     EnginePool engine;
     std::vector<uint64_t> game_history{board.key};
     int overhead = 10;
+    std::mutex output;
+    std::atomic_bool stopped{false};
+    std::future<void> active;
+    bool infinite=false;
+    auto finish=[&](bool cancel) {
+        if (!active.valid()) return;
+        if (cancel) {
+            stopped.store(true,std::memory_order_relaxed);
+            stopped.notify_all();
+        }
+        active.get();
+    };
     std::string line;
     while (std::getline(std::cin, line)) {
         try {
+            if (line=="isready") {
+                std::lock_guard lock(output);
+                std::cout << "readyok\n" << std::flush;
+                continue;
+            }
+            if (line=="stop") { finish(true); continue; }
+            if (line=="quit") { finish(true); break; }
+            if (line=="uci" || line=="bench" || line=="ucinewgame" ||
+                line.rfind("setoption ",0)==0 || line.rfind("position ",0)==0 ||
+                line=="go" || line.rfind("go ",0)==0) finish(true);
             if (line == "uci") {
+#ifdef MERO_SCRELU
+                std::cout << "id name Mero SCReLU " << mero_screlu_weights::width << " experimental"
+                          << (mero_screlu_weights::residual ? " bounded residual" : "") << '\n';
+#else
                 std::cout << "id name Mero Native Engine 7.0\n";
+#endif
                 std::cout << "id author Mohammed Nabid\n";
                 std::cout << "option name Hash type spin default 64 min 1 max 2048\n";
                 std::cout << "option name Threads type spin default 1 min 1 max 64\n";
-                std::cout << "option name NeuralBlend type spin default 50 min 0 max 100\n";
+                std::cout << "option name NeuralBlend type spin default " << DEFAULT_BLEND << " min 0 max 100\n";
                 std::cout << "option name Move Overhead type spin default 10 min 0 max 5000\n";
                 std::cout << "uciok\n" << std::flush;
-            } else if (line == "isready") {
-                std::cout << "readyok\n" << std::flush;
+            } else if (line == "bench") {
+                run_bench(12);
             } else if (line == "ucinewgame") {
                 board = Board::starting();
                 game_history = {board.key};
@@ -2556,7 +2695,7 @@ int uci_loop() {
                 overhead = std::clamp(std::stoi(line.substr(sizeof(prefix) - 1)), 0, 5000);
             } else if (line.rfind("position ", 0) == 0) {
                 parse_position(board, line, game_history);
-            } else if (line.rfind("go", 0) == 0) {
+            } else if (line=="go" || line.rfind("go ",0)==0) {
                 auto tokens = split(line);
                 int requested_depth = option_value(tokens, "depth");
                 int requested_nodes = option_value(tokens, "nodes");
@@ -2582,45 +2721,119 @@ int uci_loop() {
                     && option_value(tokens, "wtime") < 0 && option_value(tokens, "btime") < 0) {
                     move_time = 3'600'000;
                 }
-                Engine::Result result = engine.search(
-                    board,
-                    depth,
-                    move_time,
-                    game_history,
-                    static_cast<uint64_t>(std::max(0, requested_nodes))
-                );
-                uint64_t nps = result.nodes * 1000
-                    / static_cast<uint64_t>(std::max<long long>(1, result.elapsed_ms));
-                std::cout << "info depth " << result.depth;
-                if (std::abs(result.score) >= MATE - MAX_PLY) {
-                    int distance = (MATE - std::abs(result.score) + 1) / 2;
-                    std::cout << " score mate " << (result.score < 0 ? -distance : distance);
-                } else {
-                    std::cout << " score cp " << result.score;
-                }
-                std::cout << " nodes " << result.nodes
-                    << " nps " << nps
-                    << " hashfull " << result.hashfull
-                    << " time " << result.elapsed_ms
-                    << " pv";
-                for (const Move& move : result.pv) {
-                    std::cout << ' ' << move.uci();
-                }
-                std::cout << "\nbestmove " << result.move.uci()
-                    << '\n' << std::flush;
-            } else if (line == "quit") {
-                break;
+                infinite=std::find(tokens.begin(),tokens.end(),"infinite")!=tokens.end();
+                if (infinite) { move_time=2'000'000'000; depth=MAX_PLY-1; }
+                stopped.store(false,std::memory_order_relaxed);
+                engine.watch_stop(&stopped);
+                active=std::async(std::launch::async,
+                    [&,board,game_history,depth,move_time,requested_nodes,infinite] {
+                        try {
+                            auto result=engine.search(board,depth,move_time,game_history,
+                                static_cast<uint64_t>(std::max(0,requested_nodes)));
+                            if (infinite) stopped.wait(false,std::memory_order_relaxed);
+                            std::lock_guard lock(output);
+                            std::cout<<uci_result(result)<<std::flush;
+                        } catch (const std::exception& e) {
+                            std::lock_guard lock(output);
+                            std::cout<<"info string error: "<<e.what()<<"\nbestmove 0000\n"<<std::flush;
+                        }
+                    });
             }
         } catch (const std::exception& error) {
             std::cout << "info string error: " << error.what() << '\n' << std::flush;
         }
     }
+    // A finite search fed by a shell pipe drains on EOF. Explicit quit
+    // cancels immediately; an infinite search never holds a dead pipe open.
+    finish(infinite);
     return 0;
 }
+
+#ifdef MERO_SCRELU
+// Development probe: refresh from scratch at every step and compare *all*
+// accumulator lanes as well as the final score. Rewind the entire legal path.
+void trace_network(const std::string& line) {
+    auto delim=line.find('|');
+    if (delim==std::string::npos) throw std::invalid_argument("expected FEN | moves");
+    Board board=Board::from_fen(line.substr(0,delim));
+    std::vector<std::pair<Move,Board::UndoState>> path;
+    auto check=[&]() {
+        int score=board.network_score();
+        Board rebuilt=Board::from_fen(board.fen());
+        if (score!=rebuilt.network_score() || board.accumulator.white!=rebuilt.accumulator.white
+                || board.accumulator.black!=rebuilt.accumulator.black)
+            throw std::logic_error("stale SCReLU accumulator");
+        std::cout << score << ' ';
+    };
+    check();
+    std::istringstream moves(line.substr(delim+1));
+    for (std::string token;moves>>token;) {
+        Move m=board.find_move(token);
+        path.emplace_back(m,board.make_move(m));
+        check();
+    }
+    while (!path.empty()) {
+        auto [m,u]=path.back();
+        path.pop_back();
+        board.unmake_move(m,u);
+        check();
+    }
+    std::cout << '\n';
+}
+#endif
+
+#include "datagen.inc"
 
 }  // namespace
 
 int main(int argc, char** argv) {
+    if (argc >= 2 && std::string(argv[1]) == "datagen") {
+        try { return datagen_main(argc, argv); }
+        catch (const std::exception& e) {
+            std::cerr << "datagen: " << e.what() << '\n';
+            return 1;
+        }
+    }
+    if (argc==2 && std::string(argv[1])=="--quiet-prior-scores") {
+        Engine engine(1);
+        std::string fen;
+        while (std::getline(std::cin,fen)) {
+            Board board=Board::from_fen(fen);
+            bool quiet=!board.in_check() && std::popcount(board.occupied)>3;
+            if (quiet) for (auto move : board.legal_moves_in_place(true)) {
+                if (move.promotion || engine.see(board,move)>0) { quiet=false; break; }
+            }
+            std::cout << engine.static_score(board) << ' ' << quiet << '\n';
+        }
+        return 0;
+    }
+    if (argc==2 && std::string(argv[1])=="--static-scores") {
+        Engine engine(1);
+        std::string fen;
+        while (std::getline(std::cin,fen)) std::cout << engine.static_score(Board::from_fen(fen)) << '\n';
+        return 0;
+    }
+    if ((argc==2 || argc==3) && std::string(argv[1])=="bench") {
+        try {
+            int depth=argc==3?std::stoi(argv[2]):12;
+            return depth>=1 && depth<=12 ? run_bench(depth):2;
+        } catch (const std::exception& e) {
+            std::cerr << e.what() << '\n';
+            return 1;
+        }
+    }
+#ifdef MERO_SCRELU
+    if (argc==2 && std::string(argv[1])=="--screlu-trace") {
+        std::string line;
+        while (std::getline(std::cin,line)) trace_network(line);
+        return 0;
+    }
+    if (argc == 2 && std::string(argv[1]) == "--screlu-scores") {
+        std::string fen;
+        while (std::getline(std::cin,fen)) std::cout << Board::from_fen(fen).network_score() << '\n';
+        return 0;
+    }
+#endif
     if (argc == 2 && std::string(argv[1]) == "--neural-scores") {
         mero_neural::Evaluator evaluator;
         std::string fen;

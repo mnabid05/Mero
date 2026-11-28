@@ -88,13 +88,24 @@ class NativeEngineClient:
         with self._lock:
             if self._process is None:
                 return
-            if self._process.poll() is None:
-                try:
-                    self._send("quit")
-                    self._process.wait(timeout=2)
-                except (BrokenPipeError, subprocess.TimeoutExpired):
-                    self._process.terminate()
-            self._process = None
+            process = self._process
+            try:
+                if process.poll() is None:
+                    try:
+                        self._send("quit")
+                        process.wait(timeout=2)
+                    except (BrokenPipeError, subprocess.TimeoutExpired):
+                        if process.poll() is None:
+                            process.kill()
+                        process.wait()
+            finally:
+                for pipe in (process.stdin, process.stdout):
+                    if pipe is not None:
+                        try:
+                            pipe.close()
+                        except BrokenPipeError:
+                            pass
+                self._process = None
 
 
 def default_native_executable() -> Path:
