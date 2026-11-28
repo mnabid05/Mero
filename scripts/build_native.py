@@ -4,11 +4,16 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import os
 import platform
 import shutil
 import subprocess
 from pathlib import Path
+
+RELEASE_WEIGHTS = Path(__file__).resolve().parents[1] / "training/checkpoints/mero-8.bin"
+RELEASE_SHA256 = "2764a12afc0179e39c4292f560cb761f69f390ee99258ca76275d3c5aabb4134"
+LOCAL_APPLE_SILICON = platform.system() == "Darwin" and platform.machine().lower() in {"arm64", "aarch64"}
 
 
 def output_name() -> str:
@@ -25,6 +30,9 @@ def build(
     compiler: str | None = None,
     cxx_compiler: str | None = None,
     sanitize: bool = False,
+    screlu: Path | None = RELEASE_WEIGHTS,
+    native_arch: bool = LOCAL_APPLE_SILICON,
+    scalar_only: bool = False,
 ) -> tuple[Path, Path]:
     root = Path(__file__).resolve().parents[1]
     source = root / "native" / "evaluation.c"
@@ -63,6 +71,8 @@ def build(
         compile_c[compile_c.index("-O3")] = "-O1"
         compile_c.remove("-DNDEBUG")
     compile_c.extend(sanitizer_flags)
+    if native_arch:
+        compile_c.append("-march=native")
     subprocess.run(compile_c, check=True)
 
     link_library = [
@@ -96,6 +106,22 @@ def build(
         compile_engine[compile_engine.index("-O3")] = "-O1"
         compile_engine.remove("-DNDEBUG")
     compile_engine.extend(sanitizer_flags)
+    if native_arch:
+        compile_engine.append("-march=native")
+    if screlu:
+        import sys
+        sys.path.insert(0, str(root))
+        try:
+            from training.screlu_wire import emit_header
+            blob = screlu.read_bytes()
+            if screlu.resolve() == RELEASE_WEIGHTS.resolve() and hashlib.sha256(blob).hexdigest() != RELEASE_SHA256:
+                raise ValueError("Mero 8 release weights do not match the tested checkpoint")
+            emit_header(blob, output_dir / "mero_screlu_weights.h")
+        finally:
+            sys.path.pop(0)
+        compile_engine.extend(["-DMERO_SCRELU", "-I", str(output_dir.resolve())])
+        if scalar_only:
+            compile_engine.append("-DMERO_SCALAR_ONLY")
     subprocess.run(compile_engine, check=True)
     return output, engine_output
 
@@ -108,6 +134,12 @@ def main() -> int:
         default=Path(__file__).resolve().parents[1] / "build" / "native",
     )
     parser.add_argument("--compiler")
+    arch=parser.add_mutually_exclusive_group()
+    arch.add_argument("--screlu", type=Path, help="use an alternate SCReLU checkpoint instead of Mero 8")
+    arch.add_argument("--release-control", action="store_true", help="opt in to Mero 7 evaluation; no SCReLU model")
+    parser.add_argument("--native-arch", action=argparse.BooleanOptionalAction, default=LOCAL_APPLE_SILICON,
+                        help="tune for the build machine (default on Apple Silicon)")
+    parser.add_argument("--scalar-only", action="store_true", help="use the portable SCReLU kernel")
     parser.add_argument("--cxx-compiler")
     parser.add_argument("--sanitize", action="store_true", help="enable address and undefined-behavior checks")
     args = parser.parse_args()
@@ -116,6 +148,9 @@ def main() -> int:
         args.compiler,
         args.cxx_compiler,
         args.sanitize,
+        None if args.release_control else (args.screlu or RELEASE_WEIGHTS),
+        args.native_arch,
+        args.scalar_only,
     )
     print(library)
     print(engine)
