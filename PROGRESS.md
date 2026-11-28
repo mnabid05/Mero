@@ -8,9 +8,10 @@ to the previous generator on all 48 sampled games. Its first sealed
 256-game production shard has 21,541 records: independent legal replay and
 upstream Rust format verification both passed. Strict 256/384-wide inference
 includes all endgames; no hardcoded material is mixed into these networks.
-Four scaled networks have now been trained. The 384-unit candidate with the
-learned outcome link passed both queen gates. No strength SPRT or new rating
-is claimed at this checkpoint.
+Four scaled networks have now been trained. The calibrated 384-unit candidate
+passed both queen gates and won its first formal strength SPRT. Independent
+confirmation is required; this checkpoint does not claim a release or an
+external rating.
 See [protocol and commands](docs/SCALE-CAMPAIGN.md).
 
 **20M source target reached:** 20,005,910 quiet rows, 925 verified shards,
@@ -64,6 +65,15 @@ the benchmark and material checks are **not Elo**.
 [Qualification and speed evidence](backtests/scale-calibrated384-qualified.json).
 The research-only [checkpoint](training/checkpoints/mero-20m-calibrated384-candidate.bin)
 can be tested with `scripts/build_native.py --screlu`; the default is still Mero 7.
+
+**First formal H1 against Mero 7:** 349 wins, 92 draws, 251 losses in 692
+games (57.08%), no forfeits. The final LLR was +2.97 at the +2.94 boundary
+for normalized [0,+10]. Fastchess reported +49.54 ±22.18 **relative** Elo.
+The 346 color-reversed pairs, pentanomial counts, clocks, identities and
+book were reconciled independently. The confirmation uses exactly the same
+candidate and release on a different pre-held book.
+[First H1](backtests/scale-calibrated384-first-h1.json). Do not infer an
+absolute rating by adding relative Elo to Mero 7's old external estimate.
 
 Checkpoint: 63 sealed shards, 1,365,596 quiet records, 16,125 completed
 games and three capped games excluded. Mero 7 UCI independently reproduced

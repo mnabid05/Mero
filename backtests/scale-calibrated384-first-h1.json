@@ -1,0 +1,72 @@
+{
+  "scope": "First formal H1 only; independent confirmation required. Relative Elo is from Fastchess at the stated clock, not an absolute rating.",
+  "result": {
+    "status": "H1",
+    "games": 692,
+    "wins": 349,
+    "draws": 92,
+    "losses": 251,
+    "reported_llr": 2.97,
+    "faults": [],
+    "warnings": {
+      "Bestmove does not match beginning of last PV": 303,
+      "PV continues after threefold repetition": 179
+    },
+    "returncode": 0,
+    "interrupted": null
+  },
+  "audit": {
+    "pairs": 346,
+    "pentanomial": [
+      37,
+      25,
+      159,
+      53,
+      72
+    ],
+    "candidate_loss_draw_win_by_color": {
+      "white": [
+        93,
+        44,
+        209
+      ],
+      "black": [
+        158,
+        48,
+        140
+      ]
+    },
+    "decision": "H1",
+    "games": 692,
+    "llr": 2.97,
+    "sha256": {
+      "fastchess": "0baffd067ee2df163c18b3b6707decf8feb50e1767d540f13cf5c1a9fd5304dd",
+      "candidate": "175f5bef17bb427bd5b9770a3bea65503d0ccc32606db6a558a736a73fb17a16",
+      "baseline": "c8aa94febb60d23ba0697ebfd40c02cda9598656d742928e59f3ee1ee643a796",
+      "book": "04fd63e7f4ee1e9d81656e4e4ad9a94eb939340ca89a0e1249cb2753b2373002"
+    },
+    "config_sha256": "ffc07a6c14654116d8a6eb7006236d1e6df98f1936effe7445ea10f8bf128fca",
+    "log_sha256": "d152a0f34450575bc726f6492dd4c914eb7544d12b84ccbc03d0599a4dfa18df"
+  },
+  "fastchess_relative_elo": 49.54,
+  "fastchess_reported_plus_minus": 22.18,
+  "score": 0.5708092485549133,
+  "confirmation_input_sha256": {
+    "fastchess": "0baffd067ee2df163c18b3b6707decf8feb50e1767d540f13cf5c1a9fd5304dd",
+    "candidate": "175f5bef17bb427bd5b9770a3bea65503d0ccc32606db6a558a736a73fb17a16",
+    "baseline": "c8aa94febb60d23ba0697ebfd40c02cda9598656d742928e59f3ee1ee643a796",
+    "book": "4390ee3050bb718b30cc3645ec2b61cd0889cff81505f5de7fe48eb3b321f65d"
+  },
+  "confirmation_preflight_nps": {
+    "binary_sha256": {
+      "baseline": "c8aa94febb60d23ba0697ebfd40c02cda9598656d742928e59f3ee1ee643a796",
+      "candidate": "175f5bef17bb427bd5b9770a3bea65503d0ccc32606db6a558a736a73fb17a16"
+    },
+    "aggregate_nps": {
+      "baseline": 851441,
+      "candidate": 832971
+    },
+    "median_paired_ratio": 0.9969759884678301
+  },
+  "external_rating_protocol": "After a second distinct-book H1 for this exact executable only: reproduce the original Mero 7 gauntlet against the archived Stockfish 18 UCI_Elo 2300 executable. No conversion of the H1 relative estimate into a human or external rating."
+}

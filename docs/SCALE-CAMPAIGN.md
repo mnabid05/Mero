@@ -144,6 +144,14 @@ fourth trial must pass both fixed queen panels, then win two actual SPRTs.
 The invalid first LMR trial is retained and skipped; its separately pinned
 canonical-disjoint retry uses zero games from the invalid attempt.
 
+To reproduce the external rating after two clean H1 decisions, run
+`build/torch-env/bin/python -m scripts.rate_standalone --wait`. It checks
+the two distinct books and the exact winner binary, takes the exclusive
+machine slot, and uses the pinned Stockfish 18 executable, 16 historical
+calibration openings, and Mero 7's original 64-game/100-ms settings. It
+replays every move, rejects clock/power faults and forfeits, and reports
+the estimate only for that hardware and opponent setting.
+
 Dataset diagnostics (no model training):
 
 ```sh
