@@ -134,9 +134,14 @@ def fit(build,name,*,calibrated=None):
 def inputs(build,name):
     harness=expect(build/"tools/fastchess/fastchess",PINS["fastchess_sha256"])
     control=expect(build/"phase1-baseline/mwahaha-engine",PINS["release_sha256"])
-    book=expect(build/"scale-openings"/(name+".epd"),PINS["books"][name]["sha256"])
+    spec=PINS["books"].get(name)
+    if spec is None:
+        retry=json.loads((REPO/"backtests/scale-lmr-fresh-retry.json").read_text())
+        if name!=retry["name"]: raise ValueError("unknown opening reservation")
+        spec=retry["book"]
+    book=expect(build/"scale-openings"/(name+".epd"),spec["sha256"])
     info=verify(book)
-    if (info["seed"]!=PINS["books"][name]["seed"] or info["pairs"]!=2000 or
+    if (info["seed"]!=spec["seed"] or info["pairs"]!=2000 or
             info["control_sha256"]!=PINS["teacher_sha256"]):
         raise ValueError("book provenance mismatch")
     return harness,control,book
@@ -151,7 +156,7 @@ def ensure_exclusive_book(work,book):
         if inp["sha256"]["book"]==fingerprint: raise ValueError("opening set has already been played")
 
 
-def match(build,name,binary,gate=None,*,book_name=None):
+def match(build,name,binary,gate=None,*,book_name=None,search_name=None):
     run_sprt.check_power()
     harness,baseline,book=inputs(build,book_name or name)
     work=build/"scale-results"/name
@@ -161,8 +166,8 @@ def match(build,name,binary,gate=None,*,book_name=None):
         data=json.loads(gate.read_text())
         if not data["passed"] or data["binary_sha256"]!=sha(binary):
             raise ValueError("missing gate for this exact binary")
-    elif name not in PINS["candidates"]:
-        raise ValueError("standalone candidates require a queen qualification")
+    elif (spec:=PINS["candidates"].get(search_name or name)) is None or sha(binary)!=spec["sha256"]:
+        raise ValueError("only the frozen search binaries are exempt from neural qualification")
     report=work/"bench.json"
     if not report.exists():
         atomic(report,bench(binary))
@@ -191,9 +196,20 @@ def match(build,name,binary,gate=None,*,book_name=None):
 
 
 def search(build):
+    deferred=None
     for name, spec in PINS["candidates"].items():
         candidate=expect(build/f"scale-search-{name}"/"mero",spec["sha256"])
+        old=build/"scale-results"/name/"sprt"
+        if name=="lmr" and (old/"result.json").exists() and json.loads((old/"result.json").read_text())["status"].startswith("invalid"):
+            retry=json.loads((REPO/"backtests/scale-lmr-fresh-retry.json").read_text())
+            expect(old/"result.json",retry["invalid_result_sha256"]);expect(old/"match.log",retry["invalid_log_sha256"])
+            deferred=(retry["name"],candidate)
+            print("lmr: original trial invalid. Fresh retry scheduled after untouched search tests.",flush=True)
+            continue
         print(f"{name}: {match(build,name,candidate)}",flush=True)
+    if deferred:
+        retry,exe=deferred
+        print(f"{retry}: {match(build,retry,exe,book_name=retry,search_name='lmr')}",flush=True)
 
 
 def networks(build):
@@ -219,8 +235,14 @@ def networks(build):
     return False
 
 
-def calibrated_round(build):
-    plan=json.loads((REPO/"backtests/scale-outcome-link-plan.json").read_text())
+def calibrated_round(build,wide=False):
+    planfile="scale-outcome-link-384-plan.json" if wide else "scale-outcome-link-plan.json"
+    plan=json.loads((REPO/"backtests"/planfile).read_text())
+    if wide:
+        gate=json.loads((build/"campaign-calibrated256"/"queen.json").read_text())
+        if gate["passed"] is not False or gate["weights_sha256"]!="e5f5e113d957eadfe4d0f506697c137c1932e3ea8e6a31ba06b7d5f4dd9ab384":
+            raise ValueError("missing rejected calibrated-256 fingerprint")
+        panel=expect(build/"scale-tools/second-queen-panel.json",plan["extra_queen_panel"]["sha256"])
     reference=expect(build/"phase1-baseline/mwahaha-engine",PINS["release_sha256"])
     original=json.loads((REPO/"backtests/scale-first-two-fits.json").read_text())
     for old in RECIPES:
@@ -242,13 +264,20 @@ def calibrated_round(build):
                 or not q.exists() or json.loads(q.read_text())["passed"] is not False): raise
         print(f"{name}: failed queen gate; no games",flush=True)
         return False
+    if wide:
+        from training.blind_queen_panel import assess
+        extra=assess(panel,plan["extra_queen_panel"]["sha256"],binary)
+        atomic(build/("campaign-"+name)/"supplementary-queen.json",extra)
+        if not extra["passed"]:
+            print(f"{name}: failed supplementary queen gate; no matches",flush=True)
+            return False
     if match(build,name,binary,gate,book_name=plan["first_book"])!="H1": return False
     return match(build,name+"-confirm",binary,gate,book_name=plan["confirmation_book"])=="H1"
 
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)
-    p.add_argument("stage",choices=["prepare","networks","search","follow","run","calibrated-follow"],
+    p.add_argument("stage",choices=["prepare","networks","search","follow","run","calibrated-follow","wide-follow"],
                    help="run resumes datagen, networks, and search; follow attaches to an existing generator")
     p.add_argument("--build",type=Path,default=REPO/"build")
     args=p.parse_args()
@@ -257,9 +286,9 @@ def main():
         producer=expect(b/"producer-v2/mwahaha-engine",PINS["teacher_sha256"])
         generate(producer,b/"mero20m-01",target=TARGET,games_per_shard=256,
                  workers=os.cpu_count() or 1,seed=2026112601,wait_power=True)
-    if args.stage in ("follow","calibrated-follow"):
+    if args.stage in ("follow","calibrated-follow","wide-follow"):
         print("Waiting for the exclusive campaign slot; no training or matches while queued.",flush=True)
-    with machine_slot(b/"mero20m-01",wait=args.stage in ("follow","calibrated-follow")):
+    with machine_slot(b/"mero20m-01",wait=args.stage in ("follow","calibrated-follow","wide-follow")):
         if args.stage=="prepare":
             print(prepare(b))
         elif args.stage in ("run","follow"):
@@ -268,9 +297,9 @@ def main():
             won=networks(b)
             search(b)
             return 0 if won else 1
-        elif args.stage=="calibrated-follow":
+        elif args.stage in ("calibrated-follow","wide-follow"):
             await_power(b/"mero20m-01",wait=True,clocked=True)
-            won=calibrated_round(b)
+            won=calibrated_round(b,wide=args.stage=="wide-follow")
             search(b)  # resumable; no completed or interrupted SPRT is replayed
             return 0 if won else 1
         elif args.stage=="networks":

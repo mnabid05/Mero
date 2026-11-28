@@ -129,6 +129,21 @@ qualified, it uses the pre-excluded, **never played** net256 book and then
 the original untouched confirmation book. Each book is refused if any other
 run already started a match on it. Search SPRTs can resume in the same slot.
 
+The calibrated 256 trial missed the original upper bound by 10 cp and did not
+play. To apply the same learned link to the second original recipe, freeze
+the additional score-blind panel first and use `wide-follow`:
+
+```sh
+build/torch-env/bin/python -m training.blind_queen_panel build/mero20m-split build/scale-tools/second-queen-panel.json
+build/torch-env/bin/python -m scripts.scale_campaign wide-follow
+```
+
+Never overwrite an existing panel. The 274 secondary removal pairs exclude
+any base or modified layout present in training, in either orientation. The
+fourth trial must pass both fixed queen panels, then win two actual SPRTs.
+The invalid first LMR trial is retained and skipped; its separately pinned
+canonical-disjoint retry uses zero games from the invalid attempt.
+
 Dataset diagnostics (no model training):
 
 ```sh

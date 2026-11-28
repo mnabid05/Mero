@@ -1,0 +1,41 @@
+{
+  "scope": "No strength result; no fraction of the trial is used in the retry.",
+  "match": {
+    "status": "invalid: interrupted or failed",
+    "games": 910,
+    "wins": 339,
+    "draws": 190,
+    "losses": 381,
+    "reported_llr": -1.98,
+    "faults": [
+      {
+        "game": 908,
+        "reason": "White loses on time (12129ms overrun)"
+      },
+      {
+        "game": 910,
+        "reason": "White loses on time (10543ms overrun)"
+      },
+      {
+        "game": 907,
+        "reason": "Black loses on time (13263ms overrun)"
+      },
+      {
+        "game": 909,
+        "reason": "White loses on time (12077ms overrun)"
+      }
+    ],
+    "warnings": {
+      "Bestmove does not match beginning of last PV": 744,
+      "PV continues after threefold repetition": 597
+    },
+    "returncode": 1,
+    "interrupted": "Mac is on battery"
+  },
+  "attempt_sha256": {
+    "fastchess": "0baffd067ee2df163c18b3b6707decf8feb50e1767d540f13cf5c1a9fd5304dd",
+    "candidate": "04aa078b33591f524bd73a126f8917606a69fd15b46d6c76b9e7c8effc7d5bde",
+    "baseline": "c8aa94febb60d23ba0697ebfd40c02cda9598656d742928e59f3ee1ee643a796",
+    "book": "1f37b8ee7087eec3cafbea17c196f86bb3ec20747a3f7f540bebe2168c4f8aca"
+  }
+}

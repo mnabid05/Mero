@@ -1,0 +1,138 @@
+{
+  "selection": {
+    "recipe": {
+      "width": 256,
+      "wdl_weight": 0.625,
+      "train_rows": 19626685,
+      "batch_size": 2048,
+      "superbatches": 12,
+      "wdl_temperature_cp": 204.11592
+    },
+    "backend": "Bullet/Metal",
+    "bullet_revision": "5d70177680437b7c0ddf958bd4722d95afa78b0c",
+    "evaluation": "minimum deployed mixed-target MSE on whole-game validation split; not Elo",
+    "float_probe_max_error_cp": 0.00020820312511204975,
+    "float_probes": 16,
+    "checkpoints": [
+      {
+        "superbatch": 5,
+        "mixed_mse": 0.04783334955573082,
+        "outcome_brier": 0.10771303623914719,
+        "mae_search_cp": 143.1084747314453
+      },
+      {
+        "superbatch": 10,
+        "mixed_mse": 0.045832738280296326,
+        "outcome_brier": 0.10543619096279144,
+        "mae_search_cp": 135.14793395996094
+      },
+      {
+        "superbatch": 12,
+        "mixed_mse": 0.04516366124153137,
+        "outcome_brier": 0.10470060259103775,
+        "mae_search_cp": 131.16160583496094
+      }
+    ],
+    "selected": "mero-bullet-12",
+    "net_sha256": "e5f5e113d957eadfe4d0f506697c137c1932e3ea8e6a31ba06b7d5f4dd9ab384",
+    "upstream_quantised_sha256": "bf2780d21302736962b2ba4789dba87b9eb456b082b7b1f2fd7566cfe07fe0f0"
+  },
+  "parity": {
+    "kernels": 2,
+    "binary_sha256": "45ce1d2323dcda99198b946cb010501c8d1724964a1a8c8eb215b389074c5b71",
+    "kernel_sha256": [
+      "45ce1d2323dcda99198b946cb010501c8d1724964a1a8c8eb215b389074c5b71",
+      "ce968c3aaaa9a1e37c8f8fc622cdcd95286be30e289596bbaf6feec69710f076"
+    ],
+    "weights_sha256": "e5f5e113d957eadfe4d0f506697c137c1932e3ea8e6a31ba06b7d5f4dd9ab384",
+    "unique_fens": 555,
+    "material_buckets": 8,
+    "trace_paths": 17,
+    "trace_scores": 1001,
+    "integer_mismatches": 0
+  },
+  "gate": {
+    "passed": false,
+    "queen": {
+      "n": 248,
+      "median_cp": 1010,
+      "nonpositive": 0
+    },
+    "weights_sha256": "e5f5e113d957eadfe4d0f506697c137c1932e3ea8e6a31ba06b7d5f4dd9ab384",
+    "binary_sha256": "45ce1d2323dcda99198b946cb010501c8d1724964a1a8c8eb215b389074c5b71",
+    "diagnostics": {
+      "positions": 256,
+      "removals": 1817,
+      "dataset_sha256": "2e2a7a2d208eddb1a89d0c5f7ca34022a39795b5d696b86bdd319bc6cc6e9d8e",
+      "method": "median sign-adjusted cp loss on removing one piece, normalized White to move; same material bucket; synthetic diagnostic only",
+      "engines": {
+        "candidate": {
+          "sha256": "45ce1d2323dcda99198b946cb010501c8d1724964a1a8c8eb215b389074c5b71",
+          "by_piece": {
+            "P": {
+              "n": 512,
+              "median_cp": 114,
+              "nonpositive": 11
+            },
+            "N": {
+              "n": 294,
+              "median_cp": 370.5,
+              "nonpositive": 0
+            },
+            "B": {
+              "n": 326,
+              "median_cp": 396,
+              "nonpositive": 0
+            },
+            "R": {
+              "n": 437,
+              "median_cp": 587,
+              "nonpositive": 0
+            },
+            "Q": {
+              "n": 248,
+              "median_cp": 1010,
+              "nonpositive": 0
+            }
+          }
+        }
+      }
+    }
+  },
+  "paired_nps": {
+    "net256": {
+      "binary_sha256": {
+        "baseline": "c8aa94febb60d23ba0697ebfd40c02cda9598656d742928e59f3ee1ee643a796",
+        "candidate": "39118b9fe57a5364233cf61b5cc5b8c72ac08245b32200d7024547b546b81ccc"
+      },
+      "aggregate_nps": {
+        "baseline": 1274054,
+        "candidate": 1258191
+      },
+      "median_paired_ratio": 0.9498997581050933
+    },
+    "net384": {
+      "binary_sha256": {
+        "baseline": "c8aa94febb60d23ba0697ebfd40c02cda9598656d742928e59f3ee1ee643a796",
+        "candidate": "dfcbfe11960055099f1a452e725ad11aef139fbe8f76a0207c1ab4d0d83f3c08"
+      },
+      "aggregate_nps": {
+        "baseline": 1236316,
+        "candidate": 1237113
+      },
+      "median_paired_ratio": 0.9957211219862442
+    },
+    "calibrated256": {
+      "binary_sha256": {
+        "baseline": "c8aa94febb60d23ba0697ebfd40c02cda9598656d742928e59f3ee1ee643a796",
+        "candidate": "45ce1d2323dcda99198b946cb010501c8d1724964a1a8c8eb215b389074c5b71"
+      },
+      "aggregate_nps": {
+        "baseline": 1230769,
+        "candidate": 1242718
+      },
+      "median_paired_ratio": 0.9765265311007088
+    }
+  },
+  "outcome": "Rejected before any games; 1,010 cp is outside the registered ceiling."
+}

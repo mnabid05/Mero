@@ -39,6 +39,19 @@ consulting board layouts or changing inference. Its held-out outcome log
 loss was 0.45318 vs 0.48683 with the original temperature.
 [Follow-up protocol](backtests/scale-outcome-link-plan.json).
 
+The training-only outcome calibration reduced the 256-unit queen median
+to **1,010 cp** (248 probes). No rounding and no matches: the ceiling is
+1,000 cp. Its held-out search-score MAE was 131.2 cp, down from 294.1.
+[Checkpoint, parity, and three speed probes](backtests/scale-calibrated256-rejected.json).
+The [384-unit follow-up](backtests/scale-outcome-link-384-plan.json) keeps
+the same empirically fitted link with the original 384/.5 recipe and adds
+a second frozen panel of 274 removal pairs disjoint from training layouts.
+
+The original LMR SPRT lost stable AC and suffered four simultaneous clock
+forfeits after 910 games. **Invalid, not H0.** No game carries forward.
+[Fault report](backtests/scale-lmr-power-invalid.json);
+[new unplayed retry opening reservation](backtests/scale-lmr-fresh-retry.json).
+
 Checkpoint: 63 sealed shards, 1,365,596 quiet records, 16,125 completed
 games and three capped games excluded. Mero 7 UCI independently reproduced
 all 762 searched moves and all 488 saved cp scores in an eight-game sample.

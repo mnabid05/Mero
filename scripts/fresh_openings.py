@@ -7,9 +7,10 @@ import sqlite3
 import subprocess
 from pathlib import Path
 from chess_ai.board import Board
+from chess_ai.backtest import repetition_key
 from training.large_run import sha
 
-def create(registry,dest,control,seed,count=2000):
+def create(registry,dest,control,seed,count=2000,canonical_disjoint=False):
     if dest.exists(): raise FileExistsError(dest)
     rng=random.Random(seed)
     dest.parent.mkdir(parents=True,exist_ok=True)
@@ -18,6 +19,7 @@ def create(registry,dest,control,seed,count=2000):
         db.execute("BEGIN IMMEDIATE")
         if db.execute("SELECT 1 FROM positions WHERE seed=? LIMIT 1",(seed,)).fetchone():
             raise ValueError("opening campaign seed already used")
+        used={repetition_key(Board.from_fen(r[0]+" 0 5")) for r in db.execute("SELECT epd FROM positions")} if canonical_disjoint else None
         accepted=[]
         while len(accepted)<count:
             batch=[]
@@ -34,7 +36,10 @@ def create(registry,dest,control,seed,count=2000):
             for (fen,moves),cp in zip(batch,proc.stdout.splitlines(),strict=True):
                 if abs(int(cp))>120: continue
                 epd=" ".join(fen.split()[:4])
+                key=repetition_key(Board.from_fen(fen)) if used is not None else None
+                if used is not None and key in used: continue
                 if db.execute("INSERT OR IGNORE INTO positions VALUES(?,?)",(epd,seed)).rowcount!=1: continue
+                if used is not None: used.add(key)
                 accepted.append((epd,moves,int(cp)))
                 if len(accepted)==count: break
         with dest.open("x") as out:
@@ -65,5 +70,6 @@ if __name__=="__main__":
     p=argparse.ArgumentParser(description=__doc__)
     for key in ("registry","dest","control"): p.add_argument(key,type=Path)
     p.add_argument("--seed",required=True,type=int)
+    p.add_argument("--canonical-disjoint",action="store_true")
     a=p.parse_args()
     print(create(**vars(a)))

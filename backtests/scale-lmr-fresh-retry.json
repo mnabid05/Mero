@@ -1,0 +1,12 @@
+{
+  "name": "lmr-ac-retry",
+  "candidate": "lmr",
+  "book": {
+    "sha256": "27ee9681495f42847183f88a66f2fa43e76ce82061402db961140a951eda4bb0",
+    "seed": 915501,
+    "pairs": 2000
+  },
+  "invalid_result_sha256": "ffc92aade38df2ec08435dfeafec81b85a26cef22ff19d3e3f5ada1ba19d383c",
+  "invalid_log_sha256": "bc5c39e986c2619aecde4832aa3cbd0be5e328855f313f64544528948cfcc165",
+  "reason": "Power loss: four simultaneous time losses, no decision. Discard every previous game. The new book is reserved by canonical legal position across the complete registry. Search-only Mero 7 evaluator; not a new training holdout."
+}
